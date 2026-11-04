@@ -1,5 +1,7 @@
 import RGen.Invariants
+import RGen.Linear.Consumption
 import RGen.RaceFreedom
+import RGen.Linear.Consumption
 import RGen.Arms.Instances
 import RGen.Model.Registry
 import RGen.Model.Identity
@@ -208,3 +210,5 @@ This file is not imported by `RGen.lean`; it is an audit artefact.
 #print axioms RGen.KAssetState.approve_requires_credential_type
 #print axioms RGen.ProvenanceState.addAnchor_refused_duplicate
 #print axioms RGen.OracleState.addEvidence_requires_party
+#print axioms RGen.core_proof_cells_consumed_before_commit
+#print axioms RGen.Action.proof_cell_not_reused

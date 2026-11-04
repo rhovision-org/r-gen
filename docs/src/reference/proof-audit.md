@@ -115,9 +115,8 @@ The owner authorized Phase 2 with the independence limitation recorded. Since th
   verdicts; claim deadline presence and comment-window ordering are checked at creation (RR-04,
   RR-07 partial).
 
-Still open: `proofCells` trace consumption (LR-03), a full `runExec` commute theorem, conformance
-promotion (LR-06), the remaining model/code divergences (LR-08), and the three atomicity findings
-(RGA-031…033). All 32 mutating proved-model arms have a `guard_eq`; the other three are read-only.
+Still open: a full `runExec` commute theorem, the remaining model/code divergences (LR-08), and the
+three atomicity findings (RGA-031…033). All 32 mutating proved-model arms have a `guard_eq`; the other three are read-only.
 
 ## What would change the verdict
 

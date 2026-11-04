@@ -545,8 +545,8 @@ roadmap:
   - spec/lean/RGen/RaceFreedom.lean
   findings:
   - RGA-002
-  status: partial
-  note: Proof-cell membership theorems added; trace consumption still open.
+  status: done
+  note: Consumption trace model added; metadata is live. Deployed capability refineness remains out of scope.
 - id: LR-04
   title: Cross-cell composition and precise authority statement
   priority: P1

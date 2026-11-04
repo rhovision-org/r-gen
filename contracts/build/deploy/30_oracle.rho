@@ -348,7 +348,10 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
                   caseState!(s) | ret2!((false, "not decided"))
                 } else {
                   caseState!(s.set("status", "executing")
-                              .set("execution", {"attempts": 1, "lastError": Nil})) |
+                              .set("execution", {"attempts": 1, "lastError": Nil,
+                                                 "status": "pending",
+                                                 "caseId": s.get("uri"),
+                                                 "decision": s.get("decision")})) |
                   new aCh in {
                     subjectApply!("applyDecision", s.get("uri"), s.get("decision"), *aCh) |
                     for (@a <- aCh) {
@@ -358,6 +361,9 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
                             caseState!(s2.set("status", "executed")
                                          .set("execution", {"attempts": 1,
                                                             "lastError": Nil,
+                                                            "status": "applied",
+                                                            "caseId": s.get("uri"),
+                                                            "decision": s.get("decision"),
                                                             "outcome": outcome}))
                           } |
                           ret2!((true, outcome))
@@ -366,7 +372,10 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
                           for (@s2 <- caseState) {
                             caseState!(s2.set("status", "decided")
                                          .set("execution", {"attempts": 1,
-                                                            "lastError": why}))
+                                                            "lastError": why,
+                                                            "status": "failed",
+                                                            "caseId": s.get("uri"),
+                                                            "decision": s.get("decision")}))
                           } |
                           ret2!((false, why))
                         }
@@ -374,7 +383,10 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
                           for (@s2 <- caseState) {
                             caseState!(s2.set("status", "decided")
                                          .set("execution", {"attempts": 1,
-                                                            "lastError": "apply"}))
+                                                            "lastError": "apply",
+                                                            "status": "failed",
+                                                            "caseId": s.get("uri"),
+                                                            "decision": s.get("decision")}))
                           } |
                           ret2!((false, "apply"))
                         }

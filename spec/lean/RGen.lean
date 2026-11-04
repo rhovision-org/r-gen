@@ -19,6 +19,7 @@ import RGen.Linear.Versioned
 import RGen.Linear.Exec
 import RGen.Linear.Authority
 import RGen.Linear.Lift
+import RGen.Linear.Consumption
 import RGen.Model.ProofVersioned
 import RGen.Arms.Credential
 import RGen.Arms.ValueProposition

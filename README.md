@@ -113,7 +113,7 @@ behavioural suites passed. The record is `docs/src/reference/verification.md`. T
 the target.
 
 `make lean-check` builds the Lean 4 model (`spec/lean/`), rejects unproved declarations,
-checks the 194 theorems listed in `RGen/Audit.lean` (only `propext` and `Quot.sound`; no
+checks the 196 theorems listed in `RGen/Audit.lean` (only `propext` and `Quot.sound`; no
 `Classical.choice`), and checks the emitted conformance corpus. `make spec-check` includes
 `check_audit`, which ties every deployed arm, HAZOP row, claim, and improvement to an
 evidence-backed finding. The audit is in `spec/audit`, `spec/hazop`, `spec/proofs`, and

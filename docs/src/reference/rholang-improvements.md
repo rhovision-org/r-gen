@@ -48,9 +48,9 @@ The HAZOP rows for each item are in the manifest. Representative links:
   `caseReq.openedBy`. Parties and `subjectRef` remain caller-supplied; registry binding is open.
 - RR-02 is partial: `ProvenanceFactory.create` now authenticates the creator and rejects an empty
   writer list. `assetRef` is still a free string; asset-registry binding is an extension.
-- RR-08 is partial: `Apply.applyDecision` returns `already applied` when the K-Asset already has the
-  decision outcome, so an oracle retry can record success after a partial cross-contract failure. An
-  explicit execution receipt is still open.
+- RR-08 is fixed: `Apply.applyDecision` returns `already applied` when the K-Asset already has the
+  decision outcome, and `OracleCase.execute` records a pending/applied/failed receipt with the case id,
+  decision, and outcome so a retry can reconcile a partial cross-contract failure.
 - RR-03 is fixed: `ValueProposition.proveValidated` reads `nowHeight` and rejects a supplied
   `atHeight` that differs from chain height.
 - RR-05 is fixed: `KAsset.nest` caps a batch at 32 children and the parent list at 64, rejecting

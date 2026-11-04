@@ -1,5 +1,7 @@
 import RGen.Invariants
+import RGen.Linear.Consumption
 import RGen.RaceFreedom
+import RGen.Linear.Consumption
 import RGen.ArmGuards
 
 /-!
@@ -110,3 +112,5 @@ end RGen
 #check RGen.provenance_anchor_comment_independent
 #check RGen.KAssetState.approve_requires_credential_type
 #check RGen.OracleState.addEvidence_requires_party
+#check RGen.core_proof_cells_consumed_before_commit
+#check RGen.Action.proof_cell_not_reused

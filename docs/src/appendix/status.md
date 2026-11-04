@@ -10,7 +10,7 @@
   validation → K-Asset → approval → dispute → oracle → provenance.
 - Ten behavioural suites pass: identity, credentials, claim, K-asset, value, oracle,
   provenance, integration, vertical slice, and behavioural race regression.
-- Lean proof gates: 37 files, no `sorry`/axiom; the 194 theorems listed in `Audit.lean`
+- Lean proof gates: 37 files, no `sorry`/axiom; the 196 theorems listed in `Audit.lean`
   are axiom-clean (`propext`, `Quot.sound` only); `core_races_not_representable`; 32-pair
   race matrix; 35 `proved-conformance` arms. The audit list is hand-maintained (RGA-006).
 - Static gates: build, parse, arch, captures, placeholders, money, core boundary,

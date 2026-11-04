@@ -45,9 +45,10 @@ findings:
   arms: []
   actions:
   - LR-03
-  disposition: accepted
-  note: Phase 2 adds proof-cell membership theorems for seven arms, so the declared proof cells are now checked metadata.
-    The trace-ordering theorem (proofCells consumed before the arm commit) and cross-arm reuse theorem are still open.
+  disposition: fixed
+  note: 'Phase 3 adds Linear/Consumption.lean: a well-formed trace consumes every declared proof cell before the arm commit
+    and cannot consume a proof cell twice. This is a model-level trace discipline, not a refinement of the deployed private
+    capability.'
 - id: RGA-003
   title: Versioned independence is missing; the L1 alias is a plain-Store theorem
   severity: S2
@@ -135,8 +136,8 @@ findings:
   actions:
   - LR-07
   disposition: accepted
-  note: 'Phase 2 adds check_lean.py --audit-coverage: every Pareto #check must appear in Audit.lean. The audit is now 84 Pareto
-    theorems and 194 axiom checks, but public theorems outside the Pareto vocabulary can still escape the list.'
+  note: 'Phase 2 adds check_lean.py --audit-coverage: every Pareto #check must appear in Audit.lean. The audit is now 86 Pareto
+    theorems and 196 axiom checks, but public theorems outside the Pareto vocabulary can still escape the list.'
 - id: RGA-007
   title: The pair matrix covers 32 rows, not the 48 distinct pairs over modeled cells
   severity: S3
@@ -371,10 +372,10 @@ findings:
   - Apply.applyDecision
   actions:
   - RR-08
-  disposition: accepted
-  note: 'Phase 2 makes Apply.applyDecision idempotent for a matching terminal status: a retry returns "already applied" instead
-    of "not disputed", so OracleCase.execute can record the success after a partial cross-contract failure. There is still
-    no explicit receipt field for an audit trail or for an ambiguous failure.'
+  disposition: fixed
+  note: Phase 3 records an execution receipt (pending/applied/failed, caseId, decision, outcome) and Apply.applyDecision is
+    idempotent for a matching terminal status, so a retry can record success after a partial cross-contract failure. The devnet
+    suite cannot inject a crash; the receipt remains the recovery evidence.
 - id: RGA-025
   title: KAsset.nest performs unbounded recursive resolve/prove/take work
   severity: S3
