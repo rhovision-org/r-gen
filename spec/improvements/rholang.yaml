@@ -65,7 +65,8 @@ items:
   tests:
   - harness/unit_value.py
   - harness/unit_kasset.py
-  status: proposed
+  status: fixed
+  note: Phase 2 binds atHeight to nowHeight; historical proofs would need an explicit window.
 - id: RR-04
   priority: P1
   title: Make Claim and K-Asset verdict mappings total and aligned
@@ -115,7 +116,8 @@ items:
   compatibility: Breaking only for oversized batches; normal nesting is unchanged.
   tests:
   - harness/unit_kasset.py
-  status: proposed
+  status: fixed
+  note: Batch cap 32 and parent cap 64; per-child phlo is still linear in the batch.
 - id: RR-06
   priority: P2
   title: Make Credential.check explicitly advisory or authenticate it

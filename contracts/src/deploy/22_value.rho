@@ -181,12 +181,15 @@ in {
                     } |
 
                     contract ValueProposition(@"proveValidated", dId2, @atHeight, ret2) = {
-                      new a2 in {
+                      new a2, h2 in {
                         authSubject!(*dId2, *a2) |
-                        for (@(true, who) <- a2) {
+                        nowHeight!(*h2) |
+                        for (@(true, who) <- a2; @now <- h2) {
                           for (@s <- vpState) {
                             if (s.get("status") != "validated") {
                               vpState!(s) | ret2!((false, "not validated"))
+                            } else if (atHeight != now) {
+                              vpState!(s) | ret2!((false, "height"))
                             } else {
                               new proofState, Proof, proofUriCh in {
                                 proofState!({

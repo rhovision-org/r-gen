@@ -332,8 +332,9 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
         authSubject!(*dId, *aCh) |
         for (@(true, who) <- aCh) {
           for (@snap <<- kState) {
-            match (snap.get("claimant") == who, snap.get("status") == "approved") {
-              (true, true) => {
+            match (snap.get("claimant") == who, snap.get("status") == "approved",
+                   childRefs.length() <= 32) {
+              (true, true, true) => {
                 new preCh in {
                   nestCheck!(childRefs, 0, snap, *preCh) |
                   for (@p <- preCh) {
@@ -346,8 +347,10 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
                               (true, "ok") => {
                                 for (@s <- kState) {
                                   match (s.get("claimant") == who,
-                                         s.get("status") == "approved") {
-                                    (true, true) => {
+                                         s.get("status") == "approved",
+                                         childRefs.length() <= 32,
+                                         s.get("childRefs").length() + childRefs.length() <= 64) {
+                                    (true, true, true, true) => {
                                       new finalCh in {
                                         nestCheck!(childRefs, 0, s, *finalCh) |
                                         for (@f <- finalCh) {
@@ -363,7 +366,7 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
                                         }
                                       }
                                     }
-                                    _ => { kState!(s) | ret2!((false, "parent changed")) }
+                                    _ => { kState!(s) | ret2!((false, "parent changed or limit")) }
                                   }
                                 }
                               }
@@ -377,8 +380,8 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
                   }
                 }
               }
-              (false, _) => { ret2!((false, "not claimant")) }
-              _ => { ret2!((false, "parent not approved")) }
+              (false, _, _) => { ret2!((false, "not claimant")) }
+              _ => { ret2!((false, "parent not approved or limit")) }
             }
           }
         }

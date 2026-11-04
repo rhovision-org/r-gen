@@ -312,9 +312,9 @@ findings:
   - ValueProposition.proveValidated
   actions:
   - RR-03
-  disposition: accepted
-  note: The arm stores the @atHeight argument verbatim. Current core consumers pass the chain height, so the immediate path
-    checks out, but the proof API permits arbitrary-height proofs for any future consumer that trusts the payload.
+  disposition: fixed
+  note: Phase 2 adds a nowHeight read and rejects proveValidated when the supplied height differs from chain height, so the
+    proof payload can no longer carry an arbitrary height.
 - id: RGA-022
   title: Provenance creation is unauthenticated, unbound to an asset, and permits empty writers
   severity: S2
@@ -396,10 +396,8 @@ findings:
   - KAsset.nest
   actions:
   - RR-05
-  disposition: accepted
-  note: childRefs is caller-supplied and each child is resolved, proved, taken, and checked. There is no count or depth cap;
-    the parent childRefs list grows with every nest. The result is a phlo/liveness ceiling and unbounded state growth, not
-    an authority bypass.
+  disposition: fixed
+  note: Phase 2 caps a nest batch at 32 children and the parent list at 64, rejecting larger batches before proof consumption.
 - id: RGA-026
   title: Claim, VP, and oracle creation accept unvalidated deadlines and orderings
   severity: S3
