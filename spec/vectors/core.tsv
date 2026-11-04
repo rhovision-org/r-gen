@@ -20,6 +20,12 @@ VP-withdraw-nonproposer	value	withdraw	non-proposer	none	RGen.VPState.withdraw_r
 KASSET-reject	kasset	reject	validated asset	some	RGen.KAssetState.reject_requires_credential_proof
 PROV-comment-writer	provenance	comment	listed writer	some	RGen.ProvenanceState.addComment_requires_writer
 CRED-attest-thirdparty	credential	attest	third party	some	RGen.CredentialState.attest_twice
+CRED-revoke	credential	revoke	active credential	some	RGen.CredentialState.revoke_sets_revoked
+CRED-renew	credential	renew	issuer renewal	some	RGen.CredentialState.renew_requires_issuer
+KASSET-proveApproved	kasset	proveApproved	approved asset	some	RGen.KAssetState.proveApproved_requires_approved
+ORACLE-decide	oracle	decide	adjudicator decision	some	RGen.OracleState.decide_once
+KASSET-openDispute-party	kasset	openDispute	party dispute	some	RGen.KAssetState.openDispute_once
+VP-openDispute	value	openDispute	party dispute	some	RGen.VPState.openDispute_requires_status
 O2-close-open	oracle	close	open case	none	RGen.OracleState.close_open_refused
 P1-anchor-duplicate	provenance	anchor	existing anchor	none	RGen.ProvenanceState.addAnchor_refused_duplicate
 P1-anchor-append	provenance	anchor	existing anchors	preserved	RGen.P1_anchors_append_only

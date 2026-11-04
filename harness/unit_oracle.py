@@ -36,6 +36,7 @@ def main() -> int:
 
     reply = fixtures.oracle_decide(case_uri, "dave", decision)
     assertions.expect_ok("adjudicator decide", reply)
+    corpus.assert_row("ORACLE-decide", reply)
     reply = fixtures.oracle_decide(case_uri, "dave", decision)
     assertions.expect_refusal("second decide refused", reply, "not open")
 

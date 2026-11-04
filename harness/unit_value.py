@@ -89,6 +89,7 @@ def main() -> int:
     }
     opened = fixtures.vp_open_dispute(vp_uri, "alice", case_req)
     assertions.expect_ok("open dispute", opened)
+    corpus.assert_row("VP-openDispute", opened)
     reply = fixtures.vp_prove_validated(vp_uri, "bob")
     assertions.expect_refusal("disputed cannot prove", reply, "not validated")
     corpus.assert_row("V2-prove-disputed", reply)

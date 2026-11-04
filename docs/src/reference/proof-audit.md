@@ -88,7 +88,7 @@ were:
 - RGA-002: proof-cell metadata is inert; no cross-arm proof-reuse theorem.
 - RGA-003: versioned independence is missing; the L1 alias is a plain-Store theorem.
 - RGA-004: guard definitions and `guard_eq` theorems now exist for all 32 mutating proved-model arms; the model/code divergences remain in the ledger.
-- RGA-005: `proved-conformance` was zero; fourteen arms are now promoted vector-suite pairs.
+- RGA-005: `proved-conformance` was zero; twenty arms are now promoted vector-suite pairs.
 - RGA-013: `Identity.update` was mapped to a different operation; now modeled by `ProfileState.updateProfile`.
 
 The remaining P0 items are contract-state and atomicity findings: RGA-020 (verdict mapping),

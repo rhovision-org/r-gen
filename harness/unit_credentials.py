@@ -73,11 +73,13 @@ def main() -> int:
     reply = fixtures.call_uri(carol_cred, "renew", [Raw("*dId"), 2000000, "renew-hash"],
                               key="deployer")
     assertions.expect_ok("issuer renew", reply)
+    corpus.assert_row("CRED-renew", reply)
     reply = fixtures.call_uri(carol_cred, "renew", [Raw("*dId"), 1, "short"], key="bob")
     assertions.expect_refusal("subject cannot renew", reply, "not issuer")
 
     reply = fixtures.revoke_credential(bob_cred, "bob")
     assertions.expect_ok("revoke", reply)
+    corpus.assert_row("CRED-revoke", reply)
     reply = fixtures.cred_prove(bob_cred, "bob", req)
     assertions.expect_refusal("revoked credential cannot prove", reply, "revoked")
     corpus.assert_row("C1-prove-revoked", reply)

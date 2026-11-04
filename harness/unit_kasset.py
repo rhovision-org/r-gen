@@ -31,6 +31,7 @@ def main() -> int:
     assertions.expect("proveApproved returns proof and take", isinstance(reply, list), True)
     prove, take = reply
     assertions.expect_ok("proveApproved", prove)
+    corpus.assert_row("KASSET-proveApproved", prove)
     assertions.expect_ok("approval proof take", take)
     assertions.expect("approval proof id", take[1].get("id"), kasset_uri)
 
@@ -95,6 +96,7 @@ def main() -> int:
     assertions.expect_refusal("non-party dispute refused", reply, "not a party")
     reply = fixtures.kasset_open_dispute(kasset_uri, "alice", case_req)
     assertions.expect_ok("party dispute", reply)
+    corpus.assert_row("KASSET-openDispute-party", reply)
 
     print("unit_kasset: pass")
     return 0

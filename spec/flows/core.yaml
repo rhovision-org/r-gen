@@ -108,7 +108,9 @@
   transition: RGen.credentialRenew
   guard_eq: RGen.credentialRenew_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_credentials.py
+  note: suite asserts the CRED-renew vector row
 
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
@@ -118,7 +120,9 @@
   transition: RGen.credentialRevoke
   guard_eq: RGen.credentialRevoke_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_credentials.py
+  note: suite asserts the CRED-revoke vector row
   consumedProofs: []
   classification: RGen.credential_prove_revoke_never_after
 
@@ -277,7 +281,9 @@
   transition: RGen.vpOpenDispute
   guard_eq: RGen.vpOpenDispute_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_value.py
+  note: suite asserts the VP-openDispute vector row
 
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
@@ -340,7 +346,9 @@
   transition: RGen.oracleDecide
   guard_eq: RGen.oracleDecide_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_oracle.py
+  note: suite asserts the ORACLE-decide vector row
   consumedProofs: [credentialProof]
   classification: RGen.oracle_decide_expire_two_way
 
@@ -506,7 +514,9 @@
   transition: RGen.kassetOpenDispute
   guard_eq: RGen.kassetOpenDispute_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_kasset.py
+  note: suite asserts the KASSET-openDispute-party vector row
 
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
@@ -566,7 +576,9 @@
   transition: RGen.kassetProveApproved
   guard_eq: RGen.kassetProveApproved_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_kasset.py
+  note: suite asserts the KASSET-proveApproved vector row
   note: planned core arm: one-shot approval proof
 - file: contracts/src/deploy/11_credentials.rho
   contract: Proof
