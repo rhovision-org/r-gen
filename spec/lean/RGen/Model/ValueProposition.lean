@@ -84,9 +84,9 @@ def applyDecision (s : VPState) (caseId : Id) (d : VPDecision) : Option VPState 
   else none
 
 /-- A proof that the proposition is validated. -/
-def proveValidated (s : VPState) (proofUri : Id) (atHeight : Height) :
-    Option (ProofState (Id × Height)) :=
-  if s.status = VPStatus.validated then some ⟨(proofUri, atHeight), false⟩ else none
+def proveValidated (s : VPState) (proofUri : Id) (atHeight : Height) (caller : Id) :
+    Option (ProofState (Id × Height × Id)) :=
+  if s.status = VPStatus.validated then some ⟨(proofUri, atHeight, caller), false⟩ else none
 
 /-! ### Guards and once-only transitions -/
 
@@ -151,8 +151,8 @@ theorem validate_once {s s' : VPState} {validator : Id} {proof : ProofData}
   · simp at h
 
 theorem proveValidated_requires_validated {s : VPState} {uri : Id} {atHeight : Height}
-    {p : ProofState (Id × Height)}
-    (hp : s.proveValidated uri atHeight = some p) : s.status = VPStatus.validated := by
+    {caller : Id} {p : ProofState (Id × Height × Id)}
+    (hp : s.proveValidated uri atHeight caller = some p) : s.status = VPStatus.validated := by
   unfold proveValidated at hp
   split at hp
   · rename_i hg
@@ -205,8 +205,8 @@ theorem comment_preserves_status {s s' : VPState} {commentId : Id} {atHeight : H
 
 /-- A disputed proposition cannot be proved as validated. -/
 theorem prove_after_dispute {s s' : VPState} {caller caseId uri : Id} {atHeight : Height}
-    (h : s.openDispute caller caseId = some s') :
-    s'.proveValidated uri atHeight = none := by
+    {proofCaller : Id} (h : s.openDispute caller caseId = some s') :
+    s'.proveValidated uri atHeight proofCaller = none := by
   unfold openDispute at h
   split at h
   · simp only [Option.some.injEq] at h
@@ -270,8 +270,8 @@ theorem proposed_progress {s : VPState} (h : s.status = VPStatus.proposed) :
   simp [withdraw, h]
 
 theorem validated_progress {s : VPState} (h : s.status = VPStatus.validated)
-    (uri : Id) (atHeight : Height) :
-    (s.proveValidated uri atHeight).isSome := by
+    (uri : Id) (atHeight : Height) (caller : Id) :
+    (s.proveValidated uri atHeight caller).isSome := by
   simp [proveValidated, h]
 
 theorem disputed_progress {s : VPState} (h : s.status = VPStatus.disputed)

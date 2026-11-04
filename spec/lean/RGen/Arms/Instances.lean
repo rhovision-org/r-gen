@@ -52,8 +52,8 @@ def vpWithdrawArm : Arm VPState Id :=
 def vpOpenDisputeArm : Arm VPState (Id × Id) :=
   ⟨vpCell, fun s p => vpOpenDispute s p.1 p.2, [], 7⟩
 
-def vpProveValidatedArm : Arm VPState (Id × Height) :=
-  ⟨vpCell, fun s p => vpProveValidated s p.1 p.2, [], 8⟩
+def vpProveValidatedArm : Arm VPState ((Id × Height) × Id) :=
+  ⟨vpCell, fun s p => vpProveValidated s p.1.1 p.1.2 p.2, [], 8⟩
 
 def vpDecisionArm : Arm VPState (Id × VPDecision) :=
   ⟨vpCell, fun s p => vpDecision s p.1 p.2, [], 9⟩
@@ -154,7 +154,7 @@ theorem vp_validate_arm_authority (p : VPValidateArgs) :
     DependsOnlyOn (fun w => vpValidateArm.decision w p) [vpCell] :=
   core_arm_authority vpValidateArm p
 
-theorem vp_prove_validated_arm_authority (p : Id × Height) :
+theorem vp_prove_validated_arm_authority (p : (Id × Height) × Id) :
     DependsOnlyOn (fun w => vpProveValidatedArm.decision w p) [vpCell] :=
   core_arm_authority vpProveValidatedArm p
 

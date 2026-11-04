@@ -48,7 +48,7 @@ unproved. `model-stricter` and `effect-omitting` mean a model proof may not cove
 | DIV-007 | `Claim.validate` | shape-different | Model takes a caller-chosen K-Asset id; deployed mints with `makeKAsset` |
 | DIV-008 | `Claim.validate` | shape-different | Model checks `requirement`; deployed checks `selectionCriteria` |
 | DIV-009 | `Oracle.evidence` | model-permissive | Resolved: model requires a listed party or the adjudicator |
-| DIV-010 | `VP.proveValidated` | effect-omitting | Model payload lacks `caller` and accepts caller-chosen `atHeight` |
+| DIV-010 | `VP.proveValidated` | effect-omitting | Phase 2 adds `caller` to the payload; the contract binds `atHeight`, the model still treats it as a parameter |
 | DIV-011 | `Identity.update` | shape-different | Model transfers ownership; deployed patches profile hashes |
 | DIV-012 | `IdentityFactory.create` | effect-omitting | Model proves first-writer-wins only; deployed also writes identity and bundle |
 | DIV-013 | `Claim.validate` | shape-different | Deployed Claim and K-Asset verdict mappings disagree on unknown verdicts |

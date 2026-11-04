@@ -72,8 +72,8 @@ theorem V1_validate_once {s s' : VPState} {validator : Id} {proof : ProofData}
 
 /-- V2: a disputed proposition cannot be proved validated. -/
 theorem V2_dispute_blocks_prove {s s' : VPState} {caller caseId uri : Id} {atHeight : Height}
-    (h : s.openDispute caller caseId = some s') :
-    s'.proveValidated uri atHeight = none :=
+    {proofCaller : Id} (h : s.openDispute caller caseId = some s') :
+    s'.proveValidated uri atHeight proofCaller = none :=
   VPState.prove_after_dispute h
 
 /-! ### K — K-Assets -/

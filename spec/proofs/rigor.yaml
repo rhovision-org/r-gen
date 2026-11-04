@@ -325,7 +325,8 @@ divergences:
   model_decl: RGen.VPState.proveValidated
   deployed: contracts/src/deploy/22_value.rho:183
   direction: effect-omitting
-  consequence: Model payload is (uri, atHeight); deployed also stores caller and accepts caller-chosen atHeight.
+  consequence: Phase 2 adds caller to the model payload; the deployed contract also binds atHeight to nowHeight. The model
+    still treats atHeight as a parameter.
   finding: RGA-021
 - id: DIV-011
   arm: Identity.update

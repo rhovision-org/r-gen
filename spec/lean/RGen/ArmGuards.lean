@@ -308,12 +308,12 @@ theorem kassetProveApproved_guard_eq (s : KAssetState) (uri : Id) :
   unfold kassetProveApproved KAssetState.proveApproved kassetProveApprovedGuard
   cases h : s.approver <;> by_cases hs : s.status = KAssetStatus.approved <;> simp [h, hs]
 
-def vpProveValidatedGuard (s : VPState) (_ : Id × Height) : Bool :=
+def vpProveValidatedGuard (s : VPState) (_ : (Id × Height) × Id) : Bool :=
   decide (s.status = VPStatus.validated)
 
-theorem vpProveValidated_guard_eq (s : VPState) (p : Id × Height) :
+theorem vpProveValidated_guard_eq (s : VPState) (p : (Id × Height) × Id) :
     (vpProveValidatedArm.step s p).isSome = vpProveValidatedGuard s p := by
-  change (vpProveValidated s p.1 p.2).isSome = vpProveValidatedGuard s p
+  change (vpProveValidated s p.1.1 p.1.2 p.2).isSome = vpProveValidatedGuard s p
   unfold vpProveValidated VPState.proveValidated vpProveValidatedGuard
   by_cases h : s.status = VPStatus.validated <;> simp [h]
 

@@ -25,8 +25,8 @@ def vpWithdraw (s : VPState) (proposer : Id) : Option VPState :=
 def vpOpenDispute (s : VPState) (party caseId : Id) : Option VPState :=
   s.openDispute party caseId
 
-def vpProveValidated (s : VPState) (uri : Id) (atHeight : Height) : Option VPState :=
-  match s.proveValidated uri atHeight with
+def vpProveValidated (s : VPState) (uri : Id) (atHeight : Height) (caller : Id) : Option VPState :=
+  match s.proveValidated uri atHeight caller with
   | none => none
   | some _ => some s
 
@@ -62,12 +62,12 @@ theorem vp_validate_openDispute_ordered {a : VPValidateArgs} {party caseId : Id}
   simp [vpValidate, VPState.validate, hs]
 
 theorem vp_proveValidated_openDispute_ordered {uri : Id} {atHeight : Height}
-    {party caseId : Id} :
-    OrderedAfter (fun s => vpProveValidated s uri atHeight)
+    {caller party caseId : Id} :
+    OrderedAfter (fun s => vpProveValidated s uri atHeight caller)
       (fun s => vpOpenDispute s party caseId) := by
   intro s s1 hd
   dsimp only [vpOpenDispute] at hd
-  have hs := VPState.prove_after_dispute (uri := uri) (atHeight := atHeight) hd
+  have hs := VPState.prove_after_dispute (uri := uri) (atHeight := atHeight) (proofCaller := caller) hd
   simp [vpProveValidated, hs]
 
 theorem vp_decision_decision_never_after {caseId : Id} {d : VPDecision} :
