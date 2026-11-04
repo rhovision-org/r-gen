@@ -95,7 +95,7 @@ of the pre-state.
 ## Axiom audit
 
 `tools/check_lean.py --audit` elaborates `RGen/Audit.lean`. On 2026-11-04 the listed
-192 theorems reported only `propext` and `Quot.sound` (`Classical.choice` is permitted
+194 theorems reported only `propext` and `Quot.sound` (`Classical.choice` is permitted
 but unused). The list is hand-maintained; the [proof audit](proof-audit.md) records that
 gap as RGA-006.
 

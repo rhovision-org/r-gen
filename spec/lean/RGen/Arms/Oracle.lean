@@ -32,8 +32,8 @@ def oracleFinish (s : OracleState) : Option OracleState :=
 def oracleClose (s : OracleState) : Option OracleState :=
   s.close
 
-def oracleEvidence (s : OracleState) (ref : Id) : Option OracleState :=
-  s.addEvidence ref
+def oracleEvidence (s : OracleState) (caller ref : Id) : Option OracleState :=
+  s.addEvidence caller ref
 
 def oracleRollback (s : OracleState) : Option OracleState :=
   s.rollbackExecute
@@ -75,7 +75,7 @@ theorem oracle_close_close_never_after :
   exact OracleState.close_once h
 
 theorem oracle_decide_evidence_never_after {a : OracleDecideArgs} {ref : Id} :
-    NeverAfter (fun s => oracleDecide s a) (fun s => oracleEvidence s ref) := by
+    NeverAfter (fun s => oracleDecide s a) (fun s => oracleEvidence s caller ref) := by
   intro s s1 hd
   have hs := OracleState.decide_sets_status hd
   simp [oracleEvidence, OracleState.addEvidence, hs]

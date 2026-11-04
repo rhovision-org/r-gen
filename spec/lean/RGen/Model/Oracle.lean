@@ -35,6 +35,7 @@ structure OracleState where
   deadline : Height
   status : OracleStatus
   decision : Option VPDecision
+  parties : List Id
   evidence : List Id
   deriving DecidableEq, Repr
 
@@ -76,29 +77,39 @@ def close (s : OracleState) : Option OracleState :=
     some { s with status := OracleStatus.closed }
   else none
 
-def addEvidence (s : OracleState) (ref : Id) : Option OracleState :=
-  if s.status = OracleStatus.open ∧ ref ∉ s.evidence then
+def addEvidence (s : OracleState) (caller ref : Id) : Option OracleState :=
+  if s.status = OracleStatus.open ∧ (caller ∈ s.parties ∨ caller = s.adjudicator) ∧
+      ref ∉ s.evidence then
     some { s with evidence := ref :: s.evidence }
   else none
 
-theorem addEvidence_requires_open {s s' : OracleState} {ref : Id}
-    (h : s.addEvidence ref = some s') : s.status = OracleStatus.open := by
+theorem addEvidence_requires_open {s s' : OracleState} {caller ref : Id}
+    (h : s.addEvidence caller ref = some s') : s.status = OracleStatus.open := by
   unfold addEvidence at h
   split at h
   · rename_i hg
     exact hg.1
   · simp at h
 
-theorem addEvidence_no_duplicate {s s' : OracleState} {ref : Id}
-    (h : s.addEvidence ref = some s') : ref ∉ s.evidence := by
+theorem addEvidence_requires_party {s s' : OracleState} {caller ref : Id}
+    (h : s.addEvidence caller ref = some s') :
+    caller ∈ s.parties ∨ caller = s.adjudicator := by
   unfold addEvidence at h
   split at h
   · rename_i hg
-    exact hg.2
+    exact hg.2.1
   · simp at h
 
-theorem addEvidence_appends {s s' : OracleState} {ref : Id}
-    (h : s.addEvidence ref = some s') : s'.evidence = ref :: s.evidence := by
+theorem addEvidence_no_duplicate {s s' : OracleState} {caller ref : Id}
+    (h : s.addEvidence caller ref = some s') : ref ∉ s.evidence := by
+  unfold addEvidence at h
+  split at h
+  · rename_i hg
+    exact hg.2.2
+  · simp at h
+
+theorem addEvidence_appends {s s' : OracleState} {caller ref : Id}
+    (h : s.addEvidence caller ref = some s') : s'.evidence = ref :: s.evidence := by
   unfold addEvidence at h
   split at h
   · simp only [Option.some.injEq] at h

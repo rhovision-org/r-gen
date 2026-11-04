@@ -47,7 +47,7 @@ unproved. `model-stricter` and `effect-omitting` mean a model proof may not cove
 | DIV-006 | `KAsset.nest` | mixed | Model permits equal `approvedAt` with distinct ids; deployed requires strict greater-than |
 | DIV-007 | `Claim.validate` | shape-different | Model takes a caller-chosen K-Asset id; deployed mints with `makeKAsset` |
 | DIV-008 | `Claim.validate` | shape-different | Model checks `requirement`; deployed checks `selectionCriteria` |
-| DIV-009 | `Oracle.evidence` | model-permissive | Model requires open only; deployed also requires a party or adjudicator |
+| DIV-009 | `Oracle.evidence` | model-permissive | Resolved: model requires a listed party or the adjudicator |
 | DIV-010 | `VP.proveValidated` | effect-omitting | Model payload lacks `caller` and accepts caller-chosen `atHeight` |
 | DIV-011 | `Identity.update` | shape-different | Model transfers ownership; deployed patches profile hashes |
 | DIV-012 | `IdentityFactory.create` | effect-omitting | Model proves first-writer-wins only; deployed also writes identity and bundle |

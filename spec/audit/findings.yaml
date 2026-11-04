@@ -135,8 +135,8 @@ findings:
   actions:
   - LR-07
   disposition: accepted
-  note: 'Phase 2 adds check_lean.py --audit-coverage: every Pareto #check must appear in Audit.lean. The audit is now 83 Pareto
-    theorems and 192 axiom checks, but public theorems outside the Pareto vocabulary can still escape the list.'
+  note: 'Phase 2 adds check_lean.py --audit-coverage: every Pareto #check must appear in Audit.lean. The audit is now 84 Pareto
+    theorems and 194 axiom checks, but public theorems outside the Pareto vocabulary can still escape the list.'
 - id: RGA-007
   title: The pair matrix covers 32 rows, not the 48 distinct pairs over modeled cells
   severity: S3

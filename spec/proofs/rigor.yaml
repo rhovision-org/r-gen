@@ -319,7 +319,7 @@ divergences:
   model_decl: RGen.OracleState.addEvidence
   deployed: contracts/src/deploy/30_oracle.rho:86
   direction: model-permissive
-  consequence: Model requires only open status; deployed also requires a party or the adjudicator.
+  consequence: 'Resolved in Phase 2: oracle evidence now requires a listed party or the adjudicator.'
   finding: RGA-004
 - id: DIV-010
   arm: ValueProposition.proveValidated

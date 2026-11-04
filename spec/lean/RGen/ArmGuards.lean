@@ -207,14 +207,16 @@ theorem oracleClose_guard_eq (s : OracleState) (p : Unit) :
   unfold oracleClose OracleState.close oracleCloseGuard
   by_cases h : s.status = OracleStatus.executed ∨ s.status = OracleStatus.expired <;> simp [h]
 
-def oracleEvidenceGuard (s : OracleState) (ref : Id) : Bool :=
-  decide (s.status = OracleStatus.open ∧ ref ∉ s.evidence)
+def oracleEvidenceGuard (s : OracleState) (p : Id × Id) : Bool :=
+  decide (s.status = OracleStatus.open ∧ (p.1 ∈ s.parties ∨ p.1 = s.adjudicator) ∧
+    p.2 ∉ s.evidence)
 
-theorem oracleEvidence_guard_eq (s : OracleState) (ref : Id) :
-    (oracleEvidenceArm.step s ref).isSome = oracleEvidenceGuard s ref := by
-  change (oracleEvidence s ref).isSome = oracleEvidenceGuard s ref
+theorem oracleEvidence_guard_eq (s : OracleState) (p : Id × Id) :
+    (oracleEvidenceArm.step s p).isSome = oracleEvidenceGuard s p := by
+  change (oracleEvidence s p.1 p.2).isSome = oracleEvidenceGuard s p
   unfold oracleEvidence OracleState.addEvidence oracleEvidenceGuard
-  by_cases h : s.status = OracleStatus.open ∧ ref ∉ s.evidence <;> simp [h]
+  by_cases h : s.status = OracleStatus.open ∧ (p.1 ∈ s.parties ∨ p.1 = s.adjudicator) ∧
+      p.2 ∉ s.evidence <;> simp [h]
 
 def provenanceCommentGuard (s : ProvenanceState) (p : Id × Id) : Bool :=
   decide (p.1 ∈ s.writers)

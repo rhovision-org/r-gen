@@ -109,8 +109,8 @@ def oracleFinishArm : Arm OracleState Unit :=
 def oracleCloseArm : Arm OracleState Unit :=
   ⟨oracleCell, fun s _ => oracleClose s, [], 25⟩
 
-def oracleEvidenceArm : Arm OracleState Id :=
-  ⟨oracleCell, oracleEvidence, [], 26⟩
+def oracleEvidenceArm : Arm OracleState (Id × Id) :=
+  ⟨oracleCell, fun s p => oracleEvidence s p.1 p.2, [], 26⟩
 
 def oracleRollbackArm : Arm OracleState Unit :=
   ⟨oracleCell, fun s _ => oracleRollback s, [], 27⟩
@@ -234,7 +234,7 @@ theorem oracle_close_arm_authority (p : Unit) :
     DependsOnlyOn (fun w => oracleCloseArm.decision w p) [oracleCell] :=
   core_arm_authority oracleCloseArm p
 
-theorem oracle_evidence_arm_authority (p : Id) :
+theorem oracle_evidence_arm_authority (p : Id × Id) :
     DependsOnlyOn (fun w => oracleEvidenceArm.decision w p) [oracleCell] :=
   core_arm_authority oracleEvidenceArm p
 

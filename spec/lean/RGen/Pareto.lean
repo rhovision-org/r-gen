@@ -109,3 +109,4 @@ end RGen
 #check RGen.take_guard_eq
 #check RGen.provenance_anchor_comment_independent
 #check RGen.KAssetState.approve_requires_credential_type
+#check RGen.OracleState.addEvidence_requires_party
