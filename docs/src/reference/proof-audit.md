@@ -44,7 +44,7 @@ unproved. `model-stricter` and `effect-omitting` mean a model proof may not cove
 | DIV-003 | `Credential.renew` | mixed | Model adds `issuedAt <= newExpiry`; deployed writes `evidenceHash` and `renewals` |
 | DIV-004 | `KAsset.approve` | model-permissive | Phase 2 requires the Approver credential type; registry/minLevel qualification remains unmodeled |
 | DIV-005 | `KAsset.nest` | model-permissive | Resolved: model now requires an approved parent |
-| DIV-006 | `KAsset.nest` | mixed | Model permits equal `approvedAt` with distinct ids; deployed requires strict greater-than |
+| DIV-006 | `KAsset.nest` | mixed | Resolved: model requires strictly increasing `approvedAt` |
 | DIV-007 | `Claim.validate` | shape-different | Model takes a caller-chosen K-Asset id; deployed mints with `makeKAsset` |
 | DIV-008 | `Claim.validate` | shape-different | Model checks `requirement`; deployed checks `selectionCriteria` |
 | DIV-009 | `Oracle.evidence` | model-permissive | Resolved: model requires a listed party or the adjudicator |

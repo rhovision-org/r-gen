@@ -99,7 +99,8 @@ findings:
   - LR-08
   disposition: fixed
   note: Phase 2 adds guard_eq for all 32 mutating proved-model arms, aligns credential revoke/expiry, requires the Approver
-    credential type, and requires an approved parent for nest. The remaining model/code divergences are recorded in the ledger.
+    credential type and an approved parent, and uses strict approvedAt order. The remaining model/code divergences are in
+    the ledger.
 - id: RGA-005
   title: proved-conformance is zero; vectors are emitted but not asserted end-to-end
   severity: S2

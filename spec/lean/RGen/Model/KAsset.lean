@@ -115,7 +115,7 @@ def childKey (c : ApprovedProofData) : Height × Id := (c.approvedAt, c.id)
 def strictRising : List (Height × Id) → Bool
   | [] => true
   | [_] => true
-  | a :: b :: rest => decide (lexLt a b) && strictRising (b :: rest)
+  | a :: b :: rest => decide (a.1 < b.1) && strictRising (b :: rest)
 
 def nodupIds : List Id → Bool
   | [] => true
@@ -453,7 +453,7 @@ theorem nest_refused_unsorted {s : KAssetState} {caller : Id}
 
 /-- Adjacent children are strictly ordered. -/
 theorem strictRising_head {a b : Height × Id} {rest : List (Height × Id)}
-    (h : strictRising (a :: b :: rest) = true) : lexLt a b := by
+    (h : strictRising (a :: b :: rest) = true) : a.1 < b.1 := by
   unfold strictRising at h
   rw [Bool.and_eq_true] at h
   exact of_decide_eq_true h.1

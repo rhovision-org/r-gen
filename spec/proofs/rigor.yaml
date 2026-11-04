@@ -297,8 +297,7 @@ divergences:
   model_decl: RGen.KAssetState.strictRising
   deployed: contracts/src/lib/KAsset.rho:306
   direction: mixed
-  consequence: Model permits equal approvedAt with distinct ids; deployed requires strict approvedAt greater than the previous
-    child.
+  consequence: 'Resolved in Phase 2: strictRising now requires strictly increasing approvedAt, matching the deployed order.'
   finding: RGA-004
 - id: DIV-007
   arm: Claim.validate
