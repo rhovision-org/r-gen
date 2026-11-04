@@ -56,7 +56,7 @@ The HAZOP rows for each item are in the manifest. Representative links:
 - RR-05 is fixed: `KAsset.nest` caps a batch at 32 children and the parent list at 64, rejecting
   larger batches before proof consumption.
 - RR-07 is partial: claim creation now requires a deadline and rejects a comment window after the
-  deadline. Future-ness relative to chain height is still not checked for claim or oracle creation.
+  deadline. Claim and VP creation now require a future deadline; oracle future-ness remains open.
 - The other items remain proposed. The devnet suites were not re-run after the contract changes in
   this environment because the isolated node failed to start (exit 137); `parse-check` passes and
   the changes are static. Re-run `make install unit-all` before promotion.

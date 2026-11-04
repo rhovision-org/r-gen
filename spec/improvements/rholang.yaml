@@ -22,7 +22,7 @@ items:
   tests:
   - harness/unit_oracle.py
   status: partial
-  note: Opener auth added; party/subject binding remains.
+  note: Opener auth, openedBy match, and case-field presence added; party/subject registry binding remains.
 - id: RR-02
   priority: P1
   title: Authenticate and bind provenance creation; reject empty writers
@@ -45,7 +45,7 @@ items:
   tests:
   - harness/unit_provenance.py
   status: partial
-  note: Creator auth and non-empty writers added; asset registry binding remains an extension.
+  note: Creator auth, non-empty writers, and asset URI presence added; asset registry binding remains.
 - id: RR-03
   priority: P1
   title: Bind validated proofs to the chain height
@@ -166,7 +166,7 @@ items:
   - harness/unit_value.py
   - harness/unit_oracle.py
   status: partial
-  note: Phase 2 adds claim deadline presence and comment-window ordering; future-ness is still open.
+  note: Claim and VP future deadlines and claim comment ordering are checked; oracle future-ness remains.
 - id: RR-08
   priority: P1
   title: Make oracle execution retry-safe and outcome-blind

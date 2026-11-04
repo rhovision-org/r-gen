@@ -27,7 +27,7 @@ in {
 
   claimRegistryState!({}) |
 
-  contract claimReqOk(@req, ret) = {
+  contract claimReqOk(@req, @height, ret) = {
     match req.get("work") {
       Nil => { ret!(false) }
       work => {
@@ -37,7 +37,8 @@ in {
           (s, d, di, j, sc, q) => {
             if (s == Nil || s == "" || d == Nil || d == ""
                 || di == Nil || di == "" || j == Nil || j == ""
-                || sc == Nil || q == Nil || req.get("deadlineHeight") == Nil) { ret!(false) }
+                || sc == Nil || q == Nil || req.get("deadlineHeight") == Nil
+                || req.get("deadlineHeight") <= height) { ret!(false) }
             else {
               if (req.get("commentUntilHeight") != Nil
                   && req.get("commentUntilHeight") > req.get("deadlineHeight")) {
@@ -91,7 +92,7 @@ in {
         nowHeight!(*hCh) |
         for (@(true, claimant, pk) <- aCh; @height <- hCh) {
           new okCh in {
-            claimReqOk!(req, *okCh) |
+            claimReqOk!(req, height, *okCh) |
             for (@ok <- okCh) {
               if (not ok) {
                 ret!((false, "fields"))

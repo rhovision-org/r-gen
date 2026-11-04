@@ -113,7 +113,8 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
     new aCh in {
     authOwner!(*dId, *aCh) |
     for (@(true, creator, pk) <- aCh) {
-      if (writers.length() == 0) { ret!((false, "writers")) }
+      if (writers.length() == 0 || assetRef.get("uri") == Nil
+          || assetRef.get("uri") == "") { ret!((false, "writers or asset")) }
       else {
       new pState, Provenance, uriCh in {
       pState!({

@@ -20,7 +20,7 @@ in {
   // @@INLINE:lib/Time.rho@@
   // @@INLINE:lib/Proof.rho@@
 
-  contract vpReqOk(@req, ret) = {
+  contract vpReqOk(@req, @height, ret) = {
     match req.get("subjectRef") {
       Nil => { ret!(false) }
       sr => {
@@ -28,7 +28,7 @@ in {
                req.get("selectionCriteria"), req.get("deadlineHeight")) {
           (s, t, sc, d) => {
             if (s == Nil || s == "" || t == Nil || t == ""
-                || sc == Nil || d == Nil) { ret!(false) }
+                || sc == Nil || d == Nil || d <= height) { ret!(false) }
             else { ret!(true) }
           }
         }
@@ -58,7 +58,7 @@ in {
           nowHeight!(*hCh) |
           for (@(true, proposer) <- aCh; @height <- hCh) {
             new okCh in {
-              vpReqOk!(req, *okCh) |
+              vpReqOk!(req, height, *okCh) |
               for (@ok <- okCh) {
                 if (not ok) {
                   ret!((false, "fields"))

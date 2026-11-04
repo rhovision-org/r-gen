@@ -331,8 +331,8 @@ findings:
   actions:
   - RR-02
   disposition: accepted
-  note: Phase 2 adds an authenticated creator and rejects an empty writer list. assetRef is still a free string with no registry
-    binding; provenance remains advisory.
+  note: Phase 2 adds an authenticated creator, rejects an empty writer list, and rejects an assetRef with no URI. The asset
+    is still not resolved against a registry; provenance remains advisory.
 - id: RGA-023
   title: OracleFactory.open is public and trusts caller-supplied parties and adjudicator reference
   severity: S2
@@ -351,8 +351,9 @@ findings:
   actions:
   - RR-01
   disposition: accepted
-  note: Phase 2 binds oracle open to the authenticated opener and requires it to equal caseReq.openedBy. Parties and subjectRef
-    remain caller-supplied and unverified; decide and execute stay bound to the stored adjudicator and private Apply.
+  note: Phase 2 binds oracle open to the authenticated opener, requires it to equal caseReq.openedBy, and rejects empty subjectRef,
+    parties, or deadline. Parties and subjectRef are still caller-supplied rather than registry-derived; decide and execute
+    stay bound to the stored adjudicator and private Apply.
 - id: RGA-024
   title: Oracle execution spans two contracts without an atomic application receipt
   severity: S2
@@ -413,8 +414,8 @@ findings:
   actions:
   - RR-07
   disposition: accepted
-  note: Phase 2 adds a claim deadline presence check and a comment-window <= deadline check. Future-ness relative to chain
-    height remains unvalidated for claim and oracle creation.
+  note: Phase 2 requires a claim deadline and rejects a comment window after it; claim and VP creation now require the deadline
+    to be in the future. Oracle open checks that a deadline is present but not that it is future-dated.
 - id: RGA-027
   title: Credential.check accepts a caller-nominated subject and must not be used as authority
   severity: S3

@@ -160,7 +160,7 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
   }
 } |
 
-  contract vpReqOk(@req, ret) = {
+  contract vpReqOk(@req, @height, ret) = {
     match req.get("subjectRef") {
       Nil => { ret!(false) }
       sr => {
@@ -168,7 +168,7 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
                req.get("selectionCriteria"), req.get("deadlineHeight")) {
           (s, t, sc, d) => {
             if (s == Nil || s == "" || t == Nil || t == ""
-                || sc == Nil || d == Nil) { ret!(false) }
+                || sc == Nil || d == Nil || d <= height) { ret!(false) }
             else { ret!(true) }
           }
         }
@@ -198,7 +198,7 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
           nowHeight!(*hCh) |
           for (@(true, proposer) <- aCh; @height <- hCh) {
             new okCh in {
-              vpReqOk!(req, *okCh) |
+              vpReqOk!(req, height, *okCh) |
               for (@ok <- okCh) {
                 if (not ok) {
                   ret!((false, "fields"))
