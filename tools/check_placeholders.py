@@ -10,11 +10,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 ALLOWED = {
     "__ROOT_URI__",
-    "__RCASH_ROOT_URI__",
-    "__PLATFORM_OWNER__",
-    "__ADMINS__",
-    "__THRESHOLD__",
-    "__GENESIS_ISSUER__",
+    "__IDENTITY_DIRECTORY_URI__",
+    "__CREDENTIAL_FACTORY_URI__",
+    "__ORACLE_FACTORY_URI__",
 }
 PATTERN = re.compile(r"__[A-Z0-9_]+__")
 

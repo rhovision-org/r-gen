@@ -5,138 +5,151 @@
     "contracts": 32,
     "per_file": {}
   },
+  "serialization_points": {
+    "rootState": "installer-gated root directory; registration only",
+    "directoryState": "identity creation first-writer-wins; not on the claim hot path",
+    "issuerState": "genesis issuer scope/status; one trust root in core",
+    "factoryState": "issued-credential registry; issuance only, never validation"
+  },
   "components": {
     "GenRoot": {
       "file": "00_root.rho",
-      "state_cells": [
-        "rootState"
-      ],
-      "depends_on": []
-    },
-    "Clock": {
-      "file": "01_kernel.rho",
       "state_cells": [],
       "depends_on": []
     },
-    "Verifier": {
-      "file": "01_kernel.rho",
-      "state_cells": [],
-      "depends_on": []
-    },
-    "Codec": {
-      "file": "01_kernel.rho",
-      "state_cells": [],
-      "depends_on": []
-    },
-    "AdminGuard": {
-      "file": "02_admin.rho",
+    "IdentityFactory": {
+      "file": "10_identity.rho",
       "state_cells": [],
       "depends_on": [
-        "Codec"
+        "GenRoot"
       ]
     },
-    "GenAdmin": {
-      "file": "02_admin.rho",
-      "state_cells": [
-        "adminState"
-      ],
-      "depends_on": [
-        "AdminGuard"
-      ]
-    },
-    "IdentityBook": {
+    "IdentityDirectory": {
       "file": "10_identity.rho",
       "state_cells": [
-        "identityState"
-      ],
-      "depends_on": [
-        "GenRoot",
-        "AdminGuard"
-      ]
-    },
-    "CredentialBook": {
-      "file": "11_credentials.rho",
-      "state_cells": [
-        "credentialState"
-      ],
-      "depends_on": [
-        "GenRoot",
-        "AdminGuard"
-      ]
-    },
-    "TokenBook": {
-      "file": "12_token.rho",
-      "state_cells": [
-        "tokenState"
+        "directoryState"
       ],
       "depends_on": [
         "GenRoot"
       ]
     },
-    "WorkBook": {
-      "file": "20_work.rho",
+    "Identity": {
+      "file": "10_identity.rho",
       "state_cells": [
-        "workState"
+        "identityState"
       ],
       "depends_on": [
-        "GenRoot",
-        "IdentityBook",
-        "AdminGuard"
+        "IdentityFactory"
       ]
     },
-    "KAssetBook": {
-      "file": "21_kasset.rho",
+    "Issuer": {
+      "file": "11_credentials.rho",
       "state_cells": [
-        "kassetState"
+        "issuerState"
       ],
       "depends_on": [
-        "GenRoot",
-        "WorkBook",
-        "CredentialBook",
-        "AdminGuard"
+        "GenRoot"
       ]
     },
-    "ProvenanceBook": {
-      "file": "22_provenance.rho",
+    "CredentialFactory": {
+      "file": "11_credentials.rho",
       "state_cells": [
-        "provenanceState"
+        "factoryState"
       ],
       "depends_on": [
-        "GenRoot",
-        "IdentityBook",
-        "AdminGuard"
+        "Issuer"
       ]
     },
-    "RiskBook": {
-      "file": "30_risk.rho",
+    "Credential": {
+      "file": "11_credentials.rho",
       "state_cells": [
-        "riskState"
+        "credState"
       ],
       "depends_on": [
-        "GenRoot",
-        "CredentialBook",
-        "AdminGuard"
+        "CredentialFactory",
+        "Issuer"
       ]
     },
-    "PaymentBook": {
-      "file": "40_payments.rho",
-      "state_cells": [
-        "paymentState"
-      ],
+    "OracleFactory": {
+      "file": "30_oracle.rho",
+      "state_cells": [],
       "depends_on": [
-        "GenRoot",
-        "AdminGuard"
+        "CredentialFactory"
       ]
     },
-    "OracleBook": {
-      "file": "50_oracle.rho",
+    "OracleCase": {
+      "file": "30_oracle.rho",
       "state_cells": [
-        "oracleState"
+        "caseState"
       ],
       "depends_on": [
-        "GenRoot",
-        "CredentialBook",
-        "AdminGuard"
+        "OracleFactory",
+        "CredentialFactory"
+      ]
+    },
+    "ProvenanceFactory": {
+      "file": "40_provenance.rho",
+      "state_cells": [],
+      "depends_on": [
+        "GenRoot"
+      ]
+    },
+    "Provenance": {
+      "file": "40_provenance.rho",
+      "state_cells": [
+        "pState"
+      ],
+      "depends_on": [
+        "ProvenanceFactory"
+      ]
+    },
+    "ValuePropositionFactory": {
+      "file": "22_value.rho",
+      "state_cells": [],
+      "depends_on": [
+        "CredentialFactory",
+        "OracleFactory"
+      ]
+    },
+    "ValueProposition": {
+      "file": "22_value.rho",
+      "state_cells": [
+        "vpState"
+      ],
+      "depends_on": [
+        "ValuePropositionFactory",
+        "CredentialFactory",
+        "OracleFactory"
+      ]
+    },
+    "ClaimFactory": {
+      "file": "20_claim.rho",
+      "state_cells": [],
+      "depends_on": [
+        "IdentityDirectory",
+        "CredentialFactory",
+        "OracleFactory"
+      ]
+    },
+    "Claim": {
+      "file": "20_claim.rho",
+      "state_cells": [
+        "claimState"
+      ],
+      "depends_on": [
+        "ClaimFactory",
+        "IdentityDirectory",
+        "CredentialFactory"
+      ]
+    },
+    "KAsset": {
+      "file": "20_claim.rho",
+      "state_cells": [
+        "kState"
+      ],
+      "depends_on": [
+        "CredentialFactory",
+        "OracleFactory"
       ]
     }
   }

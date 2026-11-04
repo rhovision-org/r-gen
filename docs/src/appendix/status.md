@@ -4,42 +4,36 @@
 
 ## Verified on 2026-11-04
 
-- All twelve rendered terms parse with the pinned rholo parser.
-- A fresh rholo devnet (node `e2d073d`, 8 GB isolated `rgen-bootstrap`) installed all
-  twelve terms and ran every implemented behavioural suite:
-  `root, identity, credentials, work, kasset, provenance, token, risk, oracle, journey,
-  adversarial, conservation` — **12/12 pass**.
-- The component catalogue is acyclic; state cells are unique.
-- The static gates cover placeholders, integer-only money, bundled publication, suite
-  wiring, flow arms and arithmetic vectors.
-- `cargo test -p rgen-core` passes; the Rust workspace type-checks against the pinned
-  r-cash and rholo crates.
+- 7 core deploy terms, 16 catalogue components, 10 state cells, acyclic.
+- All 7 rendered terms parse with the pinned rholo parser.
+- `harness/unit_core.py`: pass — identity → credential → value proposition → claim →
+  validation → K-Asset → approval → dispute → oracle → provenance.
+- `harness/concurrency_core.py`: pass — one of two validations wins; one of two approvals
+  wins; exactly one oracle apply; cross-subject isolation; two comments both stored; eight
+  independent claims validate in one deploy; a revoked credential refuses.
+- Static gates: build, parse, arch, captures, placeholders, money, core boundary,
+  concurrency, citations.
 
-## Implemented and exercised by the harness
+## Core boundaries
 
-- Identity and handle uniqueness.
-- Credential issuance, scope matching, expiry, revocation and pool selection.
-- Work, claims, amend, withdraw and quantity validation.
-- K-Asset validation, approval, rejection and nesting.
-- KAT mint-once, balances, reputation, transfer and conservation.
-- SPE risk, insurability, attestation and the uninsurable refusal.
-- Oracle open, empanel, vote, tally, execute and close, with non-panelist and double-vote
-  refusals.
+The core installs only: Root, Identity, Issuer/Credential, Claim/K-Asset, ValueProposition,
+Oracle, Provenance. It does **not** install KAT, payments, risk scoring, panels, admin,
+handles, metrics, or a web client.
 
 ## Owed
 
-- Funded r-cash escrow release/refund (`unit_payments`). The r-cash rail was not installed
-  on the verification devnet, so this path is deployed but unexercised.
-- Dispute bond split and `revokeEarned` slashing (`unit_dispute`).
-- Lean models and the flow-to-theorem map.
-- Metcalfe/CAPM valuation metrics.
-- Web client.
+- Extension suites: receipt/KAT, payments/r-cash, risk/SPE, panels, governance, metrics.
+- A broader core suite set (the current tree has the vertical slice and the race suite).
+- Lean models and a flow-to-theorem map.
+- A public-release paper profile that replaces non-redistributable PDFs with links.
 
 ## Honest limits
 
-- The panel selection is deterministic but the on-chain subject ordering is not a
-  cryptographic random beacon.
-- Extreme-risk approval checks that an oracle case id is present; it does not yet verify
-  the decision inside the approval arm (the execution arm does verify it).
-- Payment execution is non-atomic across steps by design; each step is idempotent and
-  retryable.
+- "Maximal concurrency" means no shared mutable cell across independent entities and one
+  writer per entity. It is not an absolute optimality theorem.
+- Identity creation and credential issuance are deliberate serialization points; neither is
+  on the claim/validation hot path.
+- Oracle selection is deterministic and named by the parties, not a random beacon.
+- Nesting uses a strict `(approvedAt, id)` order; a later-approved child cannot be nested
+  into an older parent.
+- The papers are third-party copyrighted works and are not AGPL; see `docs/papers/README.md`.

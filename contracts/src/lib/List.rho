@@ -1,0 +1,47 @@
+contract listHas(@list, @value, @i, ret) = {
+  if (i >= list.length()) { ret!(false) }
+  else {
+    match list.nth(i) {
+      x => {
+        if (x == value) { ret!(true) }
+        else { listHas!(list, value, i + 1, *ret) }
+      }
+    }
+  }
+} |
+
+contract listHasId(@list, @id, @i, ret) = {
+  if (i >= list.length()) { ret!(false) }
+  else {
+    match list.nth(i) {
+      x => {
+        if (x.get("id") == id) { ret!(true) }
+        else { listHasId!(list, id, i + 1, *ret) }
+      }
+    }
+  }
+} |
+
+contract listHasAny(@list, @a, @b, @i, ret) = {
+  if (i >= list.length()) { ret!(false) }
+  else {
+    match list.nth(i) {
+      x => {
+        if (x == a || x == b) { ret!(true) }
+        else { listHasAny!(list, a, b, i + 1, *ret) }
+      }
+    }
+  }
+} |
+
+contract listHas3(@list, @a, @b, @c, @i, ret) = {
+  if (i >= list.length()) { ret!(false) }
+  else {
+    match list.nth(i) {
+      x => {
+        if (x == a || x == b || x == c) { ret!(true) }
+        else { listHas3!(list, a, b, c, i + 1, *ret) }
+      }
+    }
+  }
+} |

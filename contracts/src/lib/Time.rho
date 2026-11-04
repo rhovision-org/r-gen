@@ -1,4 +1,5 @@
-// Block height helper for contracts that need an event height without resolving the Clock.
+// The paper's clock is an agreed social schedule; the chain supplies the height that makes
+// it enforceable. The kernel is native: no deployed Clock/Verifier contract is needed.
 
 contract nowHeight(ret) = {
   new bd(`rho:block:data`), ch in {

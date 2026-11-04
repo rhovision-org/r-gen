@@ -16,7 +16,20 @@ jobs:
         with:
           python-version: "3.12"
       - run: make venv PY=.venv/bin/python
-      - run: make build-check measure-check check-arch check-captures check-placeholders check-money check-suites check-flows check-vectors PY=.venv/bin/python
+      - run: make spec-check PY=.venv/bin/python
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: "0.5.4"
+      - run: make venv PY=.venv/bin/python
+      - run: make docs-check PY=.venv/bin/python
 
   rust:
     runs-on: ubuntu-latest
@@ -46,8 +59,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: rchain-community/rchain-rust
+          ref: e2d073dcd02f1e560ccb84749937138a1e184b0b
+          path: rnode-rust
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - run: make venv PY=.venv/bin/python
-      - run: make devnet-up keys install unit-all PY=.venv/bin/python
+      - run: DEVNET_PREFIX=rgen RHOLO_DIR=$PWD/rnode-rust make devnet-up keys install unit-all PY=.venv/bin/python

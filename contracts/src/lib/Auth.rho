@@ -1,4 +1,5 @@
-// Deployer identity helpers. r-cash owns accounts; RGen uses the REV address as ownerId.
+// Deployer identity helpers. The REV address is the subject id; the public key is stored
+// only where an identity profile needs it.
 
 contract authOwner(dId, ret) = {
   new dops(`rho:rchain:deployerId:ops`), rev(`rho:rev:address`), pkCh, addrCh in {
@@ -29,21 +30,6 @@ contract authPubKey(dId, ret) = {
       match r {
         (true, _, pk) => { ret!((true, pk)) }
         _ => { ret!((false, "no identity")) }
-      }
-    }
-  }
-} |
-
-contract authIsOwner(dId, @ownerId, ret) = {
-  new c in {
-    authSubject!(*dId, *c) |
-    for (@r <- c) {
-      match r {
-        (true, addr) => {
-          if (addr == ownerId) { ret!((true, Nil)) }
-          else { ret!((false, "not owner")) }
-        }
-        _ => { ret!((false, "not owner")) }
       }
     }
   }

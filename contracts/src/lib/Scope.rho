@@ -1,0 +1,51 @@
+// Scope matching for credentials and issuers. The papers require that validators are
+// themselves validated; the scope is the concrete form of "qualified for this event".
+
+contract minLevelOf(@req, ret) = {
+  match req.get("minLevel") {
+    Nil => { ret!(0) }
+    ml => { ret!(ml) }
+  }
+} |
+
+contract scopeMatches(@cred, @req, ret) = {
+  new mlCh in {
+    minLevelOf!(req, *mlCh) |
+    for (@ml <- mlCh) {
+      match (cred.get("ctype"), cred.get("discipline"), cred.get("jurisdiction"),
+             cred.get("role"), cred.get("level")) {
+        (ctype, discipline, jurisdiction, role, level) => {
+          if (ctype != req.get("ctype") && ctype != "*") { ret!(false) }
+          else {
+            if (discipline != req.get("discipline") && discipline != "*") { ret!(false) }
+            else {
+              if (jurisdiction != req.get("jurisdiction")
+                  && jurisdiction != "global" && jurisdiction != "*") { ret!(false) }
+              else {
+                if (role != req.get("role") && role != "*") { ret!(false) }
+                else {
+                  if (level < ml) { ret!(false) }
+                  else { ret!(true) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+} |
+
+contract issuerCovers(@issuer, @req, ret) = {
+  new tCh, dCh, jCh, rCh, mlCh in {
+    listHasAny!(issuer.get("types"), req.get("ctype"), "*", 0, *tCh) |
+    listHasAny!(issuer.get("disciplines"), req.get("discipline"), "*", 0, *dCh) |
+    listHas3!(issuer.get("jurisdictions"), req.get("jurisdiction"), "global", "*", 0, *jCh) |
+    listHasAny!(issuer.get("roles"), req.get("role"), "*", 0, *rCh) |
+    minLevelOf!(req, *mlCh) |
+    for (@t <- tCh; @d <- dCh; @j <- jCh; @r <- rCh; @ml <- mlCh) {
+      if (t && d && j && r && ml <= issuer.get("maxLevel")) { ret!(true) }
+      else { ret!(false) }
+    }
+  }
+} |

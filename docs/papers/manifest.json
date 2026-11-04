@@ -1,0 +1,179 @@
+{
+  "schema": "rgen.papers/v1",
+  "citation_convention": "p.N means PDF page N (1-based), not the printed page number",
+  "notice": "These papers are third-party copyrighted works. They are NOT covered by RGen's AGPL license. See docs/papers/README.md for per-paper status.",
+  "papers": [
+    {
+      "key": "robles2020innovation",
+      "title": "The Innovation Bank: Blockchain Technology and the Decentralization of the Engineering Professions",
+      "authors": [
+        "Daniel R. Robles",
+        "Bradley Edward Layton"
+      ],
+      "venue": "ASME IMECE 2020",
+      "year": 2020,
+      "paper_number": "IMECE2020-23015",
+      "pdf": "pdf/robles2020innovation.pdf",
+      "sha256": "d72479b0b43830091473229c4ac072fcf9ea4470dbc78721114e988e91a092ec",
+      "pages": 9,
+      "license": {
+        "status": "all-rights-reserved",
+        "holder": "ASME",
+        "redistributable": false
+      },
+      "used_for": [
+        "claim=quantity / validation=quality",
+        "K-Asset pairing",
+        "S\u00d7P\u00d7E",
+        "WIKiD",
+        "receipt token"
+      ]
+    },
+    {
+      "key": "zhong2019bridge",
+      "title": "A New Perspective of Accelerated Bridge Construction",
+      "authors": [
+        "Joan Zhong-Brisbois",
+        "Daniel Robles"
+      ],
+      "venue": "IBC 19-10",
+      "year": 2019,
+      "paper_number": "IBC 19-10",
+      "pdf": "pdf/zhong2019bridge.pdf",
+      "sha256": "d5161a1af52f5489dbcaf4a4816b01011d749604975f0ca9de2cb336be204841",
+      "pages": 7,
+      "license": {
+        "status": "no-stated-license",
+        "holder": "authors",
+        "redistributable": false
+      },
+      "used_for": [
+        "handshake",
+        "work element",
+        "talent pool/selection criteria",
+        "clock",
+        "stakeholder comments",
+        "nesting",
+        "risk transfer",
+        "provenance"
+      ]
+    },
+    {
+      "key": "mathews2017bim",
+      "title": "BIM+Blockchain: A Solution to the Trust Problem in Collaboration?",
+      "authors": [
+        "Malachy Mathews",
+        "Dan Robles",
+        "Brian Bowe"
+      ],
+      "venue": "CITA BIM Gathering 2017",
+      "year": 2017,
+      "paper_number": "",
+      "pdf": "pdf/mathews2017bim.pdf",
+      "sha256": "c4008e6c87457c84b84941ffc014dd3fa41e04107d5938c52f075fda61023656",
+      "pages": 11,
+      "license": {
+        "status": "CC-BY-NC-SA-3.0",
+        "holder": "authors",
+        "redistributable": true
+      },
+      "used_for": [
+        "permissioned by qualifications",
+        "oracle",
+        "value proposition",
+        "reputation"
+      ]
+    },
+    {
+      "key": "robles2016naic",
+      "title": "Insurance: The Highest and Best Use Case for Blockchain Technology",
+      "authors": [
+        "Daniel R. Robles"
+      ],
+      "venue": "NAIC CIPR Newsletter, July 2016",
+      "year": 2016,
+      "paper_number": "",
+      "pdf": "pdf/robles2016naic.pdf",
+      "sha256": "11a54621be8bd33fb926131ddd32a95c70c1e4d9e4ff9fdd08305be66dd3f10d",
+      "pages": 11,
+      "license": {
+        "status": "all-rights-reserved-distribution-prohibited",
+        "holder": "NAIC",
+        "redistributable": false
+      },
+      "used_for": [
+        "oracle contract",
+        "insurability questions"
+      ]
+    },
+    {
+      "key": "robles2016nspe",
+      "title": "Blockchain Technology: Implications and Opportunities For Professional Engineers",
+      "authors": [
+        "Daniel R. Robles"
+      ],
+      "venue": "NSPE Financial Technologies Task Force whitepaper, 2016",
+      "year": 2016,
+      "paper_number": "",
+      "pdf": "pdf/robles2016nspe.pdf",
+      "sha256": "f610668c62c4a2a75126a63ac8f4d7539ea08e10173c4323765784affca96d9c",
+      "pages": 40,
+      "license": {
+        "status": "limited-attribution",
+        "holder": "NSPE",
+        "redistributable": false
+      },
+      "used_for": [
+        "most appropriate adjudicator",
+        "insurability",
+        "the asset keeps its information",
+        "records/identity"
+      ]
+    },
+    {
+      "key": "robles2017stewardship",
+      "title": "The Revolutionary Blockchain \u2013 An Opportunity for Engineering Stewardship",
+      "authors": [
+        "Daniel R. Robles",
+        "Matthew E. Bowers"
+      ],
+      "venue": "2017 ASCE Grand Challenge",
+      "year": 2017,
+      "paper_number": "",
+      "pdf": "pdf/robles2017stewardship.pdf",
+      "sha256": "41dbe34cc55d9d5c6fa65ecfa30016d3bf87fefbd2bcb5b7702f073a0c4a67bb",
+      "pages": 6,
+      "license": {
+        "status": "no-stated-license",
+        "holder": "authors",
+        "redistributable": false
+      },
+      "used_for": [
+        "reputation",
+        "Quant",
+        "invisible value"
+      ],
+      "status": "background"
+    },
+    {
+      "key": "caase2018agenda",
+      "title": "CAASE18 Final Agenda with Initial Abstracts (conference program)",
+      "authors": [
+        "NAFEMS"
+      ],
+      "venue": "CAASE18",
+      "year": 2018,
+      "paper_number": "",
+      "pdf": "uncited/caase2018-agenda.pdf",
+      "sha256": "a081e83e6a6624338d3d2490da587c97e1aebf35d90a93152371111e93e320cb",
+      "pages": 241,
+      "license": {
+        "status": "conference-program",
+        "holder": "NAFEMS",
+        "redistributable": false
+      },
+      "status": "quarantined",
+      "used_for": []
+    }
+  ]
+}

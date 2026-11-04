@@ -1,27 +1,24 @@
-// GenRoot: the installer-gated component directory.
-// Placeholders: __ADMINS__, __THRESHOLD__.
+// Why: GenRoot is installer-gated discovery infrastructure, not a paper primitive. Core
+//      contracts are wired to factory URIs at install time and never resolve Root at runtime.
+// Paper: none (engineering infrastructure).
+// RGen decision: no admin/freeze/rotate arms; the core is immutable. Upgrade by deploying a
+//      new core and a new Root.
+// Placeholders: none.
 new
   GenRoot, rootState,
   rs(`rho:registry:insertArbitrary`),
   deployerId(`rho:rchain:deployerId`),
-  dops(`rho:rchain:deployerId:ops`),
   deployId(`rho:rchain:deployId`),
-  pkCh, uriCh, ack,
-  guardAnySig, guardArgsAppend, guardArgsToString, guardCount, resolveManySeq, verifyAdmin
+  uriCh, ackCh, ackCh2,
+  authOwner, authSubject, authPubKey
 in {
-  // @@INLINE:lib/Guard.rho@@
+  // @@INLINE:lib/Auth.rho@@
 
-  contract GenRoot(@"resolve", @key, @minVersion, ret) = {
+  contract GenRoot(@"resolve", @key, ret) = {
     for (@s <<- rootState) {
       match s.get("entries").get(key) {
         Nil => { ret!((false, "unknown component")) }
-        e => {
-          if (e.get("status") != "active") { ret!((false, "retired")) }
-          else {
-            if (e.get("version") < minVersion) { ret!((false, "stale")) }
-            else { ret!((true, e.get("uri"), e.get("version"))) }
-          }
-        }
+        e => { ret!((true, e.get("uri"), e.get("version"))) }
       }
     }
   } |
@@ -36,179 +33,28 @@ in {
   } |
 
   contract GenRoot(@"keys", ret) = {
-    for (@s <<- rootState) {
-      ret!((true, s.get("entries").keys()))
-    }
-  } |
-
-  contract resolveManySeq(@keys, @i, @entries, @minVersion, @acc, ret) = {
-    if (i >= keys.length()) {
-      ret!((true, acc))
-    } else {
-      match keys.nth(i) {
-        key => {
-          match entries.get(key) {
-            Nil => { ret!((false, "unknown component", key)) }
-            e => {
-              if (e.get("status") != "active") {
-                ret!((false, "retired", key))
-              } else {
-                if (e.get("version") < minVersion) {
-                  ret!((false, "stale", key))
-                } else {
-                  resolveManySeq!(keys, i + 1, entries, minVersion,
-                                  acc.set(key, {"uri": e.get("uri"),
-                                                "version": e.get("version")}),
-                                  *ret)
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  } |
-
-  contract GenRoot(@"resolveMany", @keys, @minVersion, ret) = {
-    for (@s <<- rootState) {
-      new rCh in {
-        resolveManySeq!(keys, 0, s.get("entries"), minVersion, {}, *rCh) |
-        for (@r <- rCh) { ret!(r) }
-      }
-    }
+    for (@s <<- rootState) { ret!((true, s.get("entries").keys())) }
   } |
 
   contract GenRoot(@"register", @key, @uri, @version, @kind, dId, ret) = {
     for (@s <- rootState) {
-      if (s.get("frozen")) {
-        rootState!(s) | ret!((false, "frozen"))
-      } else {
-        new pkC in {
-          dops!("pubKeyBytes", *dId, *pkC) |
-          for (@pk <- pkC) {
-            if (pk != s.get("installer")) {
-              rootState!(s) | ret!((false, "not installer"))
+      new aCh in {
+        authSubject!(*dId, *aCh) |
+        for (@(true, who) <- aCh) {
+          if (who != s.get("installer")) {
+            rootState!(s) | ret!((false, "not installer"))
+          } else {
+            if (version < 1) {
+              rootState!(s) | ret!((false, "bad version"))
             } else {
-              if (version < 1) {
-                rootState!(s) | ret!((false, "bad version"))
-              } else {
-                match s.get("entries").get(key) {
-                  Nil => {
-                    match s.get("entries").set(key, {
-                      "uri": uri, "version": version, "kind": kind, "status": "active"
-                    }) {
-                      entries => {
-                        rootState!(s.set("entries", entries)) |
-                        ret!((true, Nil))
-                      }
-                    }
-                  }
-                  _ => { rootState!(s) | ret!((false, "duplicate")) }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  } |
-
-  contract GenRoot(@"rotate", @key, @expectedVersion, @newUri, @newVersion,
-                     @nonce, @sigs, ret) = {
-    for (@s <- rootState) {
-      if (nonce <= s.get("govNonce")) {
-        rootState!(s) | ret!((false, "replay"))
-      } else {
-        new vCh in {
-          verifyAdmin!("root", nonce, "rotate",
-                       [key, expectedVersion, newUri, newVersion],
-                       sigs, s.get("admins"), s.get("threshold"), *vCh) |
-          for (@v <- vCh) {
-            match v {
-              (true, ok) => {
-                if (ok == false) {
-                  rootState!(s) | ret!((false, "below threshold"))
-                } else {
-                  match s.get("entries").get(key) {
-                    Nil => { rootState!(s) | ret!((false, "unknown component")) }
-                    e => {
-                      if (e.get("version") != expectedVersion) {
-                        rootState!(s) | ret!((false, "stale"))
-                      } else {
-                        match e.set("uri", newUri).set("version", newVersion) {
-                          e2 => {
-                            match s.set("entries", s.get("entries").set(key, e2))
-                                    .set("govNonce", nonce) {
-                              s2 => { rootState!(s2) | ret!((true, Nil)) }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-              _ => { rootState!(s) | ret!((false, "below threshold")) }
-            }
-          }
-        }
-      }
-    }
-  } |
-
-  contract GenRoot(@"deprecate", @key, @nonce, @sigs, ret) = {
-    for (@s <- rootState) {
-      if (nonce <= s.get("govNonce")) {
-        rootState!(s) | ret!((false, "replay"))
-      } else {
-        new vCh in {
-          verifyAdmin!("root", nonce, "deprecate", [key], sigs,
-                       s.get("admins"), s.get("threshold"), *vCh) |
-          for (@v <- vCh) {
-            match v {
-              (true, ok) => {
-                if (ok == false) {
-                  rootState!(s) | ret!((false, "below threshold"))
-                } else {
-                  match s.get("entries").get(key) {
-                    Nil => { rootState!(s) | ret!((false, "unknown component")) }
-                    e => {
-                      match s.set("entries",
-                                   s.get("entries").set(key, e.set("status", "retired")))
-                              .set("govNonce", nonce) {
-                        s2 => { rootState!(s2) | ret!((true, Nil)) }
-                      }
-                    }
-                  }
-                }
-              }
-              _ => { rootState!(s) | ret!((false, "below threshold")) }
-            }
-          }
-        }
-      }
-    }
-  } |
-
-  contract GenRoot(@"freeze", @nonce, @sigs, ret) = {
-    for (@s <- rootState) {
-      if (nonce <= s.get("govNonce")) {
-        rootState!(s) | ret!((false, "replay"))
-      } else {
-        new vCh in {
-          verifyAdmin!("root", nonce, "freeze", [], sigs,
-                       s.get("admins"), s.get("threshold"), *vCh) |
-          for (@v <- vCh) {
-            match v {
-              (true, ok) => {
-                if (ok == false) {
-                  rootState!(s) | ret!((false, "below threshold"))
-                } else {
-                  rootState!(s.set("frozen", true).set("govNonce", nonce)) |
+              match s.get("entries").get(key) {
+                Nil => {
+                  rootState!(s.set("entries", s.get("entries").set(key, {
+                    "uri": uri, "version": version, "kind": kind }))) |
                   ret!((true, Nil))
                 }
+                _ => { rootState!(s) | ret!((false, "duplicate")) }
               }
-              _ => { rootState!(s) | ret!((false, "below threshold")) }
             }
           }
         }
@@ -216,83 +62,13 @@ in {
     }
   } |
 
-  contract GenRoot(@"admin", @nonce, @action, @args, @sigs, ret) = {
-    for (@s <- rootState) {
-      if (nonce <= s.get("govNonce")) {
-        rootState!(s) | ret!((false, "replay"))
-      } else {
-        new vCh in {
-          verifyAdmin!("root", nonce, action, args, sigs,
-                       s.get("admins"), s.get("threshold"), *vCh) |
-          for (@v <- vCh) {
-            match v {
-              (true, ok) => {
-                if (ok == false) {
-                  rootState!(s) | ret!((false, "below threshold"))
-                } else {
-                  match action {
-                    "setAdmins" => {
-                      match args.nth(0) {
-                        newAdmins => {
-                          match args.nth(1) {
-                            newThreshold => {
-                              if (newThreshold < 1 || newThreshold > newAdmins.length()) {
-                                rootState!(s) | ret!((false, "threshold"))
-                              } else {
-                                rootState!(s.set("admins", newAdmins)
-                                            .set("threshold", newThreshold)
-                                            .set("govNonce", nonce)) |
-                                ret!((true, Nil))
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                    "setThreshold" => {
-                      match args.nth(0) {
-                        newThreshold => {
-                          if (newThreshold < 1 || newThreshold > s.get("admins").length()) {
-                            rootState!(s) | ret!((false, "threshold"))
-                          } else {
-                            rootState!(s.set("threshold", newThreshold)
-                                        .set("govNonce", nonce)) |
-                            ret!((true, Nil))
-                          }
-                        }
-                      }
-                    }
-                    _ => { rootState!(s) | ret!((false, "unknown action")) }
-                  }
-                }
-              }
-              _ => { rootState!(s) | ret!((false, "below threshold")) }
-            }
-          }
-        }
-      }
-    }
-  } |
-
-  dops!("pubKeyBytes", *deployerId, *pkCh) |
-  for (@installer <- pkCh) {
-    rootState!({
-      "installer": installer,
-      "admins": __ADMINS__,
-      "threshold": __THRESHOLD__,
-      "frozen": false,
-      "govNonce": 0,
-      "entries": {}
-    }) |
+  authSubject!(*deployerId, *ackCh) |
+  for (@(true, installer) <- ackCh) {
+    rootState!({"installer": installer, "entries": {}}) |
     rs!(bundle+{*GenRoot}, *uriCh) |
     for (@uri <- uriCh) {
-      GenRoot!("register", "component:root", uri, 1, "kernel", *deployerId, *ack) |
-      for (@r <- ack) {
-        match r {
-          (true, Nil) => { deployId!([uri]) }
-          _ => { deployId!([("root register failed", r)]) }
-        }
-      }
+      GenRoot!("register", "component:root", uri, 1, "root", *deployerId, *ackCh2) |
+      for (@r <- ackCh2) { deployId!([uri]) }
     }
   }
 }

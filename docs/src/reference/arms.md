@@ -1,81 +1,40 @@
-# Arm reference
+# Core arm reference
 
-Replies are `(true, payload…)` or `(false, reason)`. Hashes are lowercase hex strings.
-Amounts are integers in base units.
+Replies are `(true, payload…)` or `(false, reason)`. Capabilities are passed as quoted names;
+a credential, K-Asset or case capability is always checked by the callee.
 
-## Identity
+## Root and identity
 
-- `IdentityBook("register", dId, profile, ret) -> (true, subject)`
-- `IdentityBook("update", dId, patch, ret)`
-- `IdentityBook("profile"|"byHandle"|"count", ...)`
-- `IdentityBook("admin", nonce, action, args, sigs, ret)`
+- `GenRoot("resolve"|"get"|"keys"|"register", ...)` — installer-gated directory.
+- `IdentityFactory("create", dId, profile, ret) -> (true, identityUri)`
+- `IdentityDirectory("lookup"|"count", ...)`
+- `Identity("get"|"update", ...)`
 
 ## Credentials
 
-- `CredentialBook("issue", dId, req, ret) -> (true, credId)`
-- `CredentialBook("renew", dId, credId, expiresAt, evidenceHash, ret)`
-- `CredentialBook("revoke", dId, credId, reason, ret)`
-- `CredentialBook("attest", dId, credId, hash, ret)`
-- `CredentialBook("valid", subject, requirement, atHeight, ret) -> (true, bool, credId|reason)`
-- `CredentialBook("pool", requirement, ret) -> (true, [subject])`
-- `CredentialBook("creds"|"credential"|"issuer"|"issuers", ...)`
+- `Issuer("get"|"authorize"|"covers"|"revoke", ...)`
+- `CredentialFactory("issue"|"verify"|"count", ...) -> (true, credentialUri)`
+- `Credential("get"|"check"|"revoke"|"renew"|"attest", ...)`
 
-## Work and K-Assets
+## Claims and K-Assets
 
-- `WorkBook("openWork", dId, work, ret) -> (true, workId)`
-- `WorkBook("claim", dId, workId, claim, ret) -> (true, claimId)`
-- `WorkBook("amend"|"withdraw", dId, claimId, ..., ret)`
-- `WorkBook("close", claimId, status, kassetId, ret)`
-- `KAssetBook("validate", dId, claimId, validation, ret) -> (true, validationId, kassetId)`
-- `KAssetBook("approve", dId, kassetId, approval, ret) -> (true, approvalId)`
-- `KAssetBook("reject", dId, kassetId, reason, ret)`
-- `KAssetBook("nest", dId, parentId, childIds, ret)`
-- `KAssetBook("mintAuthorization", kassetId, ret)`
-- `KAssetBook("oracleApprove"|"markDisputed"|"revoke", caseId, kassetId, ret)`
-- `KAssetBook("kasset"|"validation"|"approval"|"kassetsOf"|"validationsOf"|"revocation", ...)`
+- `ClaimFactory("create", dId, claimReq, ret) -> (true, {id, uri})`
+- `Claim("get"|"comments"|"comment"|"withdraw"|"expire"|"validate", ...)`
+- K-Asset arms (created by the Claim): `get`, `approve`, `reject`, `nest`, `openDispute`,
+  `children`, `revocation`, and the private `applyDecision`.
 
-## Token
+## Value proposition
 
-- `TokenBook("brand"|"supply"|"balance"|"reputation"|"history", ...)`
-- `TokenBook("transfer", dId, to, amount, memo, ret)`
-- `TokenBook("deposit"|"withdraw", dId, ..., ret)`
-- `TokenBook("newPurse", ret)`
-- `TokenBook("mintForKAsset", kassetId, ret)`
-- `TokenBook("revokeEarned", kassetId, ret)`
-
-## Provenance
-
-- `ProvenanceBook("seal", dId, seal, ret) -> (true, sealId)`
-- `ProvenanceBook("anchor", dId, ref, doc, ret) -> (true, anchorId)`
-- `ProvenanceBook("comment", dId, ref, comment, ret) -> (true, commentId)`
-- `ProvenanceBook("verify", ref, hash, ret) -> (true, bool)`
-
-## Risk
-
-- `RiskBook("assess", dId, assessment, ret) -> (true, riskId, insurable)`
-- `RiskBook("attest", dId, riskId, hash, ret)`
-- `RiskBook("link", dId, riskId, kassetId, ret)`
-- `RiskBook("gate", riskId, ret) -> (true, {insurable, score, class, ...})`
+- `ValuePropositionFactory("propose", dId, req, ret) -> (true, {id, uri})`
+- `ValueProposition("get"|"comments"|"comment"|"withdraw"|"validate"|"openDispute"|"revocation", ...)`
+- Private `applyDecision`.
 
 ## Oracle
 
-- `OracleBook("open", dId, caseReq, ret) -> (true, caseId)`
-- `OracleBook("evidence", dId, caseId, evidence, ret)`
-- `OracleBook("empanel"|"empanelWith", ..., ret)`
-- `OracleBook("vote", dId, caseId, vote, ret)`
-- `OracleBook("tally"|"decide"|"execute"|"close", ..., ret)`
-- `OracleBook("paymentInstruction", caseId, ret)`
-- `OracleBook("case"|"casesOf"|"panelOf"|"decisionOf", ...)`
+- `OracleFactory("open", subjectRef, caseReq, subjectApply, ret) -> (true, {id, uri})`
+- `OracleCase("get"|"evidence"|"decide"|"execute"|"expire"|"close", ...)`
 
-## Payments
+## Provenance
 
-- `PaymentBook("health"|"platformOwner"|"ensureAccount"|"accountOf", ...)`
-- `PaymentBook("fund", dId, intent, payment, ret) -> (true, holdId)`
-- `PaymentBook("executeCase", caseId, ret)`
-- `PaymentBook("hold"|"holds", ...)`
-- `PaymentBook("admin", nonce, action, args, sigs, ret)`
-
-## Admin payload
-
-`rgen:admin:v1|<domain>|<nonce>|<action>|<arg0>,<arg1>,...`, hashed with blake2b256 and
-signed with DER secp256k1. Admin arguments are flat strings and integers.
+- `ProvenanceFactory("create", assetRef, writers, ret) -> (true, {id, uri})`
+- `Provenance("get"|"anchors"|"anchor"|"comment"|"verify", ...)`

@@ -1,0 +1,223 @@
+// Why: "The asset becomes the keeper of its own information" (NSPE p.29) and the Bridge paper's
+//      sealing/provenance requirement (p.3, p.6). One provenance cell per asset; anchors and
+//      comments append under a single writer order, so no update is lost. parentHash gives the
+//      minimal document graph the papers imply without a global registry.
+// Paper: @robles2016nspe p.29; @zhong2019bridge p.3, p.6.
+// RGen decision: comment rights are the asset's declared writers; a broader stakeholder-identity
+//      comment gate is an extension.
+// Placeholders: __ROOT_URI__.
+new
+  ProvenanceFactory,
+  rl(`rho:registry:lookup`),
+  rs(`rho:registry:insertArbitrary`),
+  deployerId(`rho:rchain:deployerId`),
+  deployId(`rho:rchain:deployId`),
+  rootCh, cFactory, ack1,
+  authOwner, authSubject, authPubKey, nowHeight,
+  listHas, listHasId, listHasAny, listHas3
+in {
+// Deployer identity helpers. The REV address is the subject id; the public key is stored
+// only where an identity profile needs it.
+
+contract authOwner(dId, ret) = {
+  new dops(`rho:rchain:deployerId:ops`), rev(`rho:rev:address`), pkCh, addrCh in {
+    dops!("pubKeyBytes", *dId, *pkCh) |
+    for (@pk <- pkCh) {
+      rev!("fromPublicKey", pk, *addrCh) |
+      for (@addr <- addrCh) { ret!((true, addr, pk)) }
+    }
+  }
+} |
+
+contract authSubject(dId, ret) = {
+  new c in {
+    authOwner!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, addr, _) => { ret!((true, addr)) }
+        _ => { ret!((false, "no identity")) }
+      }
+    }
+  }
+} |
+
+contract authPubKey(dId, ret) = {
+  new c in {
+    authOwner!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, _, pk) => { ret!((true, pk)) }
+        _ => { ret!((false, "no identity")) }
+      }
+    }
+  }
+} |
+// The paper's clock is an agreed social schedule; the chain supplies the height that makes
+// it enforceable. The kernel is native: no deployed Clock/Verifier contract is needed.
+
+contract nowHeight(ret) = {
+  new bd(`rho:block:data`), ch in {
+    bd!(*ch) |
+    for (@h, @sender, @timestamp <- ch) { ret!(h) }
+  }
+} |
+contract listHas(@list, @value, @i, ret) = {
+  if (i >= list.length()) { ret!(false) }
+  else {
+    match list.nth(i) {
+      x => {
+        if (x == value) { ret!(true) }
+        else { listHas!(list, value, i + 1, *ret) }
+      }
+    }
+  }
+} |
+
+contract listHasId(@list, @id, @i, ret) = {
+  if (i >= list.length()) { ret!(false) }
+  else {
+    match list.nth(i) {
+      x => {
+        if (x.get("id") == id) { ret!(true) }
+        else { listHasId!(list, id, i + 1, *ret) }
+      }
+    }
+  }
+} |
+
+contract listHasAny(@list, @a, @b, @i, ret) = {
+  if (i >= list.length()) { ret!(false) }
+  else {
+    match list.nth(i) {
+      x => {
+        if (x == a || x == b) { ret!(true) }
+        else { listHasAny!(list, a, b, i + 1, *ret) }
+      }
+    }
+  }
+} |
+
+contract listHas3(@list, @a, @b, @c, @i, ret) = {
+  if (i >= list.length()) { ret!(false) }
+  else {
+    match list.nth(i) {
+      x => {
+        if (x == a || x == b || x == c) { ret!(true) }
+        else { listHas3!(list, a, b, c, i + 1, *ret) }
+      }
+    }
+  }
+} |
+
+  contract ProvenanceFactory(@"create", @assetRef, @writers, ret) = {
+    new pState, Provenance, uriCh in {
+      pState!({
+        "uri": "",
+        "assetRef": assetRef,
+        "writers": writers,
+        "anchors": [],
+        "comments": [],
+        "version": 1
+      }) |
+
+      contract Provenance(@"get", ret2) = {
+        for (@s <<- pState) { ret2!((true, s)) }
+      } |
+
+      contract Provenance(@"anchors", ret2) = {
+        for (@s <<- pState) { ret2!((true, s.get("anchors"))) }
+      } |
+
+      contract Provenance(@"anchor", dId, @doc, ret2) = {
+        new aCh, hCh in {
+          authSubject!(*dId, *aCh) |
+          nowHeight!(*hCh) |
+          for (@(true, who) <- aCh; @now <- hCh) {
+            for (@s <- pState) {
+              new wCh in {
+                listHas!(s.get("writers"), who, 0, *wCh) |
+                for (@writer <- wCh) {
+                  if (not writer) {
+                    pState!(s) | ret2!((false, "not writer"))
+                  } else {
+                    if (doc.get("hash") == Nil || doc.get("hash") == "") {
+                      pState!(s) | ret2!((false, "hash"))
+                    } else {
+                      new dupCh in {
+                        listHasId!(s.get("anchors"), doc.get("hash"), 0, *dupCh) |
+                        for (@dup <- dupCh) {
+                          if (dup) {
+                            pState!(s) | ret2!((false, "duplicate"))
+                          } else {
+                            pState!(s.set("anchors", s.get("anchors") ++ [{
+                              "id": doc.get("hash"),
+                              "kind": doc.get("kind"),
+                              "hash": doc.get("hash"),
+                              "parentHash": doc.get("parentHash"),
+                              "by": who, "at": now}])
+                              .set("version", s.get("version") + 1)) |
+                            ret2!((true, Nil))
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      } |
+
+      contract Provenance(@"comment", dId, @comment, ret2) = {
+        new aCh, hCh in {
+          authSubject!(*dId, *aCh) |
+          nowHeight!(*hCh) |
+          for (@(true, who) <- aCh; @now <- hCh) {
+            for (@s <- pState) {
+              new wCh in {
+                listHas!(s.get("writers"), who, 0, *wCh) |
+                for (@writer <- wCh) {
+                  if (not writer) {
+                    pState!(s) | ret2!((false, "not writer"))
+                  } else {
+                    pState!(s.set("comments", s.get("comments") ++ [{
+                      "id": "cm:" ++ who ++ ":" ++ now.toString(),
+                      "by": who, "hash": comment.get("hash"), "at": now}])
+                      .set("version", s.get("version") + 1)) |
+                    ret2!((true, Nil))
+                  }
+                }
+              }
+            }
+          }
+        }
+      } |
+
+      contract Provenance(@"verify", @hash, ret2) = {
+        for (@s <<- pState) {
+          new ch in {
+            listHasId!(s.get("anchors"), hash, 0, *ch) |
+            for (@found <- ch) { ret2!((true, found)) }
+          }
+        }
+      } |
+
+      rs!(bundle+{*Provenance}, *uriCh) |
+      for (@uri <- uriCh) {
+        for (@s2 <- pState) { pState!(s2.set("uri", uri)) } |
+        ret!((true, {"id": uri, "uri": uri}))
+      }
+    }
+  } |
+
+  rs!(bundle+{*ProvenanceFactory}, *cFactory) |
+  for (@uri <- cFactory) {
+    rl!(`__ROOT_URI__`, *rootCh) |
+    for (Root <- rootCh) {
+      Root!("register", "component:provenance-factory", uri, 1, "provenance",
+            *deployerId, *ack1) |
+      for (@r <- ack1) { deployId!([("provenance-factory", uri)]) }
+    }
+  }
+}

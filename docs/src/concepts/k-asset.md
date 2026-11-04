@@ -1,22 +1,25 @@
-# The K-Asset
+# Claim, validation, K-Asset
 
-A K-Asset is a claim paired with a validation, memorialized by a KAT receipt to each
-participant and ordered in time by the chain.
+A Claim is one linear cell. It carries:
 
-```
-Work Element -> Claim (quantity, by claimant)
-                    -> Validation (quality, by qualified validator)
-                    -> Approval (by a qualified approver or oracle)
-                    -> K-Asset + KAT receipts
-```
+- the claimant and the work element (`titleHash`, discipline, jurisdiction, projectRef);
+- the selection criteria (the paper's Talent Pool → Selection Criteria step);
+- the statement/definition hashes and the quantity `{unit, value}`;
+- the agreed clock (`deadlineHeight`, `commentUntilHeight`) and comment hashes;
+- an optional value-proposition reference.
 
-- The claim carries a statement hash, definition hash, quantity `{unit, value}`, evidence
-  and optional risk reference.
-- The validation carries a verdict (`valid`, `partial`, `invalid`), four quality
-  dimensions each 1..5, evidence and the validator's credential at the event height.
-- The approval carries a decision, conditions, liability and optional risk/oracle case.
-- The receipt is minted once, after approval. Nesting approved K-Assets creates a composed
-  asset and mints nothing.
+A Validation consumes the open Claim. If the validator holds a credential issued by the
+genesis issuer and matching the claim's selection criteria, the claim creates a K-Asset and
+transitions to `validated` (or `rejected` for an invalid verdict). A second validation cannot
+succeed: the Claim cell is no longer open.
 
-Reputation is **net lifetime earned KAT**. KAT balances are transferable; `earned` is not.
-Buying KAT buys no validation weight.
+The K-Asset carries the claim+validation pair, the validator's credential, the verdict and
+quality, and the approval state. Approval records the approver, conditions, liability and an
+`approvalVersion`. A dispute opens an Oracle case with the K-Asset's private
+`applyDecision` capability; the case stores that capability, so a decision on one K-Asset
+cannot be applied to another.
+
+A ValueProposition is a separate cell: a proposer states a value statement, terms and
+beneficiaries; a qualified validator validates it; a K-Asset may reference a validated
+value proposition. The papers name the value proposition but define no state machine; the
+separate primitive is a user decision recorded in the Pareto ledger.

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Render and deploy the RGen terms in order.
+"""Render and deploy the RGen Pareto core in dependency order.
 
-The r-cash Root URI is read from configs/rcash.json and the r-cash devnet manifest.
-`--dry-run` renders only, so static checks can parse the rendered terms without a node.
+The core is wired at install time: factory URIs are captured from each deploy and rendered
+into dependent terms. Core contracts do not resolve GenRoot at runtime; Root is a client
+directory only. `--dry-run` renders only, so static checks can parse without a node.
 """
 
 from __future__ import annotations
@@ -19,21 +20,17 @@ sys.path.insert(0, str(ROOT / "tools"))
 import deploy as node  # noqa: E402
 import preflight  # noqa: E402
 from minify_rho import minify  # noqa: E402
-from rcash_paths import configured_manifest  # noqa: E402
 
+# 30_oracle needs the credential factory; 22_value and 20_claim need oracle+credential;
+# 20_claim also needs the identity directory.
 ORDER = [
     "00_root.rho",
-    "01_kernel.rho",
-    "02_admin.rho",
     "10_identity.rho",
     "11_credentials.rho",
-    "12_token.rho",
-    "20_work.rho",
-    "21_kasset.rho",
-    "22_provenance.rho",
-    "30_risk.rho",
-    "40_payments.rho",
-    "50_oracle.rho",
+    "30_oracle.rho",
+    "40_provenance.rho",
+    "22_value.rho",
+    "20_claim.rho",
 ]
 
 
@@ -65,8 +62,11 @@ def decode(value):
             return tuple(decode(item) for item in value["ExprTuple"]["data"])
         if "ExprList" in value:
             return [decode(item) for item in value["ExprList"]["data"]]
-        if "ExprSet" in value:
-            return [decode(item) for item in value["ExprSet"]["data"]]
+        if "ExprMap" in value:
+            data = value["ExprMap"]["data"]
+            if isinstance(data, dict):
+                return {key: decode(item) for key, item in data.items()}
+            return {decode(entry["key"]): decode(entry["value"]) for entry in data}
         if "ExprByteArray" in value:
             return bytes.fromhex(value["ExprByteArray"]["data"])
         return {key: decode(item) for key, item in value.items()}
@@ -89,98 +89,68 @@ def find_uri(value) -> str | None:
     return None
 
 
-def admin_literal(keys: dict, dev_single_key: bool) -> str:
-    names = ["admin1", "admin2", "admin3"]
-    picked = [keys[name]["public"] for name in names if name in keys]
-    distinct = list(dict.fromkeys(picked))
-    if len(distinct) < 3:
-        if not dev_single_key:
-            raise SystemExit(
-                "install: need admin1, admin2 and admin3 with distinct keys; "
-                "pass --dev-single-key only on a throwaway devnet"
-            )
-        distinct = [keys["deployer"]["public"]] * 3
-    return "[" + ", ".join(f'"{key}".hexToBytes()' for key in distinct[:3]) + "]"
+def uri_map(value) -> dict[str, str]:
+    """Collect (key, uri) pairs emitted by a term's deployId."""
+    out: dict[str, str] = {}
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            if (isinstance(item, tuple) and len(item) == 2
+                    and isinstance(item[0], str) and isinstance(item[1], str)
+                    and item[1].startswith("rho:id:")):
+                out[item[0]] = item[1]
+            else:
+                out.update(uri_map(item))
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            if isinstance(item, str) and item.startswith("rho:id:"):
+                out[key] = item
+            else:
+                out.update(uri_map(item))
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--node", default=None)
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--dev-single-key", action="store_true",
-                    help="allow a 2-of-3 set built from one devnet key (never for production)")
-    ap.add_argument("--start", default=None,
-                    help="resume at this term (requires --root-uri)")
-    ap.add_argument("--root-uri", default=None,
-                    help="use an existing GenRoot URI instead of deploying 00_root")
     args = ap.parse_args(argv)
 
     if args.node:
         node.NODE = args.node
-
     if not args.dry_run and not preflight.require_devnet("install"):
         return 2
 
     cfg = load_json(ROOT / "configs" / "devnet.json")
-    rcash = load_json(ROOT / "configs" / "rcash.json")
     if args.dry_run and not node.keys_path().is_file():
-        keys = {
-            "deployer": {"address": "1111dryrun", "public": "02" + "11" * 32,
-                         "secret": "00" * 32},
-            "admin1": {"public": "02" + "22" * 32},
-            "admin2": {"public": "02" + "33" * 32},
-            "admin3": {"public": "02" + "44" * 32},
-        }
+        keys = {"deployer": {"address": "1111dryrun",
+                             "public": "02" + "11" * 32,
+                             "secret": "00" * 32}}
     else:
         keys = node.load_keys()
     if "deployer" not in keys:
         raise SystemExit("install: keys file has no deployer key")
 
-    rcash_manifest = configured_manifest(
-        cfg.get("rcash_manifest", rcash["root_manifest_path"]))
-    if rcash_manifest.is_file():
-        rcash_root = load_json(rcash_manifest)["root_uri"]
-    elif args.dry_run:
-        rcash_root = "rho:id:dryrun-rcash"
-    else:
-        raise SystemExit(f"install: missing r-cash manifest {rcash_manifest}; "
-                         "run `make rcash-bootstrap` first")
-
     common = {
-        "__ADMINS__": admin_literal(keys, args.dev_single_key),
-        "__THRESHOLD__": "2",
-        "__GENESIS_ISSUER__": keys["deployer"]["address"],
-        "__RCASH_ROOT_URI__": rcash_root,
-        "__PLATFORM_OWNER__": keys["deployer"]["address"],
+        "__ROOT_URI__": "rho:id:dryrun-root",
+        "__IDENTITY_DIRECTORY_URI__": "rho:id:dryrun-identity-directory",
+        "__CREDENTIAL_FACTORY_URI__": "rho:id:dryrun-credential-factory",
+        "__ORACLE_FACTORY_URI__": "rho:id:dryrun-oracle-factory",
     }
 
     build = ROOT / "contracts" / "build" / "deploy"
     rendered_dir = ROOT / ".devnet" / "rendered"
     rendered_dir.mkdir(parents=True, exist_ok=True)
-    if args.dry_run:
-        for stale in rendered_dir.glob("*.rho"):
-            if stale.name not in ORDER:
-                stale.unlink()
-    state: dict[str, str] = {}
-    root_uri = "rho:id:dryrun" if args.dry_run else None
-    if args.root_uri:
-        root_uri = args.root_uri
-        state["root_uri"] = root_uri
-    if args.start and not args.dry_run and not root_uri:
-        raise SystemExit("install: --start requires --root-uri")
+    state: dict[str, object] = {"components": {}}
+    root_uri = None
     secret = keys["deployer"]["secret"]
-    started = args.start is None or args.dry_run
 
     for name in ORDER:
-        if not started:
-            if name != args.start:
-                continue
-            started = True
         source = build / name
         if not source.is_file():
             raise SystemExit(f"install: missing {source}; run `make build`")
         values = dict(common)
-        values["__ROOT_URI__"] = root_uri or "rho:id:pending"
+        if root_uri:
+            values["__ROOT_URI__"] = root_uri
         rendered = render(source.read_text(), values)
         (rendered_dir / name).write_text(rendered)
         term = minify(rendered)
@@ -202,14 +172,24 @@ def main(argv: list[str] | None = None) -> int:
             if not root_uri:
                 raise SystemExit(f"install: could not find root URI in {decoded}")
             state["root_uri"] = root_uri
+            state["components"]["root"] = root_uri
+            common["__ROOT_URI__"] = root_uri
             print(f"install: root {root_uri}")
         else:
-            state.setdefault("components", {})[name] = decoded
+            found = uri_map(decoded)
+            state["components"].update(found)
+            if "identity-directory" in found:
+                common["__IDENTITY_DIRECTORY_URI__"] = found["identity-directory"]
+            if "credential-factory" in found:
+                common["__CREDENTIAL_FACTORY_URI__"] = found["credential-factory"]
+            if "oracle-factory" in found:
+                common["__ORACLE_FACTORY_URI__"] = found["oracle-factory"]
+            print(f"install: {name} -> {found}")
 
     if not args.dry_run:
         manifest = ROOT / cfg.get("manifest", "deployments/devnet.json")
         manifest.parent.mkdir(parents=True, exist_ok=True)
-        manifest.write_text(json.dumps({"root_uri": root_uri, **state}, indent=2) + "\n")
+        manifest.write_text(json.dumps(state, indent=2) + "\n")
         print(f"install: wrote {manifest}")
     return 0
 

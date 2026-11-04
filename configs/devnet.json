@@ -7,7 +7,5 @@
   "phlo_limit": 8000000,
   "keys": ".devnet/keys.json",
   "state": ".devnet/rgen-install.json",
-  "manifest": "deployments/devnet.json",
-  "rcash_manifest": "../Rholphin/deployments/devnet-v4.json",
-  "rcash_state": "../Rholphin/.devnet/v3-install.json"
+  "manifest": "deployments/devnet.json"
 }

@@ -1,0 +1,230 @@
+// Why: NSPE p.25 / NAIC p.9 / BIM p.8 name a singular "most appropriate person" adjudicator.
+//      A per-case linear cell makes a second decision or a second execution non-representable.
+//      The case holds the subject's private applyDecision capability, never a subject id the
+//      caller can substitute, so a decision cannot be applied to another K-Asset.
+// Paper: @robles2016nspe p.25; @robles2016naic p.9; @mathews2017bim p.8.
+// RGen decision: single adjudicator in core; panels/votes/tally are an extension. Selection is
+//      deterministic and named by the parties, not a random beacon.
+// Placeholders: __ROOT_URI__, __CREDENTIAL_FACTORY_URI__.
+new
+  rl(`rho:registry:lookup`),
+  rs(`rho:registry:insertArbitrary`),
+  deployerId(`rho:rchain:deployerId`),
+  deployId(`rho:rchain:deployId`),
+  rootCh, cfCh, cFactory, ack1,
+  authOwner, authSubject, authPubKey, nowHeight,
+  listHas, listHasId, listHasAny, listHas3,
+  CredentialFactory
+in {
+  // @@INLINE:lib/Auth.rho@@
+  // @@INLINE:lib/Time.rho@@
+  // @@INLINE:lib/List.rho@@
+
+  rl!(`__CREDENTIAL_FACTORY_URI__`, *cfCh) |
+  for (CredentialFactory <- cfCh) {
+    new OracleFactory in {
+      contract OracleFactory(@"open", @subjectRef, @caseReq, subjectApply, ret) = {
+        new caseState, OracleCase, selfDecide, uriCh in {
+          caseState!({
+            "uri": "",
+            "kind": caseReq.get("kind"),
+            "subjectRef": subjectRef,
+            "openedBy": caseReq.get("openedBy"),
+            "parties": caseReq.get("parties"),
+            "groundsHash": caseReq.get("groundsHash"),
+            "requirement": caseReq.get("requirement"),
+            "adjudicator": caseReq.get("adjudicator"),
+            "adjudicatorCredentialUri": caseReq.get("adjudicatorCredentialUri"),
+            "evidence": [],
+            "status": "open",
+            "decision": Nil,
+            "deadlineHeight": caseReq.get("deadlineHeight"),
+            "execution": Nil,
+            "version": 1
+          }) |
+
+          contract OracleCase(@"get", ret2) = {
+            for (@s <<- caseState) { ret2!((true, s)) }
+          } |
+
+          contract OracleCase(@"evidence", dId, @ev, ret2) = {
+            new aCh, hCh in {
+              authSubject!(*dId, *aCh) |
+              nowHeight!(*hCh) |
+              for (@(true, who) <- aCh; @now <- hCh) {
+                for (@s <- caseState) {
+                  if (s.get("status") != "open") {
+                    caseState!(s) | ret2!((false, "not open"))
+                  } else {
+                    new partyCh in {
+                      listHas!(s.get("parties"), who, 0, *partyCh) |
+                      for (@party <- partyCh) {
+                        if ((not party) && who != s.get("adjudicator")) {
+                          caseState!(s) | ret2!((false, "not a party"))
+                        } else {
+                          caseState!(s.set("evidence", s.get("evidence") ++ [{
+                            "by": who, "hash": ev.get("hash"), "at": now}])
+                            .set("version", s.get("version") + 1)) |
+                          ret2!((true, Nil))
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          } |
+
+          contract OracleCase(@"decide", dId, credCap, @decision, ret2) = {
+            new aCh, hCh in {
+              authSubject!(*dId, *aCh) |
+              nowHeight!(*hCh) |
+              for (@(true, who) <- aCh; @now <- hCh) {
+                for (@s <- caseState) {
+                  if (s.get("status") != "open") {
+                    caseState!(s) | ret2!((false, "not open"))
+                  } else {
+                    if (who != s.get("adjudicator")) {
+                      caseState!(s) | ret2!((false, "not adjudicator"))
+                    } else {
+                      new vfCh in {
+                        CredentialFactory!("verify",
+                          s.get("adjudicatorCredentialUri"), *vfCh) |
+                        for (@vf <- vfCh) {
+                          match vf {
+                            (true, _) => {
+                              new cCh in {
+                                credCap!("check", who, s.get("requirement"), now, *cCh) |
+                                for (@c <- cCh) {
+                                  match c {
+                                    (true, true, _) => {
+                                      match decision.get("outcome") {
+                                        "uphold" => { selfDecide!(s, decision, now, *ret2) }
+                                        "revoke" => { selfDecide!(s, decision, now, *ret2) }
+                                        "partial" => { selfDecide!(s, decision, now, *ret2) }
+                                        _ => { caseState!(s) | ret2!((false, "outcome")) }
+                                      }
+                                    }
+                                    _ => { caseState!(s) | ret2!((false, "not qualified")) }
+                                  }
+                                }
+                              }
+                            }
+                            _ => { caseState!(s) | ret2!((false, "forged credential")) }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          } |
+
+          contract selfDecide(@s, @decision, @now, ret2) = {
+            caseState!(s.set("status", "decided")
+                        .set("decision", decision.set("decidedAt", now))
+                        .set("version", s.get("version") + 1)) |
+            ret2!((true, Nil))
+          } |
+
+          contract OracleCase(@"execute", ret2) = {
+            for (@s <- caseState) {
+              if (s.get("status") == "executed") {
+                caseState!(s) | ret2!((true, "already executed"))
+              } else {
+                if (s.get("status") != "decided") {
+                  caseState!(s) | ret2!((false, "not decided"))
+                } else {
+                  caseState!(s.set("status", "executing")
+                              .set("execution", {"attempts": 1, "lastError": Nil})) |
+                  new aCh in {
+                    subjectApply!("applyDecision", s.get("uri"), s.get("decision"), *aCh) |
+                    for (@a <- aCh) {
+                      match a {
+                        (true, outcome) => {
+                          for (@s2 <- caseState) {
+                            caseState!(s2.set("status", "executed")
+                                         .set("execution", {"attempts": 1,
+                                                            "lastError": Nil,
+                                                            "outcome": outcome}))
+                          } |
+                          ret2!((true, outcome))
+                        }
+                        (false, why) => {
+                          for (@s2 <- caseState) {
+                            caseState!(s2.set("status", "decided")
+                                         .set("execution", {"attempts": 1,
+                                                            "lastError": why}))
+                          } |
+                          ret2!((false, why))
+                        }
+                        _ => {
+                          for (@s2 <- caseState) {
+                            caseState!(s2.set("status", "decided")
+                                         .set("execution", {"attempts": 1,
+                                                            "lastError": "apply"}))
+                          } |
+                          ret2!((false, "apply"))
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          } |
+
+          contract OracleCase(@"expire", ret2) = {
+            new hCh in {
+              nowHeight!(*hCh) |
+              for (@now <- hCh) {
+                for (@s <- caseState) {
+                  if (s.get("status") != "open") {
+                    caseState!(s) | ret2!((false, "not open"))
+                  } else {
+                    if (now <= s.get("deadlineHeight")) {
+                      caseState!(s) | ret2!((false, "not expired"))
+                    } else {
+                      caseState!(s.set("status", "expired")
+                                  .set("version", s.get("version") + 1)) |
+                      ret2!((true, Nil))
+                    }
+                  }
+                }
+              }
+            }
+          } |
+
+          contract OracleCase(@"close", ret2) = {
+            for (@s <- caseState) {
+              if (s.get("status") != "executed" && s.get("status") != "expired") {
+                caseState!(s) | ret2!((false, "not finished"))
+              } else {
+                caseState!(s.set("status", "closed")
+                            .set("version", s.get("version") + 1)) |
+                ret2!((true, Nil))
+              }
+            }
+          } |
+
+          rs!(bundle+{*OracleCase}, *uriCh) |
+          for (@uri <- uriCh) {
+            for (@s2 <- caseState) { caseState!(s2.set("uri", uri)) } |
+            ret!((true, {"id": uri, "uri": uri}))
+          }
+        }
+      } |
+
+      rs!(bundle+{*OracleFactory}, *cFactory) |
+      for (@uri <- cFactory) {
+        rl!(`__ROOT_URI__`, *rootCh) |
+        for (Root <- rootCh) {
+          Root!("register", "component:oracle-factory", uri, 1, "oracle",
+                *deployerId, *ack1) |
+          for (@r <- ack1) { deployId!([("oracle-factory", uri)]) }
+        }
+      }
+    }
+  }
+}

@@ -1,22 +1,22 @@
-# RGen
+# RGen Pareto core
 
-RGen makes engineering value measurable at the point where risk moves. A qualified
-claimant asserts a quantity; a qualified validator asserts its quality; the chain issues an
-immutable K-Asset and a transferable KAT receipt to both parties. A qualified adjudicator
-can then approve the next step or release payment through r-cash.
+RGen expresses the papers' engineering handshake as the smallest set of state machines that
+can carry it:
 
-The primitive is deliberately small. It is not a marketplace, an insurer, a DAO, or a
-currency. It is the handshake plus the record.
+```
+Claim (quantity, work element, selection criteria, clock, comments, value proposition ref)
+  -> Validation (quality, qualified validator, evidence)
+  -> Approval (acceptable completion, liability)
+  -> K-Asset (the claim+validation pair, with approval)
+```
 
-## What "engineering technology" means here
+A ValueProposition is a separate cell, composable with a claim or K-Asset by reference. An
+Oracle case resolves a dispute through one credential-proved adjudicator. A Provenance cell
+keeps the asset's documents and comments with the asset.
 
-The papers distinguish the discovery of laws from the application of those laws to useful
-physical outcomes. RGen encodes the application: a claim about a physical event, a
-validation by someone with the standing to judge it, and an adjudication when the two
-disagree. The value is real but invisible until the chain records both quantity and
-quality.
+The core deliberately does **not** mint, price, transfer, score risk, run panels, or
+administer a governance layer. Those are extensions. The Pareto ledger
+(`reference/pareto-ledger.md`) states why each primitive is present and what was removed.
 
-## Design test
-
-Every arm must answer one question: does this make engineering output more measurable
-without inventing a speculative surface? If not, it is out of scope.
+The design test is: remove the primitive; can the remaining set still express a claim, a
+validation, a value proposition and a K-Asset? If yes, it was not core.

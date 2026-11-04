@@ -1,0 +1,41 @@
+{
+  "schema": "rgen.verification/v1",
+  "generated_at": "2026-11-04T00:00:00Z",
+  "node": {
+    "commit": "e2d073dcd02f1e560ccb84749937138a1e184b0b",
+    "devnet": "isolated rgen-bootstrap",
+    "ports": {"http": 40403, "admin": 40405}
+  },
+  "core": {
+    "terms": 7,
+    "components": 16,
+    "state_cells": 10,
+    "terms_list": [
+      "00_root.rho",
+      "10_identity.rho",
+      "11_credentials.rho",
+      "30_oracle.rho",
+      "40_provenance.rho",
+      "22_value.rho",
+      "20_claim.rho"
+    ]
+  },
+  "static": {
+    "build": "pass",
+    "parse": "7/7 pass",
+    "arch": "pass (acyclic)",
+    "captures": "pass",
+    "placeholders": "pass",
+    "money": "pass",
+    "core_boundary": "pass",
+    "concurrency": "pass",
+    "citations": "pass",
+    "docs": "pass"
+  },
+  "suites": [
+    {"suite": "unit_core", "status": "pass"},
+    {"suite": "concurrency_core", "status": "pass"}
+  ],
+  "extensions": {"installed": false},
+  "baseline_tag": "legacy-2026-11-04"
+}
