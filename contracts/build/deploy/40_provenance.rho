@@ -109,8 +109,13 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
   }
 } |
 
-  contract ProvenanceFactory(@"create", @assetRef, @writers, ret) = {
-    new pState, Provenance, uriCh in {
+  contract ProvenanceFactory(@"create", dId, @assetRef, @writers, ret) = {
+    new aCh in {
+    authOwner!(*dId, *aCh) |
+    for (@(true, creator, pk) <- aCh) {
+      if (writers.length() == 0) { ret!((false, "writers")) }
+      else {
+      new pState, Provenance, uriCh in {
       pState!({
         "uri": "",
         "assetRef": assetRef,
@@ -208,6 +213,9 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
         for (@s2 <- pState) { pState!(s2.set("uri", uri)) } |
         ret!((true, {"id": uri, "uri": uri}))
       }
+      }
+      }
+    }
     }
   } |
 

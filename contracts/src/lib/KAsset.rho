@@ -397,7 +397,7 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
                    s.get("status") == "approved") {
               (true, true) => {
                 new oCh in {
-                  oracleFactory!("open", s.get("claimRef"), {
+                  oracleFactory!("open", *dId, s.get("claimRef"), {
                     "kind": caseReq.get("kind"),
                     "openedBy": who,
                     "parties": [s.get("claimant"), s.get("approver")],

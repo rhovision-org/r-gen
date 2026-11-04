@@ -54,11 +54,13 @@ in {
         }
       } |
 
-      contract OracleFactory(@"open", @subjectRef, @caseReq, subjectApply, ret) = {
-        new okCh in {
+      contract OracleFactory(@"open", dId, @subjectRef, @caseReq, subjectApply, ret) = {
+        new aCh, okCh in {
+        authSubject!(*dId, *aCh) |
         openCaseCheck!(caseReq, *okCh) |
-        for (@ok <- okCh) {
-        if (not ok) { ret!((false, "adjudicator credential")) }
+        for (@(true, opener) <- aCh; @ok <- okCh) {
+        if (opener != caseReq.get("openedBy")) { ret!((false, "not opener")) }
+        else if (not ok) { ret!((false, "adjudicator credential")) }
         else {
         new caseState, OracleCase, selfDecide, uriCh in {
           caseState!({

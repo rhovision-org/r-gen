@@ -21,7 +21,8 @@ items:
   compatibility: Breaking for unauthenticated openers. Reads of old cases are unchanged.
   tests:
   - harness/unit_oracle.py
-  status: proposed
+  status: partial
+  note: Opener auth added; party/subject binding remains.
 - id: RR-02
   priority: P1
   title: Authenticate and bind provenance creation; reject empty writers
@@ -43,7 +44,8 @@ items:
   compatibility: Breaking for anonymous creation and empty writer lists. Old records remain readable.
   tests:
   - harness/unit_provenance.py
-  status: proposed
+  status: partial
+  note: Creator auth and non-empty writers added; asset registry binding remains an extension.
 - id: RR-03
   priority: P1
   title: Bind validated proofs to the chain height

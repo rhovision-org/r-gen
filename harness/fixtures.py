@@ -148,9 +148,9 @@ new rl(`rho:registry:lookup`), c1, ret,
     return _one(term, key=validator)
 
 
-def provenance_create(asset_ref: dict, writers: list):
+def provenance_create(asset_ref: dict, writers: list, key: str = "deployer"):
     return call_uri(comp("provenance-factory"), "create",
-                    [asset_ref, writers], deployer=False)
+                    [Raw("*dId"), asset_ref, writers], key=key)
 
 
 def provenance_anchor(prov_uri: str, writer: str, doc: dict):

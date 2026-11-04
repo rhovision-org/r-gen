@@ -44,6 +44,10 @@ The HAZOP rows for each item are in the manifest. Representative links:
 - RR-04 is fixed: `claimStatus` and `kassetStatus` both map `valid` to validated, `partial` to
   conditional/validated, and `invalid` or unknown to rejected. An unknown verdict no longer produces
   a validated claim beside a rejected K-Asset. Pre-write rejection remains a follow-up.
+- RR-01 is partial: `OracleFactory.open` now authenticates the opener and requires it to match
+  `caseReq.openedBy`. Parties and `subjectRef` remain caller-supplied; registry binding is open.
+- RR-02 is partial: `ProvenanceFactory.create` now authenticates the creator and rejects an empty
+  writer list. `assetRef` is still a free string; asset-registry binding is an extension.
 - RR-03 is fixed: `ValueProposition.proveValidated` reads `nowHeight` and rejects a supplied
   `atHeight` that differs from chain height.
 - RR-05 is fixed: `KAsset.nest` caps a batch at 32 children and the parent list at 64, rejecting

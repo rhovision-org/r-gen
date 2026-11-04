@@ -238,7 +238,7 @@ in {
                                 match s.get("dispute") {
                                   Nil => {
                                     new oCh in {
-                                      OracleFactory!("open", s.get("subjectRef"), {
+                                      OracleFactory!("open", *dId, s.get("subjectRef"), {
                                         "kind": caseReq.get("kind"),
                                         "openedBy": who,
                                         "parties": [s.get("proposer"), s.get("validator")],

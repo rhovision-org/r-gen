@@ -332,9 +332,8 @@ findings:
   actions:
   - RR-02
   disposition: accepted
-  note: Anyone can create a record for any assetRef string and choose the writer list. Empty writers creates a record nobody
-    can anchor or comment on. Provenance is advisory in the core, so this is a records-integrity and impersonation hazard,
-    not a direct authority bypass.
+  note: Phase 2 adds an authenticated creator and rejects an empty writer list. assetRef is still a free string with no registry
+    binding; provenance remains advisory.
 - id: RGA-023
   title: OracleFactory.open is public and trusts caller-supplied parties and adjudicator reference
   severity: S2
@@ -353,10 +352,8 @@ findings:
   actions:
   - RR-01
   disposition: accepted
-  note: openCaseCheck verifies that the named adjudicator credential exists and its subject matches the caller-supplied case
-    requirement. It does not bind the opener to subjectRef or verify the parties. decide and execute remain bound to the stored
-    adjudicator and the real private Apply, so a forged case cannot apply a decision to another cell; the hazard is griefing
-    and false records.
+  note: Phase 2 binds oracle open to the authenticated opener and requires it to equal caseReq.openedBy. Parties and subjectRef
+    remain caller-supplied and unverified; decide and execute stay bound to the stored adjudicator and private Apply.
 - id: RGA-024
   title: Oracle execution spans two contracts without an atomic application receipt
   severity: S2
