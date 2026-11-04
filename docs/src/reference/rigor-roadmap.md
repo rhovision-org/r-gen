@@ -50,6 +50,14 @@ The guard count is 32 of 35 proved-model arms; the remaining three are read-only
 arms with no committed transition. Divergences are still tracked separately; a `guard_eq` proves
 the model guard, not the deployed guard.
 
+### Phase 3 candidates
+
+- Give `proofCells` a trace-consumption relation and prove no cross-arm proof reuse (LR-03).
+- Prove a full `runExec` commute theorem and retire the `Store` compatibility alias (LR-02).
+- Promote the remaining 32 proved arms to `proved-conformance` (LR-06).
+- Redesign the model for the remaining divergences: Claim K-Asset minting, Oracle evidence parties,
+  VP proof caller, IdentityFactory effects, and nest tie handling (LR-08).
+
 ## Guard extraction in practice
 
 For an arm, define a pure guard `g : σ → π → Bool` and an effect `f : σ → π → σ`. Prove:

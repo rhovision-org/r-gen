@@ -1,6 +1,6 @@
 # Status and limits
 
-**Devnet-only, no real value. Phase 1 audit recorded; Phase 2 in progress; independent review pending.**
+**Devnet-only, no real value. Phase 1 audit recorded; Phase 2 partial; Phase 3 pending; independent review pending.**
 
 ## Verified on 2026-11-04
 

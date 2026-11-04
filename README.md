@@ -1,6 +1,6 @@
 # r-gen — CoEngineers / Ingenesist contracts and proofs
 
-**Devnet-only, no real value. Phase 1 audit recorded; Phase 2 in progress; independent review pending.**
+**Devnet-only, no real value. Phase 1 audit recorded; Phase 2 partial; Phase 3 pending; independent review pending.**
 
 r-gen is the first reasonably complete suite of Rholang contracts, paired with a Lean 4 model,
 for the **CoEngineers and Ingenesist Project** vision set out in Dan Robles' papers:

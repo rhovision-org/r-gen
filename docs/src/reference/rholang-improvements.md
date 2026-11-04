@@ -90,6 +90,13 @@ The remaining P0 findings are cross-cell failure windows, not guard bypasses:
 No current Phase 2 change claims to close these. They remain accepted P0 items with the failure
 window documented; the devnet suites cannot exercise them without crash/failure injection.
 
+### Phase 3 candidates
+
+- Bind oracle `subjectRef` and provenance `assetRef` to a registry instead of a free string.
+- Add an explicit oracle execution receipt and a claim validation receipt.
+- Add identity-create and nest recovery records for the failure windows above.
+- Add a registry cap/sharding plan or a measured throughput limit for `directoryState`/`factoryState`.
+
 ## Why these orderings
 
 - **State integrity first.** RR-04 and RR-11 prevent a claim and its K-Asset, or a parent and its
