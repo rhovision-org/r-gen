@@ -576,7 +576,7 @@ roadmap:
   findings:
   - RGA-005
   status: partial
-  note: check_conformance.py enforces theorem + vector + suite; 23 arms promoted; 12 remain.
+  note: check_conformance.py enforces theorem + vector + suite; 33 arms promoted; 2 remain.
 - id: LR-07
   title: Automate audit coverage for every public theorem
   priority: P2

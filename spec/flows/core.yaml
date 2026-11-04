@@ -48,7 +48,9 @@
   transition: RGen.updateProfile
   guard_eq: RGen.identityUpdate_guard_eq
   authority: RGen.identity_update_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_identity.py
+  note: suite asserts the ID-update-owner vector row
 
 - file: contracts/src/deploy/10_identity.rho
   contract: IdentityDirectory
@@ -72,7 +74,9 @@
   transition: RGen.Directory.create
   guard_eq: RGen.identityCreate_guard_eq
   authority: RGen.identity_create_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_identity.py
+  note: suite asserts the ID-create-duplicate vector row
 
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
@@ -248,7 +252,9 @@
   transition: RGen.vpDecision
   guard_eq: RGen.vpDecision_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_value.py
+  note: suite asserts the VP-applyDecision vector row
 
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
@@ -258,8 +264,9 @@
   transition: RGen.VPState.comment
   guard_eq: RGen.vpComment_guard_eq
   authority: RGen.vp_comment_arm_authority
-  status: proved-model
-  note: comment appends and preserves status; window guard is modeled
+  status: proved-conformance
+  suite: harness/unit_value.py
+  note: suite asserts the VP-comment vector row
 
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
@@ -448,7 +455,9 @@
   contract: Provenance
   arm: verify
   lean: RGen.ProvenanceState.verify_monotone
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_provenance.py
+  note: suite asserts the PROV-verify vector row
 
 - file: contracts/src/deploy/40_provenance.rho
   contract: ProvenanceFactory
@@ -591,35 +600,40 @@
   arm: take
   lean: RGen.ProofState.take_take
   guard_eq: RGen.take_guard_eq
-  status: proved-model
-  note: one-shot proof capability; second take returns used
+  status: proved-conformance
+  suite: harness/unit_credentials.py
+  note: suite asserts the PROOF-take-once vector row
 
 - file: contracts/src/deploy/22_value.rho
   contract: Proof
   arm: take
   lean: RGen.ProofState.take_take
   guard_eq: RGen.take_guard_eq
-  status: proved-model
-  note: one-shot validated proof capability
+  status: proved-conformance
+  suite: harness/unit_credentials.py
+  note: suite asserts the PROOF-take-once vector row
 
 - file: contracts/src/lib/KAsset.rho
   contract: Proof
   arm: take
   lean: RGen.ProofState.take_take
   guard_eq: RGen.take_guard_eq
-  status: proved-model
-  note: one-shot approval proof capability
+  status: proved-conformance
+  suite: harness/unit_credentials.py
+  note: suite asserts the PROOF-take-once vector row
 
 - file: contracts/src/deploy/20_claim.rho
   contract: ClaimFactory
   arm: verify
   lean: RGen.Registry.verify_monotone
-  status: proved-model
-  note: append-only claim registry read
+  status: proved-conformance
+  suite: harness/unit_claim.py
+  note: suite asserts the CLAIM-verify vector row
 
 - file: contracts/src/deploy/22_value.rho
   contract: ValuePropositionFactory
   arm: verify
   lean: RGen.Registry.verify_monotone
-  status: proved-model
-  note: append-only value-proposition registry read
+  status: proved-conformance
+  suite: harness/unit_value.py
+  note: suite asserts the VP-verify vector row

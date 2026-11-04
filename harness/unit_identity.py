@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT / "harness"))
 
 import actors
 import assertions
+import corpus
 import fixtures
 import suite_base
 from terms import Raw
@@ -28,6 +29,7 @@ def main() -> int:
 
     reply = fixtures.identity("alice", "alice-second")
     assertions.expect_refusal("duplicate identity refused", reply, "duplicate")
+    corpus.assert_row("ID-create-duplicate", reply)
 
     reply = fixtures.call_uri(alice_uri, "get", [], deployer=False)
     assertions.expect_ok("identity get", reply)
@@ -36,6 +38,7 @@ def main() -> int:
     patch = {"displayNameHash": "display-2", "orgHash": "org-2", "contactHash": "contact-2"}
     reply = fixtures.call_uri(alice_uri, "update", [Raw("*dId"), patch], key="alice")
     assertions.expect_ok("owner update", reply)
+    corpus.assert_row("ID-update-owner", reply)
     reply = fixtures.call_uri(alice_uri, "get", [], deployer=False)
     assertions.expect("owner update stored", reply[1].get("displayNameHash"), "display-2")
 

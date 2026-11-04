@@ -118,8 +118,8 @@ findings:
   actions:
   - LR-06
   disposition: fixed
-  note: Phase 2 promotes twenty-three arms across credential, value, claim, K-Asset, oracle, and provenance. Twelve proved-model
-    arms remain unpromoted.
+  note: Phase 2 promotes thirty-three arms across credential, value, claim, K-Asset, oracle, identity, proof, and provenance.
+    Claim.expire and Oracle.expire remain proved-model.
 - id: RGA-006
   title: The axiom audit is a hand-maintained list
   severity: S3
@@ -628,7 +628,7 @@ arms:
   arm: update
   node: identity
   disposition: infrastructure-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.update_profile_requires_subject
   divergences:
   - DIV-011
@@ -665,7 +665,7 @@ arms:
   arm: create
   node: identity
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.Directory.create_unique
   divergences:
   - DIV-012
@@ -899,7 +899,7 @@ arms:
   arm: applyDecision
   node: kasset-nesting
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.VPState.decision_once
   divergences: []
   guard_fidelity: guarded
@@ -911,7 +911,7 @@ arms:
   arm: comment
   node: value-proposition
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.VPState.comment_requires_proposed
   divergences: []
   guard_fidelity: guarded
@@ -1140,7 +1140,7 @@ arms:
   arm: verify
   node: provenance
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.ProvenanceState.verify_monotone
   divergences: []
   guard_fidelity: not-applicable
@@ -1303,7 +1303,7 @@ arms:
   arm: take
   node: issuer-credential-proof
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.ProofState.take_take
   divergences: []
   guard_fidelity: guarded
@@ -1315,7 +1315,7 @@ arms:
   arm: take
   node: value-proposition
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.ProofState.take_take
   divergences: []
   guard_fidelity: guarded
@@ -1327,7 +1327,7 @@ arms:
   arm: take
   node: kasset-nesting
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.ProofState.take_take
   divergences: []
   guard_fidelity: guarded
@@ -1339,7 +1339,7 @@ arms:
   arm: verify
   node: claim-validation
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.Registry.verify_monotone
   divergences: []
   guard_fidelity: not-applicable
@@ -1351,7 +1351,7 @@ arms:
   arm: verify
   node: value-proposition
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.Registry.verify_monotone
   divergences: []
   guard_fidelity: not-applicable

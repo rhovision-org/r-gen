@@ -48,6 +48,10 @@ def main() -> int:
     # Validate once, exactly one K-Asset.
     claim2 = fixtures.claim("alice", suite_base.claim_req(addrs["alice"]))
     assertions.expect_ok("second claim", claim2)
+    reply = fixtures.call_uri(fixtures.comp("claim-factory"), "verify",
+                              [claim2[1]["uri"]], deployer=False)
+    assertions.expect_ok("claim verify", reply)
+    corpus.assert_row("CLAIM-verify", reply)
     claim2_uri = claim2[1]["uri"]
     reply = fixtures.claim_validate(claim2_uri, bob_cred, "bob",
                                     suite_base.validation(bob_cred))

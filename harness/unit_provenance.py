@@ -49,6 +49,7 @@ def main() -> int:
 
     reply = fixtures.call_uri(prov_uri, "verify", ["aa"], deployer=False)
     assertions.expect("verify known hash", reply, (True, True))
+    corpus.assert_row("PROV-verify", reply)
     reply = fixtures.call_uri(prov_uri, "verify", ["zz"], deployer=False)
     assertions.expect("verify unknown hash", reply, (True, False))
 

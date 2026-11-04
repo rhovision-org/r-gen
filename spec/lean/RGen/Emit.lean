@@ -52,6 +52,14 @@ def coreRows : List VectorRow :=
   , ⟨"CLAIM-comment", "claim", "comment", "open claim", "some", "RGen.ClaimState.comment_requires_open"⟩
   , ⟨"ORACLE-evidence-party", "oracle", "evidence", "listed party", "some", "RGen.OracleState.addEvidence_requires_party"⟩
   , ⟨"KASSET-applyDecision", "kasset", "applyDecision", "upheld decision", "upheld", "RGen.KAssetState.decision_once"⟩
+  , ⟨"ID-create-duplicate", "identity", "create", "claimed address", "none", "RGen.Directory.create_unique"⟩
+  , ⟨"ID-update-owner", "identity", "update", "owner patch", "some", "RGen.update_profile_requires_subject"⟩
+  , ⟨"PROOF-take-once", "proof", "take", "fresh proof", "some", "RGen.ProofState.take_take"⟩
+  , ⟨"PROV-verify", "provenance", "verify", "known hash", "some", "RGen.ProvenanceState.verify_monotone"⟩
+  , ⟨"VP-applyDecision", "value", "applyDecision", "upheld decision", "upheld", "RGen.VPState.decision_once"⟩
+  , ⟨"VP-comment", "value", "comment", "proposed proposition", "some", "RGen.VPState.comment_requires_proposed"⟩
+  , ⟨"CLAIM-verify", "claim", "verify", "known claim", "some", "RGen.Registry.verify_monotone"⟩
+  , ⟨"VP-verify", "value", "verify", "known proposition", "some", "RGen.Registry.verify_monotone"⟩
   , ⟨"O2-close-open", "oracle", "close", "open case", "none", "RGen.OracleState.close_open_refused"⟩
   , ⟨"P1-anchor-duplicate", "provenance", "anchor", "existing anchor", "none", "RGen.ProvenanceState.addAnchor_refused_duplicate"⟩
   , ⟨"P1-anchor-append", "provenance", "anchor", "existing anchors", "preserved", "RGen.P1_anchors_append_only"⟩

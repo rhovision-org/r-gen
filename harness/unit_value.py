@@ -58,6 +58,10 @@ def main() -> int:
     alice_cred = suite_base.issue(addrs, "alice", "Validator", "validator")
     vp2 = fixtures.vp_propose("alice", vp_req(addrs, "alice", selection))
     assertions.expect_ok("propose second", vp2)
+    reply = fixtures.call_uri(fixtures.comp("value-proposition-factory"), "verify",
+                              [vp2[1]["uri"]], deployer=False)
+    assertions.expect_ok("value proposition verify", reply)
+    corpus.assert_row("VP-verify", reply)
     reply = fixtures.vp_validate(vp2[1]["uri"], alice_cred, "alice",
                                  {"credentialUri": alice_cred, "notesHash": "self"})
     assertions.expect_refusal("self validation refused", reply, "self validation")
@@ -68,6 +72,10 @@ def main() -> int:
     reply = fixtures.vp_validate(forged[1]["uri"], fixtures.fake_uri(),
                                  "bob", {"credentialUri": "forged", "notesHash": "x"})
     assertions.expect_refusal("forged credential refused", reply, "forged credential")
+
+    reply = fixtures.vp_comment(forged[1]["uri"], "bob", {"hash": "vp-note"})
+    assertions.expect_ok("vp comment", reply)
+    corpus.assert_row("VP-comment", reply)
 
     # Only the proposer withdraws.
     reply = fixtures.vp_withdraw(forged[1]["uri"], "bob")
@@ -97,8 +105,9 @@ def main() -> int:
     decision = {"outcome": "uphold", "rationaleHash": "rationale"}
     assertions.expect_ok("decide dispute",
                          fixtures.oracle_decide(opened[1]["uri"], "carol", decision))
-    assertions.expect_ok("execute dispute",
-                         fixtures.oracle_execute(opened[1]["uri"]))
+    reply = fixtures.oracle_execute(opened[1]["uri"])
+    assertions.expect_ok("execute dispute", reply)
+    corpus.assert_row("VP-applyDecision", reply)
     reply = fixtures.read(vp_uri, "get")
     assertions.expect("VP upheld", reply[1].get("status"), "upheld")
 

@@ -38,6 +38,7 @@ def main() -> int:
     assertions.expect_ok("bob prove", prove)
     corpus.assert_row("C1-prove-active", prove, primitive="credential")
     assertions.expect_ok("proof take", take)
+    corpus.assert_row("PROOF-take-once", take)
     assertions.expect("proof subject", take[1].get("subject"), addrs["bob"])
     assertions.expect("proof credential uri", take[1].get("credentialUri"), bob_cred)
 
