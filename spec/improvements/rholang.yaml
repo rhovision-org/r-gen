@@ -242,7 +242,8 @@ items:
   - harness/unit_claim.py
   - harness/unit_kasset.py
   - harness/concurrency_core.py
-  status: proposed
+  status: partial
+  note: Claim validation receipt and resume arm added; identity-create and nest recovery records remain.
 - id: RR-10
   priority: P2
   title: Cap or measure registry growth and create serialization

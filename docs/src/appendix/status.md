@@ -15,7 +15,7 @@
   race matrix; 35 `proved-conformance` arms. The audit list is hand-maintained (RGA-006).
 - Static gates: build, parse, arch, captures, placeholders, money, core boundary,
   concurrency, citations, flows, race matrix, arm guards, audit.
-- Phase 1 audit: 65 deployed arms dispositioned; 10 HAZOP nodes, 150 coverage cells, 146 rows;
+- Phase 1 audit: 66 deployed arms dispositioned; 10 HAZOP nodes, 150 coverage cells, 146 rows;
   27 findings (12 P0, 13 P1, 2 P2; no S1); 39 Pareto claim entries; 11 Rholang items and 9 Lean
   items. The record is in `spec/audit`, `spec/hazop`, `spec/proofs`, and `spec/improvements`.
 

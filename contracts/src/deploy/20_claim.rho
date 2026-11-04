@@ -115,6 +115,7 @@ in {
                     "comments": [],
                     "validationRef": Nil,
                     "kassetRef": Nil,
+                    "validationReceipt": Nil,
                     "createdAt": height,
                     "updatedAt": height,
                     "version": 1
@@ -235,16 +236,30 @@ in {
                               for (@ka <- kaCh) {
                                 match ka {
                                   (true, _, kassetUri) => {
-                                    claimState!(s.set("status", claimSt)
-                                      .set("validationRef", {
-                                        "credentialUri": validation.get("credentialUri"),
-                                        "verdict": validation.get("verdict"),
-                                        "quality": validation.get("quality"),
-                                        "validator": validator})
-                                      .set("kassetRef", {"id": kassetUri, "uri": kassetUri})
+                                    claimState!(s.set("status", "validating")
+                                      .set("validationReceipt", {
+                                        "claimStatus": claimSt,
+                                        "validationRef": {
+                                          "credentialUri": validation.get("credentialUri"),
+                                          "verdict": validation.get("verdict"),
+                                          "quality": validation.get("quality"),
+                                          "validator": validator},
+                                        "kassetRef": {"id": kassetUri, "uri": kassetUri}})
                                       .set("updatedAt", height)
                                       .set("version", s.get("version") + 1)) |
-                                    ret2!((true, {"id": kassetUri, "uri": kassetUri}))
+                                    for (@s2 <- claimState) {
+                                      claimState!(s2.set("status", claimSt)
+                                        .set("validationRef", {
+                                          "credentialUri": validation.get("credentialUri"),
+                                          "verdict": validation.get("verdict"),
+                                          "quality": validation.get("quality"),
+                                          "validator": validator})
+                                        .set("kassetRef", {"id": kassetUri, "uri": kassetUri})
+                                        .set("validationReceipt", Nil)
+                                        .set("updatedAt", height)
+                                        .set("version", s2.get("version") + 1)) |
+                                      ret2!((true, {"id": kassetUri, "uri": kassetUri}))
+                                    }
                                   }
                                   _ => { claimState!(s) | ret2!(ka) }
                                 }
@@ -291,6 +306,31 @@ in {
                               ret2!((false, "expired"))
                             }
                             _ => { claimState!(s) | ret2!((false, "not open")) }
+                          }
+                        }
+                      }
+                    }
+                  } |
+
+                  contract Claim(@"resume", dId3, ret3) = {
+                    new a3 in {
+                      authSubject!(*dId3, *a3) |
+                      for (@(true, who) <- a3) {
+                        for (@s <- claimState) {
+                          match (s.get("status"), s.get("validationReceipt")) {
+                            ("validating", r) => {
+                              if (r == Nil) {
+                                claimState!(s) | ret3!((false, "no receipt"))
+                              } else {
+                                claimState!(s.set("status", r.get("claimStatus"))
+                                  .set("validationRef", r.get("validationRef"))
+                                  .set("kassetRef", r.get("kassetRef"))
+                                  .set("validationReceipt", Nil)
+                                  .set("version", s.get("version") + 1)) |
+                                ret3!((true, r.get("kassetRef")))
+                              }
+                            }
+                            _ => { claimState!(s) | ret3!((false, "not resumable")) }
                           }
                         }
                       }

@@ -103,7 +103,7 @@ gap as RGA-006.
 
 `spec/flows/core.yaml` maps every deployed arm to a Lean declaration and one of four
 statuses: `proved-model`, `proved-conformance`, `owed`, `open`. At this checkpoint 34
-of the 65 deployed arms are `proved-model`, 1 is `proved-conformance`, and 30 are `owed`
+of the 66 deployed arms are 0 `proved-model`, 35 `proved-conformance`, and 31 `owed`
 (read-only arms, creation registries, and extensions). `Identity.update` is modeled by
 `ProfileState.updateProfile`. `tools/check_flows.py` enforces coverage, deployment, and
 declaration existence.

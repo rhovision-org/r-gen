@@ -13,7 +13,7 @@ items remain traceable to accepted findings; an external review is still require
 
 ## Scope
 
-Audited: the seven deploy terms and all 65 deployed arms under `contracts/src`, the Lean model that
+Audited: the seven deploy terms and all 66 deployed arms under `contracts/src`, the Lean model that
 claims to describe them, the flow/race manifests, and the current documentation claims.
 
 Not audited: `legacy/` (the tagged pre-Pareto prototype), `crates/` (client tooling), the node's
@@ -28,7 +28,7 @@ The audit is fixed at `527ed95`. Phase 1 changes manifests, tools, and documenta
 
 | Artifact | Count |
 |---|---|
-| Deployed arms dispositioned | 65 |
+| Deployed arms dispositioned | 66 |
 | Lean Pareto theorems with a claim entry | 39 |
 | HAZOP nodes | 10 |
 | Guide-word coverage cells | 150 |

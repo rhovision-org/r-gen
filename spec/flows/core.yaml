@@ -239,6 +239,14 @@
   note: suite asserts the CLAIM-withdraw-nonclaimant vector row
 
 - file: contracts/src/deploy/20_claim.rho
+  contract: Claim
+  arm: resume
+  lean: -
+  cell: claimState
+  status: owed
+  note: recovery arm for a validating claim receipt; the receipt is not yet formalized in Lean
+
+- file: contracts/src/deploy/20_claim.rho
   contract: ClaimFactory
   arm: create
   lean: -
