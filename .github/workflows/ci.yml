@@ -62,6 +62,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - run: make venv PY=.venv/bin/python
       - run: make build PY=.venv/bin/python
       - run: RCHAIN_RUST_DIR=$PWD/rnode-rust tools/parse_check.sh contracts/build/deploy/*.rho
