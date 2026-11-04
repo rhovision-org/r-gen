@@ -82,7 +82,9 @@
   transition: RGen.credentialAttest
   guard_eq: RGen.credentialAttest_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_credentials.py
+  note: suite asserts the CRED-attest-thirdparty vector row
 
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
@@ -220,7 +222,9 @@
   transition: RGen.claimWithdraw
   guard_eq: RGen.claimWithdraw_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_claim.py
+  note: suite asserts the CLAIM-withdraw-nonclaimant vector row
 
 - file: contracts/src/deploy/20_claim.rho
   contract: ClaimFactory
@@ -304,7 +308,9 @@
   transition: RGen.vpWithdraw
   guard_eq: RGen.vpWithdraw_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_value.py
+  note: suite asserts the VP-withdraw-nonproposer vector row
 
 - file: contracts/src/deploy/22_value.rho
   contract: ValuePropositionFactory
@@ -415,7 +421,9 @@
   transition: RGen.provenanceComment
   guard_eq: RGen.provenanceComment_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_provenance.py
+  note: suite asserts the PROV-comment-writer vector row
 
 - file: contracts/src/deploy/40_provenance.rho
   contract: Provenance
@@ -508,7 +516,9 @@
   transition: RGen.kassetReject
   guard_eq: RGen.kassetReject_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_kasset.py
+  note: suite asserts the KASSET-reject vector row
   note: rejection requires validated/conditional and a non-claimant, non-validator proof
   consumedProofs: [credentialProof]
   classification: RGen.kasset_approve_reject_two_way

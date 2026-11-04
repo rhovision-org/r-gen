@@ -63,6 +63,7 @@ def main() -> int:
     reply = fixtures.call_uri(carol_cred, "attest", [Raw("*dId"), "attest-hash"],
                               key="bob")
     assertions.expect_ok("third-party attest", reply)
+    corpus.assert_row("CRED-attest-thirdparty", reply)
     reply = fixtures.call_uri(carol_cred, "attest", [Raw("*dId"), "attest-2"], key="bob")
     assertions.expect_refusal("duplicate attest refused", reply, "already attested")
     reply = fixtures.call_uri(carol_cred, "attest", [Raw("*dId"), "attest-3"],

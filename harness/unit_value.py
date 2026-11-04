@@ -72,6 +72,7 @@ def main() -> int:
     # Only the proposer withdraws.
     reply = fixtures.vp_withdraw(forged[1]["uri"], "bob")
     assertions.expect_refusal("non-proposer withdraw refused", reply, "not proposer")
+    corpus.assert_row("VP-withdraw-nonproposer", reply)
     reply = fixtures.vp_withdraw(forged[1]["uri"], "alice")
     assertions.expect_ok("proposer withdraw", reply)
     reply = fixtures.vp_validate(forged[1]["uri"], bob_cred, "bob",

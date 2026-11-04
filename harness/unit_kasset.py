@@ -52,6 +52,7 @@ def main() -> int:
     reply = fixtures.kasset_reject(kasset4, carol_cred, "carol",
                                    suite_base.approval(carol_cred, addrs["carol"]))
     assertions.expect_ok("reject K-Asset", reply)
+    corpus.assert_row("KASSET-reject", reply)
     assertions.expect("K-Asset rejected", fixtures.read(kasset4, "get")[1].get("status"),
                       "rejected")
 

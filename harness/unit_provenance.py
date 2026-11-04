@@ -55,6 +55,7 @@ def main() -> int:
     reply = fixtures.call_uri(prov_uri, "comment", [Raw("*dId"), {"hash": "note"}],
                               key="alice")
     assertions.expect_ok("writer comment", reply)
+    corpus.assert_row("PROV-comment-writer", reply)
     reply = fixtures.call_uri(prov_uri, "comment", [Raw("*dId"), {"hash": "note"}],
                               key="bob")
     assertions.expect_refusal("non-writer comment refused", reply, "not writer")

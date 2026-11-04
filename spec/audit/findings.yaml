@@ -118,8 +118,8 @@ findings:
   actions:
   - LR-06
   disposition: fixed
-  note: 'Phase 2 promotes nine arms: credential prove, VP validate, VP proveValidated, Claim validate, K-Asset approve/nest,
-    oracle execute/close, and provenance anchor. The other proved arms remain unpromoted.'
+  note: Phase 2 promotes fourteen arms across credential, value, claim, K-Asset, oracle, and provenance. The other proved
+    arms remain unpromoted.
 - id: RGA-006
   title: The axiom audit is a hand-maintained list
   severity: S3
@@ -678,7 +678,7 @@ arms:
   arm: attest
   node: issuer-credential-proof
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.CredentialState.attest_twice
   divergences: []
   guard_fidelity: guarded
@@ -875,7 +875,7 @@ arms:
   arm: withdraw
   node: claim-validation
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.ClaimState.withdraw_requires_claimant
   divergences: []
   guard_fidelity: guarded
@@ -983,7 +983,7 @@ arms:
   arm: withdraw
   node: value-proposition
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.VPState.withdraw_requires_proposer
   divergences: []
   guard_fidelity: guarded
@@ -1116,7 +1116,7 @@ arms:
   arm: comment
   node: provenance
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.ProvenanceState.addComment_requires_writer
   divergences: []
   guard_fidelity: guarded
@@ -1241,7 +1241,7 @@ arms:
   arm: reject
   node: kasset-nesting
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.KAssetState.reject_requires_credential_proof
   divergences: []
   guard_fidelity: guarded

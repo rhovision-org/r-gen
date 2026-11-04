@@ -37,6 +37,7 @@ def main() -> int:
 
     reply = fixtures.claim_withdraw(claim_uri, "bob")
     assertions.expect_refusal("non-claimant withdraw refused", reply, "not claimant")
+    corpus.assert_row("CLAIM-withdraw-nonclaimant", reply)
     reply = fixtures.claim_withdraw(claim_uri, "alice")
     assertions.expect_ok("claimant withdraw", reply)
     reply = fixtures.claim_validate(claim_uri, bob_cred, "bob",
