@@ -575,8 +575,9 @@ roadmap:
   - tools/check_conformance.py
   findings:
   - RGA-005
-  status: partial
-  note: check_conformance.py enforces theorem + vector + suite; 33 arms promoted; 2 remain.
+  status: done
+  note: check_conformance.py enforces theorem + vector + suite; all 35 proved arms promoted; 30 owed arms remain outside the
+    model.
 - id: LR-07
   title: Automate audit coverage for every public theorem
   priority: P2

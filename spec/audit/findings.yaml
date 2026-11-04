@@ -118,8 +118,7 @@ findings:
   actions:
   - LR-06
   disposition: fixed
-  note: Phase 2 promotes thirty-three arms across credential, value, claim, K-Asset, oracle, identity, proof, and provenance.
-    Claim.expire and Oracle.expire remain proved-model.
+  note: Phase 2 promotes all 35 proved arms; the 30 owed arms are outside the model and remain unpromoted.
 - id: RGA-006
   title: The axiom audit is a hand-maintained list
   severity: S3
@@ -836,7 +835,7 @@ arms:
   arm: expire
   node: claim-validation
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.ClaimState.expire_after_deadline
   divergences: []
   guard_fidelity: guarded
@@ -1056,7 +1055,7 @@ arms:
   arm: expire
   node: oracle
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.OracleState.expire_after_deadline
   divergences: []
   guard_fidelity: guarded

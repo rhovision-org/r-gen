@@ -36,6 +36,9 @@ def main() -> int:
     reply = fixtures.read(claim_uri, "comments")
     assertions.expect("comment stored", len(reply[1]), 1)
 
+    reply = fixtures.claim_expire(claim_uri)
+    assertions.expect_refusal("early expire refused", reply, "not expired")
+    corpus.assert_row("CLAIM-expire-early", reply)
     reply = fixtures.claim_withdraw(claim_uri, "bob")
     assertions.expect_refusal("non-claimant withdraw refused", reply, "not claimant")
     corpus.assert_row("CLAIM-withdraw-nonclaimant", reply)

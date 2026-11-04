@@ -27,6 +27,10 @@ def main() -> int:
     assertions.expect("case stores credential",
                       reply[1].get("adjudicatorCredentialUri"), adjudicator_cred)
 
+    reply = fixtures.call_uri(case_uri, "expire", [], deployer=False)
+    assertions.expect_refusal("early expire refused", reply, "not expired")
+    corpus.assert_row("ORACLE-expire-early", reply)
+
     decision = {"outcome": "uphold", "rationaleHash": "rationale"}
     reply = fixtures.oracle_decide(case_uri, "bob", decision)
     assertions.expect_refusal("non-adjudicator decide refused", reply, "not adjudicator")

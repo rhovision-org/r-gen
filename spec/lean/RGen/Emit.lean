@@ -60,6 +60,8 @@ def coreRows : List VectorRow :=
   , ⟨"VP-comment", "value", "comment", "proposed proposition", "some", "RGen.VPState.comment_requires_proposed"⟩
   , ⟨"CLAIM-verify", "claim", "verify", "known claim", "some", "RGen.Registry.verify_monotone"⟩
   , ⟨"VP-verify", "value", "verify", "known proposition", "some", "RGen.Registry.verify_monotone"⟩
+  , ⟨"CLAIM-expire-early", "claim", "expire", "open future claim", "none", "RGen.ClaimState.expire_after_deadline"⟩
+  , ⟨"ORACLE-expire-early", "oracle", "expire", "open future case", "none", "RGen.OracleState.expire_after_deadline"⟩
   , ⟨"O2-close-open", "oracle", "close", "open case", "none", "RGen.OracleState.close_open_refused"⟩
   , ⟨"P1-anchor-duplicate", "provenance", "anchor", "existing anchor", "none", "RGen.ProvenanceState.addAnchor_refused_duplicate"⟩
   , ⟨"P1-anchor-append", "provenance", "anchor", "existing anchors", "preserved", "RGen.P1_anchors_append_only"⟩

@@ -201,7 +201,9 @@
   transition: RGen.claimExpire
   guard_eq: RGen.claimExpire_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_claim.py
+  note: suite asserts the CLAIM-expire-early vector row
 
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
@@ -394,7 +396,9 @@
   transition: RGen.oracleExpire
   guard_eq: RGen.oracleExpire_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_oracle.py
+  note: suite asserts the ORACLE-expire-early vector row
 
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
