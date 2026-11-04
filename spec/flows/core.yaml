@@ -315,12 +315,14 @@
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: close
-  lean: RGen.OracleState.close_requires_finished
+  lean: RGen.OracleState.close_open_refused
   cell: caseState
   transition: RGen.oracleClose
   guard_eq: RGen.oracleClose_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_oracle.py
+  note: suite asserts the O2-close-open vector row
 
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
@@ -348,12 +350,14 @@
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: execute
-  lean: RGen.OracleState.execute_once
+  lean: RGen.O1_execute_bound_once
   cell: caseState
   transition: RGen.oracleExecute
   guard_eq: RGen.oracleExecute_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_oracle.py
+  note: suite asserts the O1-execute-twice vector row
 
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
@@ -383,12 +387,14 @@
 - file: contracts/src/deploy/40_provenance.rho
   contract: Provenance
   arm: anchor
-  lean: RGen.ProvenanceState.anchors_append_only
+  lean: RGen.ProvenanceState.addAnchor_refused_duplicate
   cell: pState
   transition: RGen.provenanceAnchor
   guard_eq: RGen.provenanceAnchor_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_provenance.py
+  note: suite asserts the P1-anchor-duplicate vector row
   consumedProofs: []
   classification: RGen.provenance_anchor_anchor_same_never_after
 
@@ -443,12 +449,14 @@
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: approve
-  lean: RGen.KAssetState.approve_requires_credential_proof
+  lean: RGen.KAssetState.approve_by_claimant_refused
   cell: kState
   transition: RGen.kassetApprove
   guard_eq: RGen.kassetApprove_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_kasset.py
+  note: suite asserts the K1-approve-self vector row
   consumedProofs: [credentialProof, valuePropositionProof]
   classification: RGen.kasset_approve_reject_two_way
 
@@ -469,12 +477,14 @@
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: nest
-  lean: RGen.KAssetState.nest_acyclic
+  lean: RGen.KAssetState.nest_refused_unsorted
   cell: kState
   transition: RGen.kassetNest
   guard_eq: RGen.kassetNest_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_kasset.py
+  note: suite asserts the K3-nest-unsorted vector row
   consumedProofs: [childApprovedProof]
   classification: RGen.kasset_nest_same_never_after_arm
 

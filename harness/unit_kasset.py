@@ -39,6 +39,7 @@ def main() -> int:
     reply = fixtures.kasset_approve(kasset2, alice_cred, "alice",
                                     suite_base.approval(alice_cred, addrs["alice"]))
     assertions.expect_refusal("claimant approval refused", reply, "conflict")
+    corpus.assert_row("K1-approve-self", reply)
 
     # A forged credential is refused.
     claim3, kasset3, _ = suite_base.validated_kasset(addrs, "bob")
@@ -72,6 +73,7 @@ def main() -> int:
                                  list(reversed([{"id": oc1, "uri": oc1},
                                                 {"id": oc2, "uri": oc2}])))
     assertions.expect_refusal("unsorted children refused", reply, "order")
+    corpus.assert_row("K3-nest-unsorted", reply)
     reply = fixtures.kasset_nest(parent, "bob", refs)
     assertions.expect_refusal("non-claimant nest refused", reply, "not claimant")
 

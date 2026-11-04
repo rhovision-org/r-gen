@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "harness"))
 
 import assertions
+import corpus
 import fixtures
 import suite_base
 from terms import Raw
@@ -32,6 +33,7 @@ def main() -> int:
     reply = fixtures.provenance_anchor(
         prov_uri, "alice", {"kind": "inspection", "hash": "aa", "parentHash": ""})
     assertions.expect_refusal("duplicate anchor refused", reply, "duplicate")
+    corpus.assert_row("P1-anchor-duplicate", reply)
     reply = fixtures.provenance_anchor(
         prov_uri, "alice", {"kind": "inspection", "hash": "", "parentHash": ""})
     assertions.expect_refusal("empty hash refused", reply, "hash")

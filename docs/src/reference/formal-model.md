@@ -111,7 +111,7 @@ declaration existence.
 `spec/vectors/core.tsv` is emitted by `lake exe emit` from `RGen/Emit.lean`.
 `tools/gen_vectors.py --write` refreshes it; `tools/check_core_vectors.py` rejects drift.
 `proved-conformance` is claimed only for a row that is both emitted and asserted by a
-suite; credential prove, VP validate, and VP proveValidated are claimed through the emitted vectors and `unit_credentials.py` / `unit_value.py`.
+suite; eight arms are claimed through emitted vectors and the credential, value, K-Asset, oracle, and provenance suites.
 
 ## Honest limits
 

@@ -117,8 +117,8 @@ findings:
   actions:
   - LR-06
   disposition: fixed
-  note: Phase 2 defines the evidence bundle and promotes credential prove, VP validate, and VP proveValidated. The other proved
-    arms remain unpromoted.
+  note: 'Phase 2 promotes eight arms: credential prove, VP validate, VP proveValidated, K-Asset approve/nest, oracle execute/close,
+    and provenance anchor. The other proved arms remain unpromoted.'
 - id: RGA-006
   title: The axiom audit is a hand-maintained list
   severity: S3
@@ -1006,8 +1006,8 @@ arms:
   arm: close
   node: oracle
   disposition: model-reviewed
-  flow_status: proved-model
-  lean: RGen.OracleState.close_requires_finished
+  flow_status: proved-conformance
+  lean: RGen.OracleState.close_open_refused
   divergences: []
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
@@ -1042,8 +1042,8 @@ arms:
   arm: execute
   node: oracle
   disposition: model-reviewed
-  flow_status: proved-model
-  lean: RGen.OracleState.execute_once
+  flow_status: proved-conformance
+  lean: RGen.O1_execute_bound_once
   divergences:
   - DIV-014
   guard_fidelity: guarded
@@ -1091,8 +1091,8 @@ arms:
   arm: anchor
   node: provenance
   disposition: model-reviewed
-  flow_status: proved-model
-  lean: RGen.ProvenanceState.anchors_append_only
+  flow_status: proved-conformance
+  lean: RGen.ProvenanceState.addAnchor_refused_duplicate
   divergences: []
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
@@ -1176,8 +1176,8 @@ arms:
   arm: approve
   node: kasset-nesting
   disposition: model-reviewed
-  flow_status: proved-model
-  lean: RGen.KAssetState.approve_requires_credential_proof
+  flow_status: proved-conformance
+  lean: RGen.KAssetState.approve_by_claimant_refused
   divergences:
   - DIV-004
   guard_fidelity: guarded
@@ -1213,8 +1213,8 @@ arms:
   arm: nest
   node: kasset-nesting
   disposition: model-reviewed
-  flow_status: proved-model
-  lean: RGen.KAssetState.nest_acyclic
+  flow_status: proved-conformance
+  lean: RGen.KAssetState.nest_refused_unsorted
   divergences:
   - DIV-005
   - DIV-006

@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "harness"))
 
 import assertions
+import corpus
 import fixtures
 import suite_base
 
@@ -42,6 +43,7 @@ def main() -> int:
     assertions.expect_ok("execute", reply)
     reply = fixtures.oracle_execute(case_uri)
     assertions.expect("second execute is already executed", reply[1], "already executed")
+    corpus.assert_row("O1-execute-twice", reply)
     assertions.expect("K-Asset upheld", fixtures.read(kasset_uri, "get")[1].get("status"),
                       "upheld")
 
@@ -67,6 +69,7 @@ def main() -> int:
     third_case, _ = suite_base.open_case(addrs, second, "dave")
     reply = fixtures.call_uri(third_case, "close", [], deployer=False)
     assertions.expect_refusal("open case cannot close", reply, "not finished")
+    corpus.assert_row("O2-close-open", reply)
 
     # Evidence is restricted to parties and the adjudicator.
     reply = fixtures.call_uri(third_case, "evidence", [__import__("terms").Raw("*dId"),

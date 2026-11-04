@@ -13,7 +13,7 @@ K1-approve-proof	kasset	approve	credential proof subject	approver	RGen.K1_approv
 K2-approve-status	kasset	approve	approved already	none	RGen.K2_approve_status
 K3-nest-unsorted	kasset	nest	children not rising	none	RGen.KAssetState.nest_refused_unsorted
 K3-nest-acyclic	kasset	nest	any child set	acyclic	RGen.K3_nest_acyclic
-O1-execute-twice	oracle	execute	second execute	none	RGen.O1_execute_bound_once
+O1-execute-twice	oracle	execute	second execute	already executed	RGen.O1_execute_bound_once
 O2-close-open	oracle	close	open case	none	RGen.OracleState.close_open_refused
 P1-anchor-duplicate	provenance	anchor	existing anchor	none	RGen.ProvenanceState.addAnchor_refused_duplicate
 P1-anchor-append	provenance	anchor	existing anchors	preserved	RGen.P1_anchors_append_only

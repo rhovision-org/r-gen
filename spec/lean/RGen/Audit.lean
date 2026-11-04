@@ -206,3 +206,4 @@ This file is not imported by `RGen.lean`; it is an audit artefact.
 #print axioms RGen.take_guard_eq
 #print axioms RGen.provenance_anchor_comment_independent
 #print axioms RGen.KAssetState.approve_requires_credential_type
+#print axioms RGen.ProvenanceState.addAnchor_refused_duplicate
