@@ -33,14 +33,14 @@ concerns. The arm's `proofCells` field is not read by `decision` or `event`; see
 
 ## Model-versus-code divergences
 
-Sixteen divergences are recorded with a direction. `model-permissive` means the model admits more
+Sixteen divergences were recorded with a direction; two are resolved in Phase 2. `model-permissive` means the model admits more
 than the contract, so a model invariant may still be conservative but the arm's real guard is
 unproved. `model-stricter` and `effect-omitting` mean a model proof may not cover the deployed arm.
 
 | ID | Arm | Direction | Difference |
 |---|---|---|---|
-| DIV-001 | `Credential.revoke` | model-permissive | Model revoke is idempotent; deployed refuses a non-active credential |
-| DIV-002 | `Credential.prove` | mixed | Model half-open window and `issuedAt` lower bound; deployed checks only `height > expiresAt` |
+| DIV-001 | `Credential.revoke` | mixed | Resolved: model revoke now requires active status |
+| DIV-002 | `Credential.prove` | mixed | Resolved: model uses `h <= expiresAt` and no `issuedAt` lower bound |
 | DIV-003 | `Credential.renew` | mixed | Model adds `issuedAt <= newExpiry`; deployed writes `evidenceHash` and `renewals` |
 | DIV-004 | `KAsset.approve` | model-permissive | Model omits the deployed Approver credential and VP-proof qualification |
 | DIV-005 | `KAsset.nest` | model-permissive | Model admits validated/conditional parents; deployed requires approved |

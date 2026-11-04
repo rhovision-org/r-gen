@@ -261,15 +261,15 @@ divergences:
   arm: Credential.revoke
   model_decl: RGen.CredentialState.revoke
   deployed: contracts/src/deploy/11_credentials.rho:234
-  direction: model-permissive
-  consequence: Model revoke is idempotent; deployed refuses a non-active credential.
+  direction: mixed
+  consequence: 'Resolved in Phase 2: the model revoke now requires active status, matching the deployed refusal.'
   finding: RGA-004
 - id: DIV-002
   arm: Credential.prove
   model_decl: RGen.CredentialState.activeAt
   deployed: contracts/src/deploy/11_credentials.rho:181
   direction: mixed
-  consequence: Model uses a half-open window plus an issuedAt lower bound; deployed checks only height > expiresAt.
+  consequence: 'Resolved in Phase 2: the model uses h <= expiresAt and no issuedAt lower bound, matching the deployed expiry.'
   finding: RGA-004
 - id: DIV-003
   arm: Credential.renew

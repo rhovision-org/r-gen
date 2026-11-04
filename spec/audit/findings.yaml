@@ -98,8 +98,8 @@ findings:
   - LR-01
   - LR-08
   disposition: fixed
-  note: Phase 2 adds guard definitions and guard_eq theorems for all 32 mutating proved-model arms; the remaining three proved-model
-    arms are read-only. The model/code divergences are still recorded in the divergence ledger and are not claimed to be aligned.
+  note: Phase 2 adds guard_eq for all 32 mutating proved-model arms and aligns credential revoke/expiry. The remaining model/code
+    divergences are recorded in the divergence ledger.
 - id: RGA-005
   title: proved-conformance is zero; vectors are emitted but not asserted end-to-end
   severity: S2

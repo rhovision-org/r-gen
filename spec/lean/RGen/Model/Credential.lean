@@ -41,9 +41,10 @@ namespace CredentialState
 
 def isActive (c : CredentialState) : Bool := decide (c.status = CredStatus.active)
 
-/-- Active at a height: not revoked and inside the half-open issue window. -/
+/-- Active at a height: not revoked and not past expiry. The deployed arm has no
+issuedAt lower bound, so the model does not add one. -/
 def activeAt (c : CredentialState) (h : Height) : Bool :=
-  c.isActive && inWindow h c.issuedAt c.expiresAt
+  c.isActive && decide (h ≤ c.expiresAt)
 
 /-- The credential and its issuer cover the requirement. -/
 def attests (c : CredentialState) (issuerScope : IssuerScope) (r : Requirement) : Bool :=
@@ -77,7 +78,7 @@ def prove (c : CredentialState) (proofUri credentialUri : Id)
 
 /-- Only the subject or the issuer may revoke. -/
 def revoke (c : CredentialState) (caller : Id) : Option CredentialState :=
-  if caller = c.subject ∨ caller = c.issuer then
+  if c.status = CredStatus.active ∧ (caller = c.subject ∨ caller = c.issuer) then
     some { c with status := CredStatus.revoked }
   else none
 
@@ -157,7 +158,7 @@ theorem revoke_requires_party {c c' : CredentialState} {caller : Id}
   unfold revoke at h
   split at h
   · rename_i hg
-    exact hg
+    exact hg.2
   · simp at h
 
 theorem revoke_sets_revoked {c c' : CredentialState} {caller : Id}

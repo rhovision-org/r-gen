@@ -16,12 +16,12 @@ validated and conditional parents.
 namespace RGen
 
 def credentialRevokeGuard (s : CredentialState) (caller : Id) : Bool :=
-  decide (caller = s.subject ∨ caller = s.issuer)
+  decide (s.status = CredStatus.active ∧ (caller = s.subject ∨ caller = s.issuer))
 
 theorem credentialRevoke_guard_eq (s : CredentialState) (caller : Id) :
     (credentialRevoke s caller).isSome = credentialRevokeGuard s caller := by
   unfold credentialRevoke CredentialState.revoke credentialRevokeGuard
-  by_cases h : caller = s.subject ∨ caller = s.issuer <;> simp [h]
+  by_cases h : s.status = CredStatus.active ∧ (caller = s.subject ∨ caller = s.issuer) <;> simp [h]
 
 def credentialRenewGuard (s : CredentialState) (p : Id × Height) : Bool :=
   decide (s.status = CredStatus.active ∧ p.1 = s.issuer ∧ s.issuedAt ≤ p.2)
