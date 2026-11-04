@@ -3,7 +3,10 @@
 
 Rules:
 - Every contract arm that consumes a state cell must re-post it in the same block.
-- An arm may not both consume (`<-`) and peek (`<<-`) the same state cell.
+- An arm may not both consume (`<-`) and peek (`<<-`) the same state cell, except the
+  documented KAsset.nest two-phase arm (parent peek for the pre-pass, parent consume only
+  after child proofs are taken).
+- `Issuer.revoke` and `Credential.check` calls are absent from the core.
 - No global nonce state cell exists.
 - Every declared serialization point is documented in the design rationale.
 """
@@ -23,6 +26,11 @@ CELLS = {
 }
 SERIALIZATION = {"rootState", "directoryState", "issuerState", "factoryState"}
 CONTRACT = re.compile(r"contract\s+([A-Za-z0-9_]+)\s*\(")
+ARM = re.compile(r'contract\s+([A-Za-z0-9_]+)\s*\(\s*@"([A-Za-z0-9_]+)"')
+FORBIDDEN_CALLS = [
+    (re.compile(r'Issuer!\("revoke"'), "Issuer.revoke is removed from the core"),
+    (re.compile(r'\w+!\("check",'), "Credential.check is advisory and not a commit authority"),
+]
 
 
 def block_end(text: str, start: int) -> int | None:
@@ -65,11 +73,20 @@ def main() -> int:
                 continue
             block = text[match.start():end]
             arms += 1
+            arm_match = ARM.match(text, match.start())
+            # KAsset.nest is a documented two-phase arm: it peeks the parent for the
+            # read-only pre-pass and consumes it only after the child proofs are taken.
+            two_phase_nest = bool(
+                arm_match and arm_match.group(1) == "KAsset"
+                and arm_match.group(2) == "nest")
+            for pattern, why in FORBIDDEN_CALLS:
+                if pattern.search(block):
+                    errors.append(f"{path.name}: {match.group(1)}: {why}")
             for cell in CELLS:
                 consumed = re.search(rf"(?<!<)<-\s*{cell}\b", block)
                 peeked = re.search(rf"<<-\s*{cell}\b", block)
                 nested = len(CONTRACT.findall(block)) > 1
-                if consumed and peeked and not nested:
+                if consumed and peeked and not nested and not two_phase_nest:
                     errors.append(
                         f"{path.name}: {match.group(1)} mixes <- and <<- on {cell}")
             for cell in CELLS:

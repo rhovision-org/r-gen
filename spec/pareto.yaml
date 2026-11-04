@@ -1,0 +1,128 @@
+# Pareto core manifest. This is the authoritative minimal set: the seven Rholang terms,
+# the catalogue boundary, the Lean modules and essential theorems, and the paper-linked
+# documentation that must exist for each primitive.
+schema: rgen.pareto/v1
+components: 16
+cells:
+  - directoryState
+  - identityState
+  - issuerState
+  - factoryState
+  - credState
+  - caseState
+  - pState
+  - vpState
+  - claimState
+  - kState
+terms:
+  - contracts/src/deploy/00_root.rho
+  - contracts/src/deploy/10_identity.rho
+  - contracts/src/deploy/11_credentials.rho
+  - contracts/src/deploy/20_claim.rho
+  - contracts/src/deploy/22_value.rho
+  - contracts/src/deploy/30_oracle.rho
+  - contracts/src/deploy/40_provenance.rho
+lean_modules:
+  - spec/lean/RGen/Basic.lean
+  - spec/lean/RGen/Linear/Cell.lean
+  - spec/lean/RGen/Linear/Protocol.lean
+  - spec/lean/RGen/Linear/Versioned.lean
+  - spec/lean/RGen/Linear/Exec.lean
+  - spec/lean/RGen/Linear/Authority.lean
+  - spec/lean/RGen/Linear/Lift.lean
+  - spec/lean/RGen/Model/Proof.lean
+  - spec/lean/RGen/Model/ProofVersioned.lean
+  - spec/lean/RGen/Model/Registry.lean
+  - spec/lean/RGen/Model/Identity.lean
+  - spec/lean/RGen/Model/Issuer.lean
+  - spec/lean/RGen/Model/Credential.lean
+  - spec/lean/RGen/Model/ValueProposition.lean
+  - spec/lean/RGen/Model/Claim.lean
+  - spec/lean/RGen/Model/KAsset.lean
+  - spec/lean/RGen/Model/Oracle.lean
+  - spec/lean/RGen/Model/Provenance.lean
+  - spec/lean/RGen/Concurrency.lean
+  - spec/lean/RGen/Composition.lean
+  - spec/lean/RGen/Invariants.lean
+  - spec/lean/RGen/Arms/Basic.lean
+  - spec/lean/RGen/Arms/Credential.lean
+  - spec/lean/RGen/Arms/ValueProposition.lean
+  - spec/lean/RGen/Arms/Claim.lean
+  - spec/lean/RGen/Arms/KAsset.lean
+  - spec/lean/RGen/Arms/Oracle.lean
+  - spec/lean/RGen/Arms/Provenance.lean
+  - spec/lean/RGen/Arms/Instances.lean
+  - spec/lean/RGen/RaceFreedom.lean
+  - spec/lean/RGen/Pareto.lean
+theorems:
+  - take_put_commit
+  - VWorld.take_take_blocks
+  - VWorld.take_post_commit_equiv
+  - D1_peek_put
+  - D1_put_without_take
+  - D2_take_without_put
+  - D3_nested_call
+  - run_frame
+  - disjoint_cells_commute_wf
+  - runExec_sound
+  - runExec_complete
+  - runExec_deterministic
+  - runExec_projection
+  - runExec_no_same_expected
+  - core_races_not_representable
+  - Arm.decision_factors
+  - core_arm_authority
+  - cross_cell_read_not_authority
+  - proof_take_once_versioned
+  - C1_prove_requires_active
+  - C2_revoke_blocks_prove
+  - C3_issuer_immutable
+  - V1_validate_once
+  - V2_dispute_blocks_prove
+  - K1_approve_credential
+  - K2_approve_status
+  - K3_nest_acyclic
+  - O1_execute_bound_once
+  - O2_close_finished
+  - P1_anchors_append_only
+  - L1_disjoint_commute
+  - L2_shared_serializes
+  - L3_mayAcquire_acyclic
+  - L4_deadlock_free
+  - claim_validation_exactly_one_kasset
+  - approval_composes_credential_and_vp_proofs
+  - nesting_is_a_forest_with_strict_order
+  - oracle_execution_exactly_once_and_subject_bound
+  - provenance_is_append_only
+docs:
+  - path: docs/src/primitives/identity.md
+    citations: 2
+  - path: docs/src/primitives/credential.md
+    citations: 2
+  - path: docs/src/primitives/claim.md
+    citations: 2
+  - path: docs/src/primitives/validation.md
+    citations: 2
+  - path: docs/src/primitives/k-asset.md
+    citations: 2
+  - path: docs/src/primitives/value-proposition.md
+    citations: 2
+  - path: docs/src/primitives/oracle.md
+    citations: 2
+  - path: docs/src/primitives/provenance.md
+    citations: 2
+  - path: docs/src/primitives/registry.md
+    citations: 0
+  - path: docs/src/reference/paper-to-code.md
+    citations: 6
+extensions:
+  - ValueProposition.revocation
+  - KAsset.revocation
+  - Issuer.revoke
+  - KAT
+  - payments
+  - risk
+  - panels
+  - admin
+  - handles
+  - metrics

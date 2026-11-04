@@ -1,0 +1,146 @@
+import RGen.Invariants
+import RGen.RaceFreedom
+import RGen.Arms.Instances
+import RGen.Model.Registry
+import RGen.Model.Identity
+
+/-!
+# Axiom audit
+
+`#print axioms` for the public theorems. `tools/check_lean.py --audit` runs this
+file and rejects any axiom outside `{propext, Classical.choice, Quot.sound}`.
+This file is not imported by `RGen.lean`; it is an audit artefact.
+-/
+
+#print axioms RGen.run_frame
+#print axioms RGen.disjoint_cells_commute
+#print axioms RGen.disjoint_cells_commute_wf
+#print axioms RGen.run_agree
+#print axioms RGen.World.commit_commute
+#print axioms RGen.World.commit_same_cell
+#print axioms RGen.World.commit_preserves_other
+#print axioms RGen.proof_take_once
+#print axioms RGen.proof_take_second
+#print axioms RGen.proof_take_marks_used
+#print axioms RGen.D1_peek_put
+#print axioms RGen.D1_put_without_take
+#print axioms RGen.D2_take_without_put
+#print axioms RGen.D3_nested_call
+#print axioms RGen.Registry.verify_monotone
+#print axioms RGen.Registry.register_twice
+#print axioms RGen.Directory.create_unique
+#print axioms RGen.update_owner_requires_owner
+#print axioms RGen.Issuer.issuer_immutable
+#print axioms RGen.CredentialState.prove_requires_subject
+#print axioms RGen.CredentialState.prove_requires_active
+#print axioms RGen.CredentialState.prove_after_revoke
+#print axioms RGen.CredentialState.prove_wrong_subject
+#print axioms RGen.CredentialState.credReach_preserves_identity
+#print axioms RGen.VPState.validate_once
+#print axioms RGen.VPState.proveValidated_requires_validated
+#print axioms RGen.VPState.prove_after_dispute
+#print axioms RGen.VPState.terminal_no_transition
+#print axioms RGen.ClaimState.validate_once
+#print axioms RGen.ClaimState.validate_creates_exactly_one_kasset
+#print axioms RGen.ClaimState.terminal_no_transition
+#print axioms RGen.KAssetState.approve_only_from_validated_or_conditional
+#print axioms RGen.KAssetState.approve_requires_credential_proof
+#print axioms RGen.KAssetState.approve_requires_vp_proof
+#print axioms RGen.KAssetState.approve_by_claimant_refused
+#print axioms RGen.KAssetState.nest_requires_order
+#print axioms RGen.KAssetState.nest_refused_unsorted
+#print axioms RGen.KAssetState.nest_acyclic
+#print axioms RGen.KAssetState.approvedAt_stable
+#print axioms RGen.OracleState.decide_once
+#print axioms RGen.OracleState.execute_subject_bound
+#print axioms RGen.OracleState.execute_once
+#print axioms RGen.OracleState.close_requires_finished
+#print axioms RGen.OracleState.close_open_refused
+#print axioms RGen.ProvenanceState.anchors_append_only
+#print axioms RGen.ProvenanceState.anchor_unique
+#print axioms RGen.ProvenanceState.verify_monotone
+#print axioms RGen.mayAcquire_rank_strict
+#print axioms RGen.mayAcquire_acyclic
+#print axioms RGen.deadlock_free_of_rank
+#print axioms RGen.claim_validation_exactly_one_kasset
+#print axioms RGen.approval_composes_credential_and_vp_proofs
+#print axioms RGen.nesting_is_a_forest_with_strict_order
+#print axioms RGen.oracle_execution_exactly_once_and_subject_bound
+#print axioms RGen.provenance_is_append_only
+#print axioms RGen.L1_disjoint_commute
+#print axioms RGen.L2_shared_serializes
+#print axioms RGen.L3_mayAcquire_acyclic
+#print axioms RGen.L4_deadlock_free
+
+#print axioms RGen.VWorld.commit_accepted
+#print axioms RGen.VWorld.take_take_blocks
+#print axioms RGen.VWorld.take_post_commit_equiv
+#print axioms RGen.runExec_sound
+#print axioms RGen.runExec_complete
+#print axioms RGen.runExec_deterministic
+#print axioms RGen.runExec_frame
+#print axioms RGen.runExec_projection
+#print axioms RGen.runCell_applied
+#print axioms RGen.appliedExpecteds_no_two
+#print axioms RGen.runExec_no_same_expected
+#print axioms RGen.factors_iff_depends_only
+#print axioms RGen.cross_cell_read_not_authority
+#print axioms RGen.peek_not_authority
+#print axioms RGen.Arm.decision_factors
+#print axioms RGen.Arm.decision_authority
+#print axioms RGen.proof_take_once_versioned
+#print axioms RGen.proof_no_second_payload
+#print axioms RGen.credential_prove_revoke_never_after
+#print axioms RGen.credential_revoke_renew_never_after
+#print axioms RGen.credential_attest_same_never_after
+#print axioms RGen.vp_validate_withdraw_two_way
+#print axioms RGen.vp_proveValidated_openDispute_ordered
+#print axioms RGen.vp_decision_decision_never_after
+#print axioms RGen.claim_validate_withdraw_two_way
+#print axioms RGen.claim_validate_expire_two_way
+#print axioms RGen.claim_validate_reject_two_way
+#print axioms RGen.claim_validate_blocks_comment
+#print axioms RGen.claim_comment_comment_appends
+#print axioms RGen.kasset_approve_reject_two_way
+#print axioms RGen.kasset_openDispute_proveApproved_never_after
+#print axioms RGen.kasset_nest_same_never_after
+#print axioms RGen.oracle_decide_expire_two_way
+#print axioms RGen.oracle_execute_execute_never_after
+#print axioms RGen.oracle_decide_evidence_never_after
+#print axioms RGen.provenance_anchor_anchor_same_never_after
+#print axioms RGen.provenance_anchor_anchor_distinct_appends
+#print axioms RGen.core_arm_authority
+#print axioms RGen.core_proof_payloads_consumed
+#print axioms RGen.core_no_two_commits_same_generation
+#print axioms RGen.core_races_not_representable
+#print axioms RGen.core_same_cell_serialization
+#print axioms RGen.core_independent_cells_commute
+#print axioms RGen.credential_prove_arm_authority
+#print axioms RGen.credential_revoke_arm_authority
+#print axioms RGen.credential_renew_arm_authority
+#print axioms RGen.credential_attest_arm_authority
+#print axioms RGen.vp_validate_arm_authority
+#print axioms RGen.vp_withdraw_arm_authority
+#print axioms RGen.vp_open_dispute_arm_authority
+#print axioms RGen.vp_prove_validated_arm_authority
+#print axioms RGen.vp_decision_arm_authority
+#print axioms RGen.claim_validate_arm_authority
+#print axioms RGen.claim_withdraw_arm_authority
+#print axioms RGen.claim_expire_arm_authority
+#print axioms RGen.claim_comment_arm_authority
+#print axioms RGen.claim_reject_arm_authority
+#print axioms RGen.kasset_approve_arm_authority
+#print axioms RGen.kasset_reject_arm_authority
+#print axioms RGen.kasset_prove_approved_arm_authority
+#print axioms RGen.kasset_open_dispute_arm_authority
+#print axioms RGen.kasset_decision_arm_authority
+#print axioms RGen.kasset_nest_arm_authority
+#print axioms RGen.oracle_decide_arm_authority
+#print axioms RGen.oracle_expire_arm_authority
+#print axioms RGen.oracle_execute_arm_authority
+#print axioms RGen.oracle_finish_arm_authority
+#print axioms RGen.oracle_close_arm_authority
+#print axioms RGen.oracle_evidence_arm_authority
+#print axioms RGen.oracle_rollback_arm_authority
+#print axioms RGen.provenance_anchor_arm_authority
+#print axioms RGen.provenance_comment_arm_authority

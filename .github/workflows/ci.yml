@@ -31,6 +31,18 @@ jobs:
       - run: make venv PY=.venv/bin/python
       - run: make docs-check PY=.venv/bin/python
 
+  lean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: spec/lean
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: make lean-check PY=python3
+
   rust:
     runs-on: ubuntu-latest
     steps:

@@ -25,6 +25,10 @@ idea but does not define its mechanism), **user decision** (the user asked for i
 | Liability transfer | "assign, limit, or transfer liability" `@robles2016nspe p.25`; "Tokens issuance marks points where risk is transferred" `@zhong2019bridge p.6` | Approval and oracle decisions must record who bears the risk | Paper-derived |
 | GenRoot | No paper passage | Install-time discovery only; core contracts are wired at install and never resolve it at runtime | Engineering infrastructure |
 
+Each core primitive has a page with paper quotes, the Rholang arm/field references, and the
+Lean theorem names under `docs/src/primitives/`; the row-by-row linkage is
+[paper-to-code](paper-to-code.md).
+
 ## Extensions (excluded from the default build)
 
 | Extension | Paper basis | Why not core |

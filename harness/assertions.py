@@ -85,7 +85,7 @@ def secret(name: str = "deployer") -> str:
     return node.secret_for(name)
 
 
-def one(term: str, key: str = "deployer", phlo_limit: int = 20_000_000):
+def one(term: str, key: str = "deployer", phlo_limit: int = 8_000_000):
     deploy_id, result = node.deploy_and_wait(term, secret(key), phlo_limit=phlo_limit)
     decoded = decode(result)
     if isinstance(decoded, list) and len(decoded) == 1:
@@ -94,7 +94,7 @@ def one(term: str, key: str = "deployer", phlo_limit: int = 20_000_000):
 
 
 def call(uri: str, arm: str, args=(), key: str = "deployer",
-         deployer: bool = True, phlo_limit: int = 20_000_000):
+         deployer: bool = True, phlo_limit: int = 8_000_000):
     if deployer:
         term = terms.call_term(uri, arm, args)
     else:

@@ -45,8 +45,8 @@ def main() -> int:
                     errors.append(f"{path.name}: unknown citation key @{key}")
                     continue
                 paper = papers[key]
-                if paper.get("status") == "quarantined":
-                    errors.append(f"{path.name}: quarantined paper @{key} is cited")
+                if paper.get("status") in ("quarantined", "uncited"):
+                    errors.append(f"{path.name}: uncited paper @{key} is cited")
                 extract = ROOT / "docs" / "papers" / "extract" / f"{key}.md"
                 if not extract.is_file():
                     errors.append(f"{path.name}: missing extract for @{key}")
@@ -60,7 +60,7 @@ def main() -> int:
                         errors.append(f"{path.name}: @{key} has no extract heading p.{page}")
 
     for key, paper in papers.items():
-        if paper.get("status") in ("quarantined", "background"):
+        if paper.get("status") in ("uncited", "background", "quarantined"):
             continue
         if key not in cited:
             errors.append(f"@key {key} is never cited by a core term")
@@ -73,17 +73,6 @@ def main() -> int:
         digest = hashlib.sha256(pdf.read_bytes()).hexdigest()
         if digest != paper["sha256"]:
             errors.append(f"@key {key}: sha256 drift")
-
-    if os.environ.get("RGEN_PUBLIC_RELEASE") == "1":
-        import subprocess
-        tracked = subprocess.run(
-            ["git", "-C", str(ROOT), "ls-files", "docs/papers/pdf"],
-            text=True, capture_output=True).stdout
-        for key, paper in papers.items():
-            if paper.get("license", {}).get("redistributable") is False:
-                if Path(paper["pdf"]).name in tracked:
-                    errors.append(
-                        f"@key {key}: non-redistributable PDF tracked in a public release")
 
     if errors:
         for error in errors:

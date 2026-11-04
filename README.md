@@ -1,6 +1,8 @@
-# RGen — Pareto core
+# RGen — Pareto-efficient engineering-technology primitives
 
 **Devnet-only, unaudited, no real value.**
+
+**Documentation:** <https://rhovision-org.github.io/r-gen/>
 
 RGen is the Pareto-efficient core of the engineering-technology primitives suggested by the
 Dan Robles papers: it expresses **claims**, **validations**, **value propositions**,
@@ -19,8 +21,11 @@ Dan Robles papers: it expresses **claims**, **validations**, **value proposition
 > participant in a pair. — *The Innovation Bank*, p.4
 
 The full quote-to-primitive map, including what was removed and why, is
-`docs/src/reference/pareto-ledger.md`. The papers are indexed at `docs/papers/README.md`;
-the code headers use citation keys and page numbers.
+`docs/src/reference/pareto-ledger.md`. Each primitive has a page under `docs/src/primitives/`
+with paper quotes, code references, and Lean theorem names; the row-by-row linkage is
+`docs/src/reference/paper-to-code.md`. The Pareto minimal set is `spec/pareto.yaml`,
+checked by `tools/check_pareto.py`. The papers are indexed at `docs/papers/README.md`; the
+code headers use citation keys and page numbers.
 
 ## Core (default install)
 
@@ -56,11 +61,14 @@ creation and credential issuance; neither is on the claim/validation hot path. O
 receive the subject's private `applyDecision` capability in their closure, so a decision
 cannot be applied to another K-Asset.
 
-Measured: `harness/concurrency_core.py` passes one-of-two validation, one-of-two approval,
-exactly-one oracle apply, cross-subject isolation, two comments both stored, eight independent
-claims validating in one deploy, and revoked-credential refusal. The claim is precise: **no
-shared mutable cell across independent entities; one writer per entity** — not an absolute
-optimality theorem. See `docs/src/reference/design-rationale.md`.
+Proved: `RGen.core_races_not_representable` — in every `Run` of the versioned-cell model,
+no two events on one cell share an expected generation; `RGen.core_arm_authority` — every
+arm's decision factors through its consumed cell; the pair matrix in `spec/flows/races.yaml`
+classifies 32 arm pairs (19 exclusive, 12 ordered, 1 independent). See
+`docs/src/reference/race-freedom-proof.md`. The behavioural suite
+(`harness/concurrency_core.py`) is regression evidence only, not the proof. The claim is
+precise: **no shared mutable cell across independent entities; one writer per entity** —
+not an absolute optimality theorem.
 
 ## Quickstart
 
@@ -70,10 +78,13 @@ Prerequisites: Docker, Python 3.12, an rholo checkout at `../RNodeRust`, and `md
 make venv
 make build-check
 make spec-check
+make lean-check
+make check-pareto
+make check-docs-links
 make parse-check
 make docs-check
 
-export RHOLO_DIR=/home/patrick/RNodeRust
+export RHOLO_DIR=../RNodeRust
 DEVNET_PREFIX=rgen make devnet-up keys install
 make unit-core
 make unit-race
@@ -86,17 +97,24 @@ leaves any existing default devnet alone.
 
 ## Verification
 
-On 2026-11-04, node `e2d073d`, the 7-term core installed on a fresh isolated devnet and both
-core suites passed. The record is `docs/src/reference/verification.md`. The pre-Pareto
+On 2026-11-04, node `e2d073d`, the 7-term core installed on a fresh isolated devnet and the ten
+behavioural suites passed. The record is `docs/src/reference/verification.md`. The pre-Pareto
 12-term prototype is on tag `legacy-2026-11-04`; its 12/12 suite result is the baseline, not
 the target.
+
+`make lean-check` builds the Lean 4 model (`spec/lean/`), rejects unproved declarations,
+audits 131 public theorems (only `propext` and `Quot.sound`; no `Classical.choice`), and
+checks the emitted conformance corpus. The model and its honest limits are described in
+`docs/src/reference/formal-model.md` and `docs/src/reference/concurrency-and-proofs.md`.
+The deployed contracts use the proof-URI design; the race-freedom theorem is `core_races_not_representable` and the pair matrix is `spec/flows/races.yaml`.
 
 ## Non-goals
 
 - No token sale, pricing, transfer, or ERTP in the core.
 - No payments, risk scoring, panels, admin, handles, or metrics in the core.
 - No off-chain indexer: the chain is the backend; clients carry URIs/capabilities.
-- No Lean/flow claim of refinement; the formal artefacts are owed.
+- No refinement claim: Lean proves the model, and the flow manifest plus corpus is
+  traceability, not a refinement theorem. Arms not yet mapped are listed as `owed`.
 - No claim that the papers use "Pareto" or define a ValueProposition state machine; the
   ledger labels those as the user's framing/decision.
 
@@ -105,17 +123,21 @@ the target.
 ```
 contracts/src/deploy/       7 core terms
 contracts/src/lib/          Auth, Time, List, Scope, KAsset
-harness/                    installer, keys, core + race suites
-docs/papers/                six cited PDFs, extracts, manifest, licence notice
-docs/src/                   mdBook: Pareto ledger, design rationale, adversarial review
-spec/                       legacy/extension flow and vector material
-tools/                      build, parse, measure, boundary/concurrency/citation checks
+harness/                    installer, keys, per-primitive + behavioural suites
+docs/papers/                seven PDFs, extracts, manifest, copyright notice
+docs/src/                   mdBook: primitive pages, paper-to-code, Pareto ledger, formal model
+docs/src/primitives/        one paper-cited page per primitive
+spec/lean/                  Lean 4 model, Pareto proof set, race-freedom, audit, corpus emitter
+spec/pareto.yaml            Pareto core manifest and docs/theorem boundary
+spec/flows/, spec/vectors/  arm-to-theorem manifest, race matrix, emitted corpus
+spec/                       legacy/extension vector material
+tools/                      build, parse, measure, formal, boundary/concurrency/citation checks
 crates/                     rgen-core, rgen-sdk, rgen-cli
 legacy/                     the tagged pre-Pareto 12-term implementation
 ```
 
 ## License and papers
 
-RGen is AGPL-3.0-only. The papers are third-party copyrighted works, **not** covered by the
-AGPL; see `docs/papers/README.md` and `THIRD_PARTY_NOTICES.md`. For a public release,
-replace non-redistributable PDFs with links and keep the short page-cited extracts.
+RGen is AGPL-3.0-only. The papers are third-party copyrighted works, already public on
+Arweave and the authors' websites, and are **not** covered by the AGPL; they are included as
+cited reference material. See `docs/papers/README.md` and `THIRD_PARTY_NOTICES.md`.

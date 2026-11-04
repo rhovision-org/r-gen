@@ -128,7 +128,7 @@ def main() -> int:
         "conditionsHash": "",
         "rationaleHash": "rationale",
     }
-    reply = fixtures.oracle_decide(case_uri, dave_cred, DAVE, decision)
+    reply = fixtures.oracle_decide(case_uri, DAVE, decision)
     assertions.expect_ok("oracle decide", reply)
 
     reply = fixtures.oracle_execute(case_uri)

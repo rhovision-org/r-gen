@@ -14,10 +14,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "deployments" / "suite-results.json"
 SUITES = {
+    "identity": "unit_identity.py",
+    "credentials": "unit_credentials.py",
+    "claim": "unit_claim.py",
+    "kasset": "unit_kasset.py",
+    "value": "unit_value.py",
+    "oracle": "unit_oracle.py",
+    "provenance": "unit_provenance.py",
+    "integration": "integration_core.py",
     "core": "unit_core.py",
     "race": "concurrency_core.py",
 }
-DEFAULT = ["core", "race"]
+DEFAULT = ["identity", "credentials", "claim", "kasset", "value", "oracle",
+           "provenance", "integration", "core", "race"]
 
 
 def run(name: str) -> dict:

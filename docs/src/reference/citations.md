@@ -20,7 +20,7 @@ The core contract headers use the form:
 // RGen decision: ...
 ```
 
-`@caase2018agenda` is a quarantined conference program and must not be cited. A term with
+`@caase2018agenda` is included but uncited; do not cite it. A term with
 no paper basis uses `// Paper: none (engineering infrastructure)`.
 
 `tools/check_citations.py` verifies:
@@ -30,4 +30,3 @@ no paper basis uses `// Paper: none (engineering infrastructure)`.
 3. Every cited key has `docs/papers/extract/<key>.md` with a `## p.N` heading.
 4. Every core deploy term has `// Why:` and `// Paper:` lines.
 5. `@caase2018agenda` is never cited.
-6. If `RGEN_PUBLIC_RELEASE=1`, no non-redistributable PDF is tracked.

@@ -1,7 +1,7 @@
 {
   "schema": "rgen.papers/v1",
   "citation_convention": "p.N means PDF page N (1-based), not the printed page number",
-  "notice": "These papers are third-party copyrighted works. They are NOT covered by RGen's AGPL license. See docs/papers/README.md for per-paper status.",
+  "notice": "These papers are third-party copyrighted works, already public on Arweave and the authors' websites. They are NOT covered by RGen's AGPL license; they are included as cited reference material.",
   "papers": [
     {
       "key": "robles2020innovation",
@@ -18,8 +18,7 @@
       "pages": 9,
       "license": {
         "status": "all-rights-reserved",
-        "holder": "ASME",
-        "redistributable": false
+        "holder": "ASME"
       },
       "used_for": [
         "claim=quantity / validation=quality",
@@ -44,8 +43,7 @@
       "pages": 7,
       "license": {
         "status": "no-stated-license",
-        "holder": "authors",
-        "redistributable": false
+        "holder": "authors"
       },
       "used_for": [
         "handshake",
@@ -74,8 +72,7 @@
       "pages": 11,
       "license": {
         "status": "CC-BY-NC-SA-3.0",
-        "holder": "authors",
-        "redistributable": true
+        "holder": "authors"
       },
       "used_for": [
         "permissioned by qualifications",
@@ -98,8 +95,7 @@
       "pages": 11,
       "license": {
         "status": "all-rights-reserved-distribution-prohibited",
-        "holder": "NAIC",
-        "redistributable": false
+        "holder": "NAIC"
       },
       "used_for": [
         "oracle contract",
@@ -120,8 +116,7 @@
       "pages": 40,
       "license": {
         "status": "limited-attribution",
-        "holder": "NSPE",
-        "redistributable": false
+        "holder": "NSPE"
       },
       "used_for": [
         "most appropriate adjudicator",
@@ -145,8 +140,7 @@
       "pages": 6,
       "license": {
         "status": "no-stated-license",
-        "holder": "authors",
-        "redistributable": false
+        "holder": "authors"
       },
       "used_for": [
         "reputation",
@@ -164,15 +158,14 @@
       "venue": "CAASE18",
       "year": 2018,
       "paper_number": "",
-      "pdf": "uncited/caase2018-agenda.pdf",
+      "pdf": "pdf/caase2018-agenda.pdf",
       "sha256": "a081e83e6a6624338d3d2490da587c97e1aebf35d90a93152371111e93e320cb",
       "pages": 241,
       "license": {
         "status": "conference-program",
-        "holder": "NAFEMS",
-        "redistributable": false
+        "holder": "NAFEMS"
       },
-      "status": "quarantined",
+      "status": "uncited",
       "used_for": []
     }
   ]

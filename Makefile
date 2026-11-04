@@ -11,8 +11,11 @@ export RGEN_CONTAINER
 
 .PHONY: venv build build-check measure measure-check spec-check parse-check docs docs-check \
         check-arch check-captures check-placeholders check-money check-core-boundary \
-        check-concurrency check-citations check-paper-licenses check-docs check-suites \
-        devnet-up devnet-wait down status keys install unit-core unit-race unit-all verify \
+        check-concurrency check-citations check-docs check-docs-links check-suites \
+        check-pareto check-lean check-flows check-race-matrix check-arm-guards lean-build lean-audit lean-check gen-core-vectors check-core-vectors \
+        devnet-up devnet-wait down status keys install unit-identity unit-credentials \
+        unit-claim unit-kasset unit-value unit-oracle unit-provenance unit-integration \
+        unit-core unit-race unit-all verify \
         client-lint client-test client-build check ci clean
 
 venv:
@@ -53,18 +56,47 @@ check-concurrency:
 check-citations:
 	$(PY) tools/check_citations.py
 
-check-paper-licenses:
-	$(PY) tools/check_paper_licenses.py
-
 check-docs:
 	$(PY) tools/check_docs.py
+
+check-docs-links:
+	$(PY) tools/check_docs_links.py
 
 check-suites:
 	$(PY) tools/check_suites.py
 
+check-pareto:
+	$(PY) tools/check_pareto.py
+
+check-lean:
+	$(PY) tools/check_lean.py
+
+check-flows:
+	$(PY) tools/check_flows.py
+
+check-race-matrix:
+	$(PY) tools/check_race_matrix.py
+
+check-arm-guards:
+	$(PY) tools/check_arm_guards.py
+
+lean-build:
+	cd spec/lean && lake build
+
+gen-core-vectors:
+	$(PY) tools/gen_vectors.py --write
+
+check-core-vectors:
+	$(PY) tools/check_core_vectors.py
+
+lean-audit:
+	$(PY) tools/check_lean.py --audit
+
+lean-check: lean-build check-lean lean-audit check-core-vectors
+
 spec-check: build-check measure-check check-arch check-captures check-placeholders \
             check-money check-core-boundary check-concurrency check-citations \
-            check-suites
+            check-suites check-pareto check-lean check-flows check-race-matrix check-arm-guards
 
 parse-check:
 	rm -f .devnet/rendered/*.rho
@@ -76,7 +108,7 @@ docs:
 	$(PY) tools/sync_papers.py
 	$(MDBOOK) build
 
-docs-check: check-docs check-citations check-paper-licenses
+docs-check: check-docs check-docs-links check-citations
 	$(PY) tools/sync_papers.py
 	$(MDBOOK) build
 
@@ -99,6 +131,30 @@ keys:
 
 install:
 	$(PY) harness/install.py --node $(NODE)
+
+unit-identity:
+	$(PY) harness/unit_identity.py
+
+unit-credentials:
+	$(PY) harness/unit_credentials.py
+
+unit-claim:
+	$(PY) harness/unit_claim.py
+
+unit-kasset:
+	$(PY) harness/unit_kasset.py
+
+unit-value:
+	$(PY) harness/unit_value.py
+
+unit-oracle:
+	$(PY) harness/unit_oracle.py
+
+unit-provenance:
+	$(PY) harness/unit_provenance.py
+
+unit-integration:
+	$(PY) harness/integration_core.py
 
 unit-core:
 	$(PY) harness/unit_core.py

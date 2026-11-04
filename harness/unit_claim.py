@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+"""Claim primitive: comment, withdraw, expire, validate once, exactly one K-Asset."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "harness"))
+
+import actors
+import assertions
+import fixtures
+import suite_base
+
+
+def main() -> int:
+    if not suite_base.require("unit_claim"):
+        return 2
+    addrs = suite_base.setup(("alice", "bob", "carol"))
+    actors.ensure_vault("frank")  # funded but deliberately has no identity
+    bob_cred = suite_base.issue(addrs, "bob", "Validator", "validator")
+
+    req = suite_base.claim_req(addrs["alice"])
+    reply = fixtures.claim("alice", req)
+    assertions.expect_ok("create claim", reply)
+    claim_uri = reply[1]["uri"]
+    assertions.expect("claim open", fixtures.read(claim_uri, "get")[1].get("status"), "open")
+
+    # Comment no longer requires directory registration; frank has no identity.
+    reply = fixtures.claim_comment(claim_uri, "frank", {"hash": "frank-comment"})
+    assertions.expect_ok("unregistered actor comments", reply)
+    reply = fixtures.read(claim_uri, "comments")
+    assertions.expect("comment stored", len(reply[1]), 1)
+
+    reply = fixtures.claim_withdraw(claim_uri, "bob")
+    assertions.expect_refusal("non-claimant withdraw refused", reply, "not claimant")
+    reply = fixtures.claim_withdraw(claim_uri, "alice")
+    assertions.expect_ok("claimant withdraw", reply)
+    reply = fixtures.claim_validate(claim_uri, bob_cred, "bob",
+                                    suite_base.validation(bob_cred))
+    assertions.expect_refusal("withdrawn cannot validate", reply, "not open")
+
+    # Validate once, exactly one K-Asset.
+    claim2 = fixtures.claim("alice", suite_base.claim_req(addrs["alice"]))
+    assertions.expect_ok("second claim", claim2)
+    claim2_uri = claim2[1]["uri"]
+    reply = fixtures.claim_validate(claim2_uri, bob_cred, "bob",
+                                    suite_base.validation(bob_cred))
+    assertions.expect_ok("validate claim", reply)
+    kasset_uri = reply[1]["uri"]
+    reply = fixtures.read(claim2_uri, "get")
+    assertions.expect("claim validated", reply[1].get("status"), "validated")
+    assertions.expect("one kasset ref", reply[1].get("kassetRef").get("uri"), kasset_uri)
+    reply = fixtures.claim_validate(claim2_uri, bob_cred, "bob",
+                                    suite_base.validation(bob_cred, "invalid"))
+    assertions.expect_refusal("second validate refused", reply, "not open")
+
+    # Self-validation.
+    alice_cred = suite_base.issue(addrs, "alice", "Validator", "validator")
+    claim3 = fixtures.claim("alice", suite_base.claim_req(addrs["alice"]))
+    assertions.expect_ok("third claim", claim3)
+    reply = fixtures.claim_validate(claim3[1]["uri"], alice_cred, "alice",
+                                    suite_base.validation(alice_cred))
+    assertions.expect_refusal("self validation refused", reply, "self validation")
+
+    # Forged credential.
+    claim4 = fixtures.claim("alice", suite_base.claim_req(addrs["alice"]))
+    assertions.expect_ok("fourth claim", claim4)
+    reply = fixtures.claim_validate(claim4[1]["uri"], fixtures.fake_uri(), "bob",
+                                    suite_base.validation("forged"))
+    assertions.expect_refusal("forged credential refused", reply, "forged credential")
+
+    # Late validation marks the claim expired.
+    late = suite_base.claim_req(addrs["alice"])
+    late["deadlineHeight"] = 0
+    claim5 = fixtures.claim("alice", late)
+    assertions.expect_ok("late claim", claim5)
+    reply = fixtures.claim_validate(claim5[1]["uri"], bob_cred, "bob",
+                                    suite_base.validation(bob_cred))
+    assertions.expect_refusal("late validation refused", reply, "expired")
+    assertions.expect("late claim expired",
+                      fixtures.read(claim5[1]["uri"], "get")[1].get("status"), "expired")
+
+    # Comment window closes.
+    closed = suite_base.claim_req(addrs["alice"])
+    closed["commentUntilHeight"] = 0
+    claim6 = fixtures.claim("alice", closed)
+    assertions.expect_ok("closed-window claim", claim6)
+    reply = fixtures.claim_comment(claim6[1]["uri"], "bob", {"hash": "late"})
+    assertions.expect_refusal("comment window closed", reply, "comment closed")
+
+    print("unit_claim: pass")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

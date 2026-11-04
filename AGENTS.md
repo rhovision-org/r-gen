@@ -78,10 +78,10 @@ the Pareto ledger labels every row.
 
 ## Papers and licensing
 
-The papers are third-party copyrighted works, not AGPL. Do not add full-text extracts.
-Keep only short page-cited quotations. Never describe NAIC/NSPE as "Robles papers" without
-the institutional venue; see the manifest. `RGEN_PUBLIC_RELEASE=1` must fail if a
-non-redistributable PDF is tracked.
+The papers are third-party copyrighted works, already public on Arweave and the authors'
+websites, and included as cited reference material. They are not AGPL. Do not add
+full-text extracts beyond the short page-cited quotations. Never describe NAIC/NSPE as
+"Robles papers" without the institutional venue; see the manifest.
 
 ## Safety
 

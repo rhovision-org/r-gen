@@ -27,7 +27,7 @@ def address(name: str = "deployer") -> str:
 
 
 def invoke(uri: str, arm: str, args=None, key: str = "deployer",
-           phlo_limit: int = 20_000_000):
+           phlo_limit: int = 8_000_000):
     from terms import call_term
     return one(call_term(uri, arm, args or ()), key=key, phlo_limit=phlo_limit)
 
@@ -39,7 +39,7 @@ def resolve(component: str, key: str = "deployer"):
     return reply[1]
 
 
-def ensure_vault(name: str, min_phlo: int = 20_000_000) -> None:
+def ensure_vault(name: str, min_phlo: int = 8_000_000) -> None:
     if name == "deployer":
         return
     try:

@@ -1,0 +1,98 @@
+// One-shot proof helpers. A credential or value proposition `prove` arm returns a private
+// `Proof` capability whose `take` arm yields `(true, data)` once and `(false, "used")` after
+// that. These helpers resolve the credential by its registry URI, obtain a proof, take it, and
+// check the fields the caller binds. Extracting them keeps the consuming arms within the
+// parser's nesting limit.
+
+contract resolveAndProve(@credentialUri, dId, @rq, ret) = {
+  new credCh in {
+    rl!(credentialUri, *credCh) |
+    for (Credential <- credCh) {
+      new pCh in {
+        Credential!("prove", *dId, rq, *pCh) |
+        for (@p <- pCh) { ret!(p) }
+      }
+    }
+  }
+} |
+
+contract checkCredentialProof(@proofUri, @validator, @credentialUri, @height, ret) = {
+  new pc, tCh in {
+    rl!(proofUri, *pc) |
+    for (Proof <- pc) {
+    Proof!("take", *tCh) |
+    for (@t <- tCh) {
+      match t {
+        (true, data) => {
+          if (data.get("subject") == validator
+              && data.get("credentialUri") == credentialUri
+              && data.get("atHeight") == height) { ret!(true) }
+          else { ret!(false) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+    }
+  }
+} |
+
+contract proveAndCheck(@credentialUri, dId, @rq, @validator, @height, ret) = {
+  new pCh, okCh in {
+    resolveAndProve!(credentialUri, *dId, rq, *pCh) |
+    for (@pr <- pCh) {
+      match pr {
+        (true, proofUri) => {
+          checkCredentialProof!(proofUri, validator, credentialUri, height, *okCh) |
+          for (@ok <- okCh) { ret!(ok) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+  }
+} |
+
+contract checkValidatedProof(@proofUri, @caller, @atHeight, ret) = {
+  new pc, tCh in {
+    rl!(proofUri, *pc) |
+    for (Proof <- pc) {
+    Proof!("take", *tCh) |
+    for (@t <- tCh) {
+      match t {
+        (true, data) => {
+          if (data.get("caller") == caller && data.get("atHeight") == atHeight) {
+            ret!(true)
+          } else { ret!(false) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+    }
+  }
+} |
+
+contract resolveProveValidated(@vpUri, dId, @atHeight, ret) = {
+  new vpc in {
+    rl!(vpUri, *vpc) |
+    for (VP <- vpc) {
+      new pCh in {
+        VP!("proveValidated", *dId, atHeight, *pCh) |
+        for (@p <- pCh) { ret!(p) }
+      }
+    }
+  }
+} |
+
+contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
+  new pCh, okCh in {
+    resolveProveValidated!(vpUri, *dId, atHeight, *pCh) |
+    for (@pr <- pCh) {
+      match pr {
+        (true, proofUri) => {
+          checkValidatedProof!(proofUri, caller, atHeight, *okCh) |
+          for (@ok <- okCh) { ret!(ok) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+  }
+} |

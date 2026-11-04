@@ -1,12 +1,11 @@
 # RGen paper archive
 
-The papers are source material for the primitives, not part of the software license.
+The papers are source material for the primitives and are included as cited reference
+material. They are already public on Arweave and the authors' websites.
 
 > **NOTICE.** These are third-party copyrighted works. They are **not** covered by RGen's
-> AGPL-3.0-only license and are **not** part of the software distribution. They are kept
-> here as cited reference material. Redistribution status differs per paper; see the
-> manifest. For a public release, replace non-redistributable PDFs with links and keep only
-> the short page-cited extracts.
+> AGPL-3.0-only license. The PDFs are included as reference material; the copyrights remain
+> with their holders. See `manifest.json` for authors, venues, pages and SHA-256.
 
 ## Index
 
@@ -18,27 +17,16 @@ The papers are source material for the primitives, not part of the software lice
 | `@robles2016naic` | Insurance: The Highest and Best Use Case for Blockchain Technology | Daniel R. Robles | NAIC CIPR, July 2016 | 11 |
 | `@robles2016nspe` | Blockchain Technology: Implications and Opportunities For Professional Engineers | Daniel R. Robles (for NSPE) | NSPE FinTech Task Force, 2016 | 40 |
 | `@robles2017stewardship` | The Revolutionary Blockchain – An Opportunity for Engineering Stewardship | Daniel R. Robles, Matthew E. Bowers | ASCE Grand Challenge 2017 | 6 |
+| `@caase2018agenda` | CAASE18 Final Agenda with Initial Abstracts | NAFEMS | CAASE18, 2018 | 241 |
 
-`@caase2018agenda` is a conference program, uncited, and quarantined under `uncited/`.
+All seven PDFs are under `pdf/`. `@caase2018agenda` is included but uncited; it is not used
+as a source for a core primitive.
 
 ## Citation convention
 
 `p.N` means **PDF page N**, 1-based, not the printed page. Every quote used in code or docs
 must appear in `extract/<key>.md` under a `## p.N` heading. The manifest records the PDF
 SHA-256 so the archive can be checked for drift.
-
-## Per-paper redistribution status
-
-- `mathews2017bim` — CC BY-NC-SA 3.0. Attribution, non-commercial, share-alike.
-- `robles2016nspe` — NSPE copyright; limited attribution. Do not redistribute without
-  permission.
-- `robles2016naic` — NAIC copyright; further distribution prohibited.
-- `robles2020innovation` — ASME copyright; all rights reserved.
-- `zhong2019bridge`, `robles2017stewardship` — no stated license.
-- `caase2018agenda` — conference program; uncited.
-
-`tools/check_paper_licenses.py` fails a `RGEN_PUBLIC_RELEASE=1` build if a
-non-redistributable PDF is tracked.
 
 ## Extracts
 

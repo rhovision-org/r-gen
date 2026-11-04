@@ -14,7 +14,7 @@ new
   rootCh, cfCh, ofCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
   CredentialFactory, OracleFactory,
-  vpReqOk
+  vpReqOk, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
 in {
 // Deployer identity helpers. The REV address is the subject id; the public key is stored
 // only where an identity profile needs it.
@@ -61,6 +61,104 @@ contract nowHeight(ret) = {
     for (@h, @sender, @timestamp <- ch) { ret!(h) }
   }
 } |
+// One-shot proof helpers. A credential or value proposition `prove` arm returns a private
+// `Proof` capability whose `take` arm yields `(true, data)` once and `(false, "used")` after
+// that. These helpers resolve the credential by its registry URI, obtain a proof, take it, and
+// check the fields the caller binds. Extracting them keeps the consuming arms within the
+// parser's nesting limit.
+
+contract resolveAndProve(@credentialUri, dId, @rq, ret) = {
+  new credCh in {
+    rl!(credentialUri, *credCh) |
+    for (Credential <- credCh) {
+      new pCh in {
+        Credential!("prove", *dId, rq, *pCh) |
+        for (@p <- pCh) { ret!(p) }
+      }
+    }
+  }
+} |
+
+contract checkCredentialProof(@proofUri, @validator, @credentialUri, @height, ret) = {
+  new pc, tCh in {
+    rl!(proofUri, *pc) |
+    for (Proof <- pc) {
+    Proof!("take", *tCh) |
+    for (@t <- tCh) {
+      match t {
+        (true, data) => {
+          if (data.get("subject") == validator
+              && data.get("credentialUri") == credentialUri
+              && data.get("atHeight") == height) { ret!(true) }
+          else { ret!(false) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+    }
+  }
+} |
+
+contract proveAndCheck(@credentialUri, dId, @rq, @validator, @height, ret) = {
+  new pCh, okCh in {
+    resolveAndProve!(credentialUri, *dId, rq, *pCh) |
+    for (@pr <- pCh) {
+      match pr {
+        (true, proofUri) => {
+          checkCredentialProof!(proofUri, validator, credentialUri, height, *okCh) |
+          for (@ok <- okCh) { ret!(ok) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+  }
+} |
+
+contract checkValidatedProof(@proofUri, @caller, @atHeight, ret) = {
+  new pc, tCh in {
+    rl!(proofUri, *pc) |
+    for (Proof <- pc) {
+    Proof!("take", *tCh) |
+    for (@t <- tCh) {
+      match t {
+        (true, data) => {
+          if (data.get("caller") == caller && data.get("atHeight") == atHeight) {
+            ret!(true)
+          } else { ret!(false) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+    }
+  }
+} |
+
+contract resolveProveValidated(@vpUri, dId, @atHeight, ret) = {
+  new vpc in {
+    rl!(vpUri, *vpc) |
+    for (VP <- vpc) {
+      new pCh in {
+        VP!("proveValidated", *dId, atHeight, *pCh) |
+        for (@p <- pCh) { ret!(p) }
+      }
+    }
+  }
+} |
+
+contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
+  new pCh, okCh in {
+    resolveProveValidated!(vpUri, *dId, atHeight, *pCh) |
+    for (@pr <- pCh) {
+      match pr {
+        (true, proofUri) => {
+          checkValidatedProof!(proofUri, caller, atHeight, *okCh) |
+          for (@ok <- okCh) { ret!(ok) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+  }
+} |
 
   contract vpReqOk(@req, ret) = {
     match req.get("subjectRef") {
@@ -82,6 +180,18 @@ contract nowHeight(ret) = {
   rl!(`__ORACLE_FACTORY_URI__`, *ofCh) |
   for (CredentialFactory <- cfCh; OracleFactory <- ofCh) {
     new ValuePropositionFactory in {
+      new vpRegistryState in {
+      vpRegistryState!({}) |
+
+      contract ValuePropositionFactory(@"verify", @uri, ret) = {
+        for (@r <<- vpRegistryState) {
+          match r.get(uri.toString()) {
+            Nil => { ret!((false, "unknown value proposition")) }
+            rec => { ret!((true, rec)) }
+          }
+        }
+      } |
+
       contract ValuePropositionFactory(@"propose", dId, @req, ret) = {
         new aCh, hCh in {
           authSubject!(*dId, *aCh) |
@@ -168,48 +278,79 @@ contract nowHeight(ret) = {
                       }
                     } |
 
-                    contract ValueProposition(@"validate", dId2, credCap, @validation, ret2) = {
+                    contract ValueProposition(@"validate", dId2, @credentialUri, @validation, ret2) = {
                       new a2, h2 in {
                         authSubject!(*dId2, *a2) |
                         nowHeight!(*h2) |
                         for (@(true, validator) <- a2; @height <- h2) {
                           for (@s <- vpState) {
-                            if (s.get("status") != "proposed") {
-                              vpState!(s) | ret2!((false, "not proposed"))
-                            } else {
-                              if (validator == s.get("proposer")) {
-                                vpState!(s) | ret2!((false, "self validation"))
-                              } else {
-                                new vfCh in {
-                                  CredentialFactory!("verify",
-                                    validation.get("credentialUri"), *vfCh) |
+                            match (s.get("status"), validator == s.get("proposer")) {
+                              ("proposed", false) => {
+                                new vfCh, okCh in {
+                                  CredentialFactory!("verify", credentialUri, *vfCh) |
                                   for (@vf <- vfCh) {
                                     match vf {
                                       (true, _) => {
-                                        new cCh in {
-                                          credCap!("check", validator,
-                                                   s.get("selectionCriteria"), height, *cCh) |
-                                          for (@c <- cCh) {
-                                            match c {
-                                              (true, true, _) => {
-                                                vpState!(s.set("status", "validated")
-                                                          .set("validator", validator)
-                                                          .set("validation", {
-                                                            "validator": validator,
-                                                            "credentialUri": validation.get("credentialUri"),
-                                                            "notesHash": validation.get("notesHash"),
-                                                            "at": height})
-                                                          .set("version", s.get("version") + 1)) |
-                                                ret2!((true, Nil))
-                                              }
-                                              _ => { vpState!(s) | ret2!((false, "not qualified")) }
-                                            }
-                                          }
+                                        proveAndCheck!(credentialUri, *dId2,
+                                          s.get("selectionCriteria"), validator, height, *okCh) |
+                                        for (@ok <- okCh) {
+                                          if (ok) {
+                                            vpState!(s.set("status", "validated")
+                                              .set("validator", validator)
+                                              .set("validation", {
+                                                "validator": validator,
+                                                "credentialUri": credentialUri,
+                                                "notesHash": validation.get("notesHash"),
+                                                "at": height})
+                                              .set("version", s.get("version") + 1)) |
+                                            ret2!((true, Nil))
+                                          } else { vpState!(s) | ret2!((false, "proof")) }
                                         }
                                       }
                                       _ => { vpState!(s) | ret2!((false, "forged credential")) }
                                     }
                                   }
+                                }
+                              }
+                              ("proposed", true) => { vpState!(s) | ret2!((false, "self validation")) }
+                              _ => { vpState!(s) | ret2!((false, "not proposed")) }
+                            }
+                          }
+                        }
+                      }
+                    } |
+
+                    contract ValueProposition(@"proveValidated", dId2, @atHeight, ret2) = {
+                      new a2 in {
+                        authSubject!(*dId2, *a2) |
+                        for (@(true, who) <- a2) {
+                          for (@s <- vpState) {
+                            if (s.get("status") != "validated") {
+                              vpState!(s) | ret2!((false, "not validated"))
+                            } else {
+                              new proofState, Proof, proofUriCh in {
+                                proofState!({
+                                  "data": {
+                                    "uri": s.get("uri"),
+                                    "atHeight": atHeight,
+                                    "caller": who
+                                  },
+                                  "used": false
+                                }) |
+                                contract Proof(@"take", ret3) = {
+                                  for (@p <- proofState) {
+                                    if (p.get("used")) {
+                                      proofState!(p) | ret3!((false, "used"))
+                                    } else {
+                                      proofState!(p.set("used", true)) |
+                                      ret3!((true, p.get("data")))
+                                    }
+                                  }
+                                } |
+                                rs!(bundle+{*Proof}, *proofUriCh) |
+                                for (@proofUri <- proofUriCh) {
+                                  vpState!(s) |
+                                  ret2!((true, proofUri))
                                 }
                               }
                             }
@@ -234,8 +375,19 @@ contract nowHeight(ret) = {
                                 match s.get("dispute") {
                                   Nil => {
                                     new oCh in {
-                                      OracleFactory!("open", s.get("subjectRef"), caseReq,
-                                                     *Apply, *oCh) |
+                                      OracleFactory!("open", s.get("subjectRef"), {
+                                        "kind": caseReq.get("kind"),
+                                        "openedBy": who,
+                                        "parties": [s.get("proposer"), s.get("validator")],
+                                        "groundsHash": caseReq.get("groundsHash"),
+                                        "requirement": {"ctype": "Oracle",
+                                                        "discipline": s.get("selectionCriteria").get("discipline"),
+                                                        "jurisdiction": s.get("selectionCriteria").get("jurisdiction"),
+                                                        "role": "oracle", "minLevel": 1},
+                                        "adjudicator": caseReq.get("adjudicator"),
+                                        "adjudicatorCredentialUri": caseReq.get("adjudicatorCredentialUri"),
+                                        "deadlineHeight": caseReq.get("deadlineHeight")
+                                      }, *Apply, *oCh) |
                                       for (@o <- oCh) {
                                         match o {
                                           (true, caseRef) => {
@@ -303,8 +455,18 @@ contract nowHeight(ret) = {
 
                     rs!(bundle+{*ValueProposition}, *uriCh) |
                     for (@uri <- uriCh) {
-                      for (@s2 <- vpState) { vpState!(s2.set("uri", uri)) } |
-                      ret!((true, {"id": uri, "uri": uri}))
+                      for (@s2 <- vpState) {
+                        vpState!(s2.set("uri", uri)) |
+                        for (@r <- vpRegistryState) {
+                          vpRegistryState!(r.set(uri.toString(), {
+                            "uri": uri,
+                            "proposer": proposer,
+                            "subjectRef": req.get("subjectRef"),
+                            "statementHash": req.get("statementHash")
+                          })) |
+                          ret!((true, {"id": uri, "uri": uri}))
+                        }
+                      }
                     }
                   }
                 }
@@ -322,6 +484,7 @@ contract nowHeight(ret) = {
                 *deployerId, *ack1) |
           for (@r <- ack1) { deployId!([("value-proposition-factory", uri)]) }
         }
+      }
       }
     }
   }

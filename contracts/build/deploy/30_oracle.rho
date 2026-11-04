@@ -14,7 +14,7 @@ new
   rootCh, cfCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
   listHas, listHasId, listHasAny, listHas3,
-  CredentialFactory
+  CredentialFactory, openCaseCheck, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
 in {
 // Deployer identity helpers. The REV address is the subject id; the public key is stored
 // only where an identity profile needs it.
@@ -108,11 +108,144 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
     }
   }
 } |
+// One-shot proof helpers. A credential or value proposition `prove` arm returns a private
+// `Proof` capability whose `take` arm yields `(true, data)` once and `(false, "used")` after
+// that. These helpers resolve the credential by its registry URI, obtain a proof, take it, and
+// check the fields the caller binds. Extracting them keeps the consuming arms within the
+// parser's nesting limit.
+
+contract resolveAndProve(@credentialUri, dId, @rq, ret) = {
+  new credCh in {
+    rl!(credentialUri, *credCh) |
+    for (Credential <- credCh) {
+      new pCh in {
+        Credential!("prove", *dId, rq, *pCh) |
+        for (@p <- pCh) { ret!(p) }
+      }
+    }
+  }
+} |
+
+contract checkCredentialProof(@proofUri, @validator, @credentialUri, @height, ret) = {
+  new pc, tCh in {
+    rl!(proofUri, *pc) |
+    for (Proof <- pc) {
+    Proof!("take", *tCh) |
+    for (@t <- tCh) {
+      match t {
+        (true, data) => {
+          if (data.get("subject") == validator
+              && data.get("credentialUri") == credentialUri
+              && data.get("atHeight") == height) { ret!(true) }
+          else { ret!(false) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+    }
+  }
+} |
+
+contract proveAndCheck(@credentialUri, dId, @rq, @validator, @height, ret) = {
+  new pCh, okCh in {
+    resolveAndProve!(credentialUri, *dId, rq, *pCh) |
+    for (@pr <- pCh) {
+      match pr {
+        (true, proofUri) => {
+          checkCredentialProof!(proofUri, validator, credentialUri, height, *okCh) |
+          for (@ok <- okCh) { ret!(ok) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+  }
+} |
+
+contract checkValidatedProof(@proofUri, @caller, @atHeight, ret) = {
+  new pc, tCh in {
+    rl!(proofUri, *pc) |
+    for (Proof <- pc) {
+    Proof!("take", *tCh) |
+    for (@t <- tCh) {
+      match t {
+        (true, data) => {
+          if (data.get("caller") == caller && data.get("atHeight") == atHeight) {
+            ret!(true)
+          } else { ret!(false) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+    }
+  }
+} |
+
+contract resolveProveValidated(@vpUri, dId, @atHeight, ret) = {
+  new vpc in {
+    rl!(vpUri, *vpc) |
+    for (VP <- vpc) {
+      new pCh in {
+        VP!("proveValidated", *dId, atHeight, *pCh) |
+        for (@p <- pCh) { ret!(p) }
+      }
+    }
+  }
+} |
+
+contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
+  new pCh, okCh in {
+    resolveProveValidated!(vpUri, *dId, atHeight, *pCh) |
+    for (@pr <- pCh) {
+      match pr {
+        (true, proofUri) => {
+          checkValidatedProof!(proofUri, caller, atHeight, *okCh) |
+          for (@ok <- okCh) { ret!(ok) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+  }
+} |
 
   rl!(`__CREDENTIAL_FACTORY_URI__`, *cfCh) |
   for (CredentialFactory <- cfCh) {
     new OracleFactory in {
+      contract openCaseCheck(@caseReq, ret) = {
+        new vfCh in {
+          CredentialFactory!("verify", caseReq.get("adjudicatorCredentialUri"), *vfCh) |
+          for (@vf <- vfCh) {
+            match vf {
+              (true, _) => {
+                new ccCh in {
+                  rl!(caseReq.get("adjudicatorCredentialUri"), *ccCh) |
+                  for (Credential <- ccCh) {
+                    new gCh in {
+                      Credential!("get", *gCh) |
+                      for (@g <- gCh) {
+                        match g {
+                          (true, cred) => {
+                            if (cred.get("subject") == caseReq.get("adjudicator")) { ret!(true) }
+                            else { ret!(false) }
+                          }
+                          _ => { ret!(false) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              _ => { ret!(false) }
+            }
+          }
+        }
+      } |
+
       contract OracleFactory(@"open", @subjectRef, @caseReq, subjectApply, ret) = {
+        new okCh in {
+        openCaseCheck!(caseReq, *okCh) |
+        for (@ok <- okCh) {
+        if (not ok) { ret!((false, "adjudicator credential")) }
+        else {
         new caseState, OracleCase, selfDecide, uriCh in {
           caseState!({
             "uri": "",
@@ -164,46 +297,31 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
             }
           } |
 
-          contract OracleCase(@"decide", dId, credCap, @decision, ret2) = {
+          contract OracleCase(@"decide", dId, @decision, ret2) = {
             new aCh, hCh in {
               authSubject!(*dId, *aCh) |
               nowHeight!(*hCh) |
               for (@(true, who) <- aCh; @now <- hCh) {
                 for (@s <- caseState) {
-                  if (s.get("status") != "open") {
-                    caseState!(s) | ret2!((false, "not open"))
-                  } else {
-                    if (who != s.get("adjudicator")) {
-                      caseState!(s) | ret2!((false, "not adjudicator"))
-                    } else {
-                      new vfCh in {
-                        CredentialFactory!("verify",
-                          s.get("adjudicatorCredentialUri"), *vfCh) |
-                        for (@vf <- vfCh) {
-                          match vf {
-                            (true, _) => {
-                              new cCh in {
-                                credCap!("check", who, s.get("requirement"), now, *cCh) |
-                                for (@c <- cCh) {
-                                  match c {
-                                    (true, true, _) => {
-                                      match decision.get("outcome") {
-                                        "uphold" => { selfDecide!(s, decision, now, *ret2) }
-                                        "revoke" => { selfDecide!(s, decision, now, *ret2) }
-                                        "partial" => { selfDecide!(s, decision, now, *ret2) }
-                                        _ => { caseState!(s) | ret2!((false, "outcome")) }
-                                      }
-                                    }
-                                    _ => { caseState!(s) | ret2!((false, "not qualified")) }
-                                  }
-                                }
-                              }
+                  match (s.get("status") == "open", who == s.get("adjudicator")) {
+                    (true, true) => {
+                      new okCh in {
+                        proveAndCheck!(s.get("adjudicatorCredentialUri"), *dId,
+                          s.get("requirement"), who, now, *okCh) |
+                        for (@ok <- okCh) {
+                          if (ok) {
+                            match decision.get("outcome") {
+                              "uphold" => { selfDecide!(s, decision, now, *ret2) }
+                              "revoke" => { selfDecide!(s, decision, now, *ret2) }
+                              "partial" => { selfDecide!(s, decision, now, *ret2) }
+                              _ => { caseState!(s) | ret2!((false, "outcome")) }
                             }
-                            _ => { caseState!(s) | ret2!((false, "forged credential")) }
-                          }
+                          } else { caseState!(s) | ret2!((false, "not qualified")) }
                         }
                       }
                     }
+                    (false, _) => { caseState!(s) | ret2!((false, "not open")) }
+                    _ => { caseState!(s) | ret2!((false, "not adjudicator")) }
                   }
                 }
               }
@@ -302,6 +420,9 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
             for (@s2 <- caseState) { caseState!(s2.set("uri", uri)) } |
             ret!((true, {"id": uri, "uri": uri}))
           }
+        }
+        }
+        }
         }
       } |
 

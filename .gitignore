@@ -13,3 +13,6 @@ deployments/*.json
 
 # Rust client build output
 /target/
+
+# Lean build output
+/spec/lean/.lake/

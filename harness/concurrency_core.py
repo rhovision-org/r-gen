@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Same-deploy race suite for the Pareto core.
+"""Behavioural regression suite for the Pareto core.
+
+This suite is evidence only. Race non-representability is proved by
+`RGen.core_races_not_representable` in `spec/lean`; do not cite this file as the proof.
 
 Each test puts two or more calls in ONE deploy with parallel processes. The per-entity
 linear cell serializes them; the loser observes the post-state and must refuse. The
 independent-claim test puts eight different claim cells in one deploy and requires all
-eight to succeed, which is the behavioural witness that independent entities do not
-serialize.
+eight to succeed.
 """
 
 from __future__ import annotations
@@ -27,6 +29,36 @@ BOB = "bob"
 CAROL = "carol"
 DAVE = "dave"
 FRANK = "frank"
+
+
+def approved_one():
+    claim_uri = fixtures.claim(ALICE, claim_req())[1]["uri"]
+    cred = fixtures.issue(actors.address(BOB), "Validator", "structural", "US-TX",
+                          "validator", 1)[1]
+    val = fixtures.claim_validate(claim_uri, cred, BOB,
+                                  {"verdict": "valid",
+                                   "quality": {"completeness": 5, "correctness": 5,
+                                               "traceability": 5, "fitness": 5},
+                                   "credentialUri": cred, "characteristicsHash": "c",
+                                   "commentHash": "c", "evidence": []})
+    kasset = val[1]["uri"]
+    approver = fixtures.issue(actors.address(CAROL), "Approver", "structural", "US-TX",
+                              "approver", 1)[1]
+    fixtures.kasset_approve(kasset, approver, CAROL,
+                            {"decision": "approve", "conditionsHash": "",
+                             "credentialUri": approver,
+                             "liability": {"responsible": carol_placeholder(),
+                                           "shareBps": 10000,
+                                           "basisHash": "l"}})
+    return claim_uri, kasset
+
+
+def carol_placeholder():
+    return actors.address(CAROL)
+
+
+def suite_base_approved():
+    return approved_one()
 
 
 def split(replies):
@@ -119,7 +151,7 @@ def main() -> int:
         "rationaleHash": "rationale",
     }
     assertions.expect_ok("race case decided",
-                         fixtures.oracle_decide(case_uri, dave_cred, DAVE, decision))
+                         fixtures.oracle_decide(case_uri, DAVE, decision))
     replies = fixtures.two_oracle_executes(case_uri)
     applied = [r for r in replies if isinstance(r, tuple) and r == (True, "upheld")]
     assertions.expect("exactly one apply", len(applied), 1)
@@ -136,7 +168,7 @@ def main() -> int:
     b = approved(fixtures.claim(ALICE, claim_req())[1]["uri"])
     opened = fixtures.kasset_open_dispute(a, ALICE, case_req)
     case_a = opened[1]["uri"]
-    fixtures.oracle_decide(case_a, dave_cred, DAVE, decision)
+    fixtures.oracle_decide(case_a, DAVE, decision)
     fixtures.oracle_execute(case_a)
     reply = fixtures.read(a, "get")
     assertions.expect("A upheld", reply[1].get("status"), "upheld")
@@ -168,7 +200,80 @@ def main() -> int:
     late = fixtures.claim(ALICE, claim_req())[1]["uri"]
     reply = fixtures.claim_validate(late, frank_cred, FRANK,
                                      dict(validation, credentialUri=frank_cred))
-    assertions.expect_refusal("revoked credential refused", reply, "not qualified")
+    assertions.expect_refusal("revoked credential refused", reply, "proof")
+
+    # 8. Prove vs revoke on the same credential: revoke wins, the proof may be taken
+    # before the revoke and remains valid (non-retroactive).
+    bob2 = fixtures.issue(bob, "Validator", "structural", "US-TX", "validator", 1)[1]
+    race_req = {"ctype": "Validator", "discipline": "structural",
+                "jurisdiction": "US-TX", "role": "validator", "minLevel": 1}
+    race = fixtures.cred_prove_vs_revoke(bob2, BOB, race_req)
+    prove, revoke = race[0], race[1]
+    take = race[2] if len(race) > 2 else None
+    assertions.expect_ok("race revoke", revoke)
+    assertions.expect("prove is some or refused",
+                      isinstance(prove, tuple) and (prove[0] is True or prove[0] is False),
+                      True)
+    if isinstance(take, tuple) and take and take[0] is True:
+        assertions.expect("pre-revoke proof remains valid", take[1].get("subject"), bob)
+    late = fixtures.cred_prove(bob2, BOB, race_req)
+    assertions.expect_refusal("prove after race refused", late, "revoked")
+
+    # 9. proveValidated vs dispute on the same VP.
+    vp = fixtures.vp_propose(ALICE, {
+        "subjectRef": {"type": "claim", "id": "pending", "uri": ""},
+        "statementHash": "race-vp", "valueModelHash": "m",
+        "beneficiaries": [alice], "termsHash": "t",
+        "selectionCriteria": {"ctype": "Validator", "discipline": "structural",
+                              "jurisdiction": "US-TX", "role": "validator", "minLevel": 1},
+        "deadlineHeight": 1000000,
+    })
+    assertions.expect_ok("race VP", vp)
+    vp_uri = vp[1]["uri"]
+    bob3 = fixtures.issue(bob, "Validator", "structural", "US-TX", "validator", 1)[1]
+    fixtures.vp_validate(vp_uri, bob3, BOB, {"credentialUri": bob3, "notesHash": "n"})
+    race_case = dict(case_req, adjudicator=dave, adjudicatorCredentialUri=dave_cred)
+    race_vp = fixtures.vp_prove_vs_dispute(vp_uri, ALICE, race_case)
+    p2, d2 = race_vp[0], race_vp[1]
+    t2 = race_vp[2] if len(race_vp) > 2 else None
+    assertions.expect_ok("race dispute", d2)
+    if isinstance(t2, tuple) and t2 and t2[0] is True:
+        assertions.expect("pre-dispute proof remains valid", t2[1].get("caller"), alice)
+    late_vp = fixtures.vp_prove_validated(vp_uri, ALICE)
+    assertions.expect_refusal("prove after dispute refused", late_vp, "not validated")
+
+    # 10. decide vs expire on the same oracle case: exactly one wins.
+    _, race_kasset2 = suite_base_approved()
+    opened = fixtures.kasset_open_dispute(race_kasset2, ALICE, case_req)
+    assertions.expect_ok("race case opened", opened)
+    d3, e3 = fixtures.oracle_decide_vs_expire(opened[1]["uri"], DAVE, decision)
+    wins = [r for r in (d3, e3) if isinstance(r, tuple) and r[0] is True]
+    assertions.expect("exactly one of decide/expire", len(wins), 1)
+
+    # 11. Two identity creates for one address: exactly one wins. Use a key that
+    # has no identity yet, so reruns against a persistent devnet stay meaningful.
+    fresh = None
+    for candidate in ("ida", "idb", "wa", "wb", "ka", "kb", "kc", "ta", "tb", "tc"):
+        actors.ensure_vault(candidate)
+        lookup = fixtures.call_uri(fixtures.comp("identity-directory"), "lookup",
+                                   [actors.address(candidate)], deployer=False)
+        if not (isinstance(lookup, tuple) and lookup and lookup[0] is True):
+            fresh = candidate
+            break
+    if fresh is None:
+        print("  skip one identity create wins: no fresh key")
+    else:
+        a1, a2 = fixtures.two_identity_creates(fresh, f"{fresh}-race")
+        winners = [r for r in (a1, a2) if isinstance(r, tuple) and r[0] is True]
+        assertions.expect("one identity create wins", len(winners), 1)
+
+    # 12. Two nests of the same child into one parent: exactly one wins.
+    _, nc1 = approved_one()
+    _, np1 = approved_one()
+    refs1 = [{"id": nc1, "uri": nc1}]
+    n1, n2 = fixtures.two_nests_same_parent(np1, ALICE, refs1)
+    nwins = [r for r in (n1, n2) if isinstance(r, tuple) and r[0] is True]
+    assertions.expect("one nest wins", len(nwins), 1)
 
     print("concurrency_core: pass")
     return 0

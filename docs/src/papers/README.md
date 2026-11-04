@@ -1,13 +1,12 @@
 # Papers
 
-The paper archive lives in `docs/papers/`. It contains the six cited PDFs, short page-cited
-extracts, a manifest with authors/venue/sha256/licence status, and the quarantined CAASE18
-program.
+The paper archive lives in `docs/papers/`. It contains all seven PDFs, short page-cited
+extracts, and a manifest with authors, venues and SHA-256. The papers are already public on
+Arweave and the authors' websites.
 
 > **NOTICE.** The papers are third-party copyrighted works. They are **not** covered by
-> RGen's AGPL license. Redistribution status differs per paper; see
-> `docs/papers/manifest.json`. For a public release, replace non-redistributable PDFs with
-> links and keep only the short extracts.
+> RGen's AGPL license; they are included as cited reference material. See
+> `docs/papers/manifest.json`.
 
 ## Citation keys
 
@@ -19,5 +18,6 @@ program.
 | `@robles2016naic` | Insurance: The Highest and Best Use Case for Blockchain Technology |
 | `@robles2016nspe` | Blockchain Technology: Implications and Opportunities For Professional Engineers |
 | `@robles2017stewardship` | The Revolutionary Blockchain – An Opportunity for Engineering Stewardship |
+| `@caase2018agenda` | CAASE18 Final Agenda (included, uncited) |
 
 Convention: `p.N` is PDF page N (1-based). The extracts are short quotations, not full text.

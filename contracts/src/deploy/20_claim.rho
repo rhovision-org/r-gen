@@ -6,7 +6,7 @@
 //        -> Validation -> Approval), p.5 (clock, stakeholder comments).
 // RGen decision: the K-Asset is created by the Claim cell through the private KAsset library,
 //      not by a public factory, so a fake K-Asset cannot be created for a real claim.
-// Placeholders: __ROOT_URI__, __CREDENTIAL_FACTORY_URI__, __IDENTITY_DIRECTORY_URI__,
+// Placeholders: __ROOT_URI__, __CREDENTIAL_FACTORY_URI__, __VALUE_PROPOSITION_FACTORY_URI__,
 //               __ORACLE_FACTORY_URI__.
 new
   ClaimFactory,
@@ -14,15 +14,18 @@ new
   rs(`rho:registry:insertArbitrary`),
   deployerId(`rho:rchain:deployerId`),
   deployId(`rho:rchain:deployId`),
-  rootCh, cfCh, idCh, ofCh, cFactory, ack1,
+  rootCh, cfCh, vpCh, ofCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
   listHas, listHasId, listHasAny, listHas3,
-  makeKAsset, claimReqOk, claimStatus, kassetStatus,
-  CredentialFactory, IdentityDirectory, OracleFactory
+  makeKAsset, claimReqOk, claimStatus, kassetStatus, claimRegistryState,
+  CredentialFactory, ValuePropositionFactory, OracleFactory, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
 in {
   // @@INLINE:lib/Auth.rho@@
   // @@INLINE:lib/Time.rho@@
   // @@INLINE:lib/List.rho@@
+  // @@INLINE:lib/Proof.rho@@
+
+  claimRegistryState!({}) |
 
   contract claimReqOk(@req, ret) = {
     match req.get("work") {
@@ -58,10 +61,19 @@ in {
   } |
 
   rl!(`__CREDENTIAL_FACTORY_URI__`, *cfCh) |
-  rl!(`__IDENTITY_DIRECTORY_URI__`, *idCh) |
+  rl!(`__VALUE_PROPOSITION_FACTORY_URI__`, *vpCh) |
   rl!(`__ORACLE_FACTORY_URI__`, *ofCh) |
-  for (CredentialFactory <- cfCh; IdentityDirectory <- idCh; OracleFactory <- ofCh) {
+  for (CredentialFactory <- cfCh; ValuePropositionFactory <- vpCh; OracleFactory <- ofCh) {
     // @@INLINE:lib/KAsset.rho@@
+
+    contract ClaimFactory(@"verify", @uri, ret) = {
+      for (@r <<- claimRegistryState) {
+        match r.get(uri.toString()) {
+          Nil => { ret!((false, "unknown claim")) }
+          rec => { ret!((true, rec)) }
+        }
+      }
+    } |
 
     contract ClaimFactory(@"create", dId, @req, ret) = {
       new aCh, hCh in {
@@ -74,7 +86,7 @@ in {
               if (not ok) {
                 ret!((false, "fields"))
               } else {
-                new claimState, Claim, uriCh in {
+                new claimState, Claim, finalizeValidation, uriCh in {
                   claimState!({
                     "uri": "",
                     "claimant": claimant,
@@ -117,24 +129,14 @@ in {
                             if (now > s.get("commentUntilHeight")) {
                               claimState!(s) | ret2!((false, "comment closed"))
                             } else {
-                              new iCh in {
-                                IdentityDirectory!("lookup", who, *iCh) |
-                                for (@i <- iCh) {
-                                  match i {
-                                    (true, _) => {
-                                      claimState!(s.set("comments",
-                                        s.get("comments") ++ [{
-                                          "id": "cm:" ++ who ++ ":" ++ now.toString(),
-                                          "by": who, "hash": comment.get("hash"),
-                                          "at": now}])
-                                        .set("updatedAt", now)
-                                        .set("version", s.get("version") + 1)) |
-                                      ret2!((true, Nil))
-                                    }
-                                    _ => { claimState!(s) | ret2!((false, "not registered")) }
-                                  }
-                                }
-                              }
+                              claimState!(s.set("comments",
+                                s.get("comments") ++ [{
+                                  "id": "cm:" ++ who ++ ":" ++ now.toString(),
+                                  "by": who, "hash": comment.get("hash"),
+                                  "at": now}])
+                                .set("updatedAt", now)
+                                .set("version", s.get("version") + 1)) |
+                              ret2!((true, Nil))
                             }
                           }
                         }
@@ -187,105 +189,53 @@ in {
                     }
                   } |
 
-                  contract Claim(@"validate", dId2, credCap, @validation, ret2) = {
-                    new a2, h2 in {
-                      authSubject!(*dId2, *a2) |
-                      nowHeight!(*h2) |
-                      for (@(true, validator) <- a2; @height <- h2) {
-                        for (@s <- claimState) {
-                          if (s.get("status") != "open") {
-                            claimState!(s) | ret2!((false, "not open"))
-                          } else {
-                            if (validator == s.get("claimant")) {
-                              claimState!(s) | ret2!((false, "self validation"))
-                            } else {
-                              if (height > s.get("deadlineHeight")) {
-                                claimState!(s.set("status", "expired")
-                                              .set("updatedAt", height)
-                                              .set("version", s.get("version") + 1)) |
-                                ret2!((false, "expired"))
-                              } else {
-                                new vfCh in {
-                                  CredentialFactory!("verify",
-                                    validation.get("credentialUri"), *vfCh) |
-                                  for (@vf <- vfCh) {
-                                    match vf {
-                                      (true, _) => {
-                                        new cCh in {
-                                          credCap!("check", validator,
-                                                   s.get("selectionCriteria"), height, *cCh) |
-                                          for (@c <- cCh) {
-                                            match c {
-                                              (true, true, _) => {
-                                                new stCh in {
-                                                  claimStatus!(validation.get("verdict"), *stCh) |
-                                                  for (@claimSt <- stCh) {
-                                                    new ksCh in {
-                                                      kassetStatus!(validation.get("verdict"), *ksCh) |
-                                                      for (@kassetSt <- ksCh) {
-                                                        new kaCh in {
-                                                          makeKAsset!({
-                                                            "uri": "",
-                                                            "claimRef": {"id": s.get("uri"),
-                                                                         "uri": s.get("uri")},
-                                                            "validation": validation,
-                                                            "validator": validator,
-                                                            "validatorCredential": validation.get("credentialUri"),
-                                                            "claimant": s.get("claimant"),
-                                                            "verdict": validation.get("verdict"),
-                                                            "quality": validation.get("quality"),
-                                                            "quantity": s.get("quantity"),
-                                                            "discipline": s.get("work").get("discipline"),
-                                                            "jurisdiction": s.get("work").get("jurisdiction"),
-                                                            "valuePropositionRef": s.get("valuePropositionRef"),
-                                                            "status": kassetSt,
-                                                            "approver": Nil,
-                                                            "approval": Nil,
-                                                            "approvedAt": Nil,
-                                                            "approvalVersion": Nil,
-                                                            "childRefs": [],
-                                                            "dispute": Nil,
-                                                            "revocation": Nil,
-                                                            "createdAt": height,
-                                                            "version": 1
-                                                          }, *OracleFactory, *kaCh) |
-                                                          for (@ka <- kaCh) {
-                                                            match ka {
-                                                              (true, _, kassetUri) => {
-                                                                claimState!(s
-                                                                  .set("status", claimSt)
-                                                                  .set("validationRef", {
-                                                                    "credentialUri": validation.get("credentialUri"),
-                                                                    "verdict": validation.get("verdict"),
-                                                                    "quality": validation.get("quality"),
-                                                                    "validator": validator})
-                                                                  .set("kassetRef", {"id": kassetUri,
-                                                                                     "uri": kassetUri})
-                                                                  .set("updatedAt", height)
-                                                                  .set("version", s.get("version") + 1)) |
-                                                                ret2!((true, {"id": kassetUri,
-                                                                              "uri": kassetUri}))
-                                                              }
-                                                              _ => {
-                                                                claimState!(s) |
-                                                                ret2!(ka)
-                                                              }
-                                                            }
-                                                          }
-                                                        }
-                                                      }
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                              _ => { claimState!(s) | ret2!((false, "not qualified")) }
-                                            }
-                                          }
-                                        }
-                                      }
-                                      _ => { claimState!(s) | ret2!((false, "forged credential")) }
-                                    }
+                  contract finalizeValidation(@s, @validator, @height, @validation, ret2) = {
+                    new stCh in {
+                      claimStatus!(validation.get("verdict"), *stCh) |
+                      for (@claimSt <- stCh) {
+                        new ksCh in {
+                          kassetStatus!(validation.get("verdict"), *ksCh) |
+                          for (@kassetSt <- ksCh) {
+                            new kaCh in {
+                              makeKAsset!({
+                                "uri": "",
+                                "claimRef": {"id": s.get("uri"), "uri": s.get("uri")},
+                                "validation": validation,
+                                "validator": validator,
+                                "validatorCredential": validation.get("credentialUri"),
+                                "claimant": s.get("claimant"),
+                                "verdict": validation.get("verdict"),
+                                "quality": validation.get("quality"),
+                                "quantity": s.get("quantity"),
+                                "discipline": s.get("work").get("discipline"),
+                                "jurisdiction": s.get("work").get("jurisdiction"),
+                                "valuePropositionRef": s.get("valuePropositionRef"),
+                                "status": kassetSt,
+                                "approver": Nil,
+                                "approval": Nil,
+                                "approvedAt": Nil,
+                                "approvalVersion": Nil,
+                                "childRefs": [],
+                                "dispute": Nil,
+                                "revocation": Nil,
+                                "createdAt": height,
+                                "version": 1
+                              }, *OracleFactory, *ValuePropositionFactory, *ClaimFactory, *kaCh) |
+                              for (@ka <- kaCh) {
+                                match ka {
+                                  (true, _, kassetUri) => {
+                                    claimState!(s.set("status", claimSt)
+                                      .set("validationRef", {
+                                        "credentialUri": validation.get("credentialUri"),
+                                        "verdict": validation.get("verdict"),
+                                        "quality": validation.get("quality"),
+                                        "validator": validator})
+                                      .set("kassetRef", {"id": kassetUri, "uri": kassetUri})
+                                      .set("updatedAt", height)
+                                      .set("version", s.get("version") + 1)) |
+                                    ret2!((true, {"id": kassetUri, "uri": kassetUri}))
                                   }
+                                  _ => { claimState!(s) | ret2!(ka) }
                                 }
                               }
                             }
@@ -295,10 +245,60 @@ in {
                     }
                   } |
 
+                  contract Claim(@"validate", dId2, @credentialUri, @validation, ret2) = {
+                    new a2, h2 in {
+                      authSubject!(*dId2, *a2) |
+                      nowHeight!(*h2) |
+                      for (@(true, validator) <- a2; @height <- h2) {
+                        for (@s <- claimState) {
+                          match (s.get("status"), validator == s.get("claimant"),
+                                 height > s.get("deadlineHeight")) {
+                            ("open", false, false) => {
+                              new vfCh, okCh in {
+                                CredentialFactory!("verify", credentialUri, *vfCh) |
+                                for (@vf <- vfCh) {
+                                  match vf {
+                                    (true, _) => {
+                                      proveAndCheck!(credentialUri, *dId2,
+                                        s.get("selectionCriteria"), validator, height, *okCh) |
+                                      for (@ok <- okCh) {
+                                        if (ok) {
+                                          finalizeValidation!(s, validator, height, validation, *ret2)
+                                        } else { claimState!(s) | ret2!((false, "proof")) }
+                                      }
+                                    }
+                                    _ => { claimState!(s) | ret2!((false, "forged credential")) }
+                                  }
+                                }
+                              }
+                            }
+                            ("open", true, _) => { claimState!(s) | ret2!((false, "self validation")) }
+                            ("open", _, true) => {
+                              claimState!(s.set("status", "expired")
+                                .set("updatedAt", height)
+                                .set("version", s.get("version") + 1)) |
+                              ret2!((false, "expired"))
+                            }
+                            _ => { claimState!(s) | ret2!((false, "not open")) }
+                          }
+                        }
+                      }
+                    }
+                  } |
+
                   rs!(bundle+{*Claim}, *uriCh) |
                   for (@uri <- uriCh) {
-                    for (@s2 <- claimState) { claimState!(s2.set("uri", uri)) } |
-                    ret!((true, {"id": uri, "uri": uri}))
+                    for (@s2 <- claimState) {
+                      claimState!(s2.set("uri", uri)) |
+                      for (@r <- claimRegistryState) {
+                        claimRegistryState!(r.set(uri.toString(), {
+                          "uri": uri,
+                          "claimant": claimant,
+                          "subjectRef": req.get("subjectRef")
+                        })) |
+                        ret!((true, {"id": uri, "uri": uri}))
+                      }
+                    }
                   }
                 }
               }

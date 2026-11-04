@@ -1,24 +1,550 @@
-schema: rgen.flows/v1
-subsystem: core
-invariants:
-  Q1: a validation requires an active matching validator credential at the event height
-  K1: at most one validation per claim
-  K2: approval requires a validated or conditional K-Asset
-  K3: KAT is minted once per K-Asset and never on nesting
-  R1: risk score = severity * probability * exposure in 1..100
-  R2: an uninsurable assessment cannot be attested, linked, or approved against
-  O1: one vote per panelist; only seated panelists vote
-  O2: payment executes only against a canonical decision and at most once per hold
-rules:
-  - {id: C-issue, arm: 'CredentialBook@"issue"', status: implemented}
-  - {id: C-valid, arm: 'CredentialBook@"valid"', status: implemented}
-  - {id: W-claim, arm: 'WorkBook@"claim"', status: implemented}
-  - {id: K-validate, arm: 'KAssetBook@"validate"', status: implemented}
-  - {id: K-approve, arm: 'KAssetBook@"approve"', status: implemented}
-  - {id: K-nest, arm: 'KAssetBook@"nest"', status: implemented}
-  - {id: T-mint, arm: 'TokenBook@"mintForKAsset"', status: implemented}
-  - {id: R-assess, arm: 'RiskBook@"assess"', status: implemented}
-  - {id: R-attest, arm: 'RiskBook@"attest"', status: implemented}
-  - {id: R-link, arm: 'RiskBook@"link"', status: implemented}
-  - {id: S-seal, arm: 'ProvenanceBook@"seal"', status: implemented}
-  - {id: S-anchor, arm: 'ProvenanceBook@"anchor"', status: implemented}
+# Flow manifest: every deployed arm and its Lean declaration.
+# Status vocabulary: proved-model | proved-conformance | owed | open.
+# `proved-model`: a theorem about the Lean model (RGen.*).
+# `proved-conformance`: the theorem plus a spec/vectors/core.tsv row (asserted by suites in Phase 5).
+# `owed`/`open`: outside the model; `note` says why.
+
+- file: contracts/src/deploy/00_root.rho
+  contract: GenRoot
+  arm: get
+  lean: -
+  status: owed
+  note: installer-gated root; outside the Pareto model
+
+- file: contracts/src/deploy/00_root.rho
+  contract: GenRoot
+  arm: keys
+  lean: -
+  status: owed
+  note: installer-gated root; outside the Pareto model
+
+- file: contracts/src/deploy/00_root.rho
+  contract: GenRoot
+  arm: register
+  lean: -
+  cell: rootState
+  status: owed
+  note: installer-gated root; outside the Pareto model
+
+- file: contracts/src/deploy/00_root.rho
+  contract: GenRoot
+  arm: resolve
+  lean: -
+  status: owed
+  note: installer-gated root; outside the Pareto model
+
+- file: contracts/src/deploy/10_identity.rho
+  contract: Identity
+  arm: get
+  lean: -
+  status: owed
+  note: read-only or extension arm; no committed authority modeled
+
+- file: contracts/src/deploy/10_identity.rho
+  contract: Identity
+  arm: update
+  lean: RGen.update_owner_requires_owner
+  cell: identityState
+  status: proved-model
+
+- file: contracts/src/deploy/10_identity.rho
+  contract: IdentityDirectory
+  arm: count
+  lean: -
+  status: owed
+  note: monotone directory read
+
+- file: contracts/src/deploy/10_identity.rho
+  contract: IdentityDirectory
+  arm: lookup
+  lean: -
+  status: owed
+  note: monotone directory read
+
+- file: contracts/src/deploy/10_identity.rho
+  contract: IdentityFactory
+  arm: create
+  lean: RGen.Directory.create_unique
+  cell: directoryState
+  status: proved-model
+
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Credential
+  arm: attest
+  lean: RGen.CredentialState.attest_twice
+  cell: credState
+  transition: RGen.credentialAttest
+  authority: RGen.core_arm_authority
+  status: proved-model
+
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Credential
+  arm: check
+  lean: -
+  status: owed
+  note: advisory read; no core commit may use it
+
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Credential
+  arm: get
+  lean: -
+  status: owed
+  note: read-only or extension arm; no committed authority modeled
+
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Credential
+  arm: renew
+  lean: RGen.CredentialState.renew_requires_issuer
+  cell: credState
+  transition: RGen.credentialRenew
+  authority: RGen.core_arm_authority
+  status: proved-model
+
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Credential
+  arm: revoke
+  lean: RGen.CredentialState.revoke_sets_revoked
+  cell: credState
+  transition: RGen.credentialRevoke
+  authority: RGen.core_arm_authority
+  status: proved-model
+  consumedProofs: []
+  classification: RGen.credential_prove_revoke_never_after
+
+- file: contracts/src/deploy/11_credentials.rho
+  contract: CredentialFactory
+  arm: count
+  lean: -
+  status: owed
+  note: creation is an append-only registry write
+
+- file: contracts/src/deploy/11_credentials.rho
+  contract: CredentialFactory
+  arm: issue
+  lean: -
+  cell: factoryState
+  status: owed
+  note: creation is an append-only registry write
+
+- file: contracts/src/deploy/11_credentials.rho
+  contract: CredentialFactory
+  arm: verify
+  lean: -
+  status: owed
+  note: creation is an append-only registry write
+
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Issuer
+  arm: authorize
+  lean: -
+  status: owed
+  note: monotone issuer read; issuer is immutable
+
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Issuer
+  arm: covers
+  lean: -
+  status: owed
+  note: monotone issuer read; issuer is immutable
+
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Issuer
+  arm: get
+  lean: -
+  status: owed
+  note: monotone issuer read; issuer is immutable
+
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Issuer
+  arm: revoke
+  lean: -
+  status: owed
+  note: removed from core by plan section 3.1; governance extension
+
+- file: contracts/src/deploy/20_claim.rho
+  contract: Claim
+  arm: comment
+  lean: RGen.ClaimState.comment_requires_open
+  cell: claimState
+  transition: RGen.claimComment
+  authority: RGen.core_arm_authority
+  status: proved-model
+  note: comment appends and preserves status; window guard is modeled
+
+- file: contracts/src/deploy/20_claim.rho
+  contract: Claim
+  arm: comments
+  lean: -
+  status: owed
+  note: read-only or extension arm; no committed authority modeled
+
+- file: contracts/src/deploy/20_claim.rho
+  contract: Claim
+  arm: expire
+  lean: RGen.ClaimState.expire_after_deadline
+  cell: claimState
+  transition: RGen.claimExpire
+  authority: RGen.core_arm_authority
+  status: proved-model
+
+- file: contracts/src/deploy/20_claim.rho
+  contract: Claim
+  arm: get
+  lean: -
+  status: owed
+  note: read-only or extension arm; no committed authority modeled
+
+- file: contracts/src/deploy/20_claim.rho
+  contract: Claim
+  arm: validate
+  lean: RGen.ClaimState.validate_once
+  cell: claimState
+  transition: RGen.claimValidate
+  authority: RGen.core_arm_authority
+  status: proved-model
+  consumedProofs: [credentialProof]
+  classification: RGen.claim_validate_expire_two_way
+
+- file: contracts/src/deploy/20_claim.rho
+  contract: Claim
+  arm: withdraw
+  lean: RGen.ClaimState.withdraw_requires_claimant
+  cell: claimState
+  transition: RGen.claimWithdraw
+  authority: RGen.core_arm_authority
+  status: proved-model
+
+- file: contracts/src/deploy/20_claim.rho
+  contract: ClaimFactory
+  arm: create
+  lean: -
+  cell: claimState
+  status: owed
+  note: creation is an append-only registry write
+
+- file: contracts/src/deploy/22_value.rho
+  contract: Apply
+  arm: applyDecision
+  lean: RGen.VPState.decision_once
+  cell: vpState
+  transition: RGen.vpDecision
+  authority: RGen.core_arm_authority
+  status: proved-model
+
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: comment
+  lean: RGen.VPState.comment_requires_proposed
+  cell: vpState
+  status: proved-model
+  note: comment appends and preserves status; window guard is modeled
+
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: comments
+  lean: -
+  status: owed
+  note: read-only or extension arm; no committed authority modeled
+
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: get
+  lean: -
+  status: owed
+  note: read-only or extension arm; no committed authority modeled
+
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: openDispute
+  lean: RGen.VPState.openDispute_requires_status
+  cell: vpState
+  transition: RGen.vpOpenDispute
+  authority: RGen.core_arm_authority
+  status: proved-model
+
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: revocation
+  lean: -
+  status: owed
+  note: partiallyRevoked extension; not core
+
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: validate
+  lean: RGen.VPState.validate_once
+  cell: vpState
+  transition: RGen.vpValidate
+  authority: RGen.core_arm_authority
+  status: proved-model
+  consumedProofs: [credentialProof]
+  classification: RGen.vp_validate_withdraw_two_way
+
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: withdraw
+  lean: RGen.VPState.withdraw_requires_proposer
+  cell: vpState
+  transition: RGen.vpWithdraw
+  authority: RGen.core_arm_authority
+  status: proved-model
+
+- file: contracts/src/deploy/22_value.rho
+  contract: ValuePropositionFactory
+  arm: propose
+  lean: -
+  cell: vpState
+  status: owed
+  note: creation is an append-only registry write
+
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleCase
+  arm: close
+  lean: RGen.OracleState.close_requires_finished
+  cell: caseState
+  transition: RGen.oracleClose
+  authority: RGen.core_arm_authority
+  status: proved-model
+
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleCase
+  arm: decide
+  lean: RGen.OracleState.decide_once
+  cell: caseState
+  transition: RGen.oracleDecide
+  authority: RGen.core_arm_authority
+  status: proved-model
+  consumedProofs: [credentialProof]
+  classification: RGen.oracle_decide_expire_two_way
+
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleCase
+  arm: evidence
+  lean: RGen.OracleState.addEvidence_requires_open
+  cell: caseState
+  transition: RGen.oracleEvidence
+  authority: RGen.core_arm_authority
+  status: proved-model
+  note: evidence appends only while open; duplicates are refused
+
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleCase
+  arm: execute
+  lean: RGen.OracleState.execute_once
+  cell: caseState
+  transition: RGen.oracleExecute
+  authority: RGen.core_arm_authority
+  status: proved-model
+
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleCase
+  arm: expire
+  lean: RGen.OracleState.expire_after_deadline
+  cell: caseState
+  transition: RGen.oracleExpire
+  authority: RGen.core_arm_authority
+  status: proved-model
+
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleCase
+  arm: get
+  lean: -
+  status: owed
+  note: read-only or extension arm; no committed authority modeled
+
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleFactory
+  arm: open
+  lean: -
+  cell: caseState
+  status: owed
+  note: creation; the stored adjudicator credential is checked by decide
+
+- file: contracts/src/deploy/40_provenance.rho
+  contract: Provenance
+  arm: anchor
+  lean: RGen.ProvenanceState.anchors_append_only
+  cell: pState
+  transition: RGen.provenanceAnchor
+  authority: RGen.core_arm_authority
+  status: proved-model
+  consumedProofs: []
+  classification: RGen.provenance_anchor_anchor_same_never_after
+
+- file: contracts/src/deploy/40_provenance.rho
+  contract: Provenance
+  arm: anchors
+  lean: -
+  status: owed
+  note: read-only or extension arm; no committed authority modeled
+
+- file: contracts/src/deploy/40_provenance.rho
+  contract: Provenance
+  arm: comment
+  lean: RGen.ProvenanceState.addComment_requires_writer
+  cell: pState
+  transition: RGen.provenanceComment
+  authority: RGen.core_arm_authority
+  status: proved-model
+
+- file: contracts/src/deploy/40_provenance.rho
+  contract: Provenance
+  arm: get
+  lean: -
+  status: owed
+  note: read-only or extension arm; no committed authority modeled
+
+- file: contracts/src/deploy/40_provenance.rho
+  contract: Provenance
+  arm: verify
+  lean: RGen.ProvenanceState.verify_monotone
+  status: proved-model
+
+- file: contracts/src/deploy/40_provenance.rho
+  contract: ProvenanceFactory
+  arm: create
+  lean: -
+  cell: pState
+  status: owed
+  note: creation; no transition modeled
+
+- file: contracts/src/lib/KAsset.rho
+  contract: Apply
+  arm: applyDecision
+  lean: RGen.KAssetState.decision_once
+  cell: kState
+  transition: RGen.vpDecision
+  authority: RGen.core_arm_authority
+  status: proved-model
+
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: approve
+  lean: RGen.KAssetState.approve_requires_credential_proof
+  cell: kState
+  transition: RGen.kassetApprove
+  authority: RGen.core_arm_authority
+  status: proved-model
+  consumedProofs: [credentialProof, valuePropositionProof]
+  classification: RGen.kasset_approve_reject_two_way
+
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: children
+  lean: -
+  status: owed
+  note: read-only or extension arm; no committed authority modeled
+
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: get
+  lean: -
+  status: owed
+  note: read-only or extension arm; no committed authority modeled
+
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: nest
+  lean: RGen.KAssetState.nest_acyclic
+  cell: kState
+  transition: RGen.kassetNest
+  authority: RGen.core_arm_authority
+  status: proved-model
+  consumedProofs: [childApprovedProof]
+  classification: RGen.kasset_nest_same_never_after_arm
+
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: openDispute
+  lean: RGen.KAssetState.openDispute_once
+  cell: kState
+  transition: RGen.kassetOpenDispute
+  authority: RGen.core_arm_authority
+  status: proved-model
+
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: reject
+  lean: RGen.KAssetState.reject_requires_credential_proof
+  cell: kState
+  transition: RGen.kassetReject
+  authority: RGen.core_arm_authority
+  status: proved-model
+  note: rejection requires validated/conditional and a non-claimant, non-validator proof
+  consumedProofs: [credentialProof]
+  classification: RGen.kasset_approve_reject_two_way
+
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: revocation
+  lean: -
+  status: owed
+  note: revocation record is an extension
+
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Credential
+  arm: prove
+  lean: RGen.CredentialState.prove_requires_active
+  cell: credState
+  transition: RGen.credentialProve
+  authority: RGen.core_arm_authority
+  status: proved-model
+  note: planned core arm: one-shot credential proof
+  consumedProofs: []
+  classification: RGen.credential_prove_revoke_never_after
+
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: proveValidated
+  lean: RGen.VPState.proveValidated_requires_validated
+  cell: vpState
+  transition: RGen.vpProveValidated
+  authority: RGen.core_arm_authority
+  status: proved-model
+  note: planned core arm: one-shot validated proof
+  consumedProofs: []
+  classification: RGen.vp_proveValidated_openDispute_ordered
+
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: proveApproved
+  lean: RGen.KAssetState.proveApproved_requires_approved
+  cell: kState
+  transition: RGen.kassetProveApproved
+  authority: RGen.core_arm_authority
+  status: proved-model
+  note: planned core arm: one-shot approval proof
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Proof
+  arm: take
+  lean: RGen.ProofState.take_take
+  status: proved-model
+  note: one-shot proof capability; second take returns used
+
+- file: contracts/src/deploy/22_value.rho
+  contract: Proof
+  arm: take
+  lean: RGen.ProofState.take_take
+  status: proved-model
+  note: one-shot validated proof capability
+
+- file: contracts/src/lib/KAsset.rho
+  contract: Proof
+  arm: take
+  lean: RGen.ProofState.take_take
+  status: proved-model
+  note: one-shot approval proof capability
+
+- file: contracts/src/deploy/20_claim.rho
+  contract: ClaimFactory
+  arm: verify
+  lean: RGen.Registry.verify_monotone
+  status: proved-model
+  note: append-only claim registry read
+
+- file: contracts/src/deploy/22_value.rho
+  contract: ValuePropositionFactory
+  arm: verify
+  lean: RGen.Registry.verify_monotone
+  status: proved-model
+  note: append-only value-proposition registry read

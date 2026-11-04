@@ -6,7 +6,7 @@
 //        -> Validation -> Approval), p.5 (clock, stakeholder comments).
 // RGen decision: the K-Asset is created by the Claim cell through the private KAsset library,
 //      not by a public factory, so a fake K-Asset cannot be created for a real claim.
-// Placeholders: __ROOT_URI__, __CREDENTIAL_FACTORY_URI__, __IDENTITY_DIRECTORY_URI__,
+// Placeholders: __ROOT_URI__, __CREDENTIAL_FACTORY_URI__, __VALUE_PROPOSITION_FACTORY_URI__,
 //               __ORACLE_FACTORY_URI__.
 new
   ClaimFactory,
@@ -14,11 +14,11 @@ new
   rs(`rho:registry:insertArbitrary`),
   deployerId(`rho:rchain:deployerId`),
   deployId(`rho:rchain:deployId`),
-  rootCh, cfCh, idCh, ofCh, cFactory, ack1,
+  rootCh, cfCh, vpCh, ofCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
   listHas, listHasId, listHasAny, listHas3,
-  makeKAsset, claimReqOk, claimStatus, kassetStatus,
-  CredentialFactory, IdentityDirectory, OracleFactory
+  makeKAsset, claimReqOk, claimStatus, kassetStatus, claimRegistryState,
+  CredentialFactory, ValuePropositionFactory, OracleFactory, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
 in {
 // Deployer identity helpers. The REV address is the subject id; the public key is stored
 // only where an identity profile needs it.
@@ -112,6 +112,106 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
     }
   }
 } |
+// One-shot proof helpers. A credential or value proposition `prove` arm returns a private
+// `Proof` capability whose `take` arm yields `(true, data)` once and `(false, "used")` after
+// that. These helpers resolve the credential by its registry URI, obtain a proof, take it, and
+// check the fields the caller binds. Extracting them keeps the consuming arms within the
+// parser's nesting limit.
+
+contract resolveAndProve(@credentialUri, dId, @rq, ret) = {
+  new credCh in {
+    rl!(credentialUri, *credCh) |
+    for (Credential <- credCh) {
+      new pCh in {
+        Credential!("prove", *dId, rq, *pCh) |
+        for (@p <- pCh) { ret!(p) }
+      }
+    }
+  }
+} |
+
+contract checkCredentialProof(@proofUri, @validator, @credentialUri, @height, ret) = {
+  new pc, tCh in {
+    rl!(proofUri, *pc) |
+    for (Proof <- pc) {
+    Proof!("take", *tCh) |
+    for (@t <- tCh) {
+      match t {
+        (true, data) => {
+          if (data.get("subject") == validator
+              && data.get("credentialUri") == credentialUri
+              && data.get("atHeight") == height) { ret!(true) }
+          else { ret!(false) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+    }
+  }
+} |
+
+contract proveAndCheck(@credentialUri, dId, @rq, @validator, @height, ret) = {
+  new pCh, okCh in {
+    resolveAndProve!(credentialUri, *dId, rq, *pCh) |
+    for (@pr <- pCh) {
+      match pr {
+        (true, proofUri) => {
+          checkCredentialProof!(proofUri, validator, credentialUri, height, *okCh) |
+          for (@ok <- okCh) { ret!(ok) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+  }
+} |
+
+contract checkValidatedProof(@proofUri, @caller, @atHeight, ret) = {
+  new pc, tCh in {
+    rl!(proofUri, *pc) |
+    for (Proof <- pc) {
+    Proof!("take", *tCh) |
+    for (@t <- tCh) {
+      match t {
+        (true, data) => {
+          if (data.get("caller") == caller && data.get("atHeight") == atHeight) {
+            ret!(true)
+          } else { ret!(false) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+    }
+  }
+} |
+
+contract resolveProveValidated(@vpUri, dId, @atHeight, ret) = {
+  new vpc in {
+    rl!(vpUri, *vpc) |
+    for (VP <- vpc) {
+      new pCh in {
+        VP!("proveValidated", *dId, atHeight, *pCh) |
+        for (@p <- pCh) { ret!(p) }
+      }
+    }
+  }
+} |
+
+contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
+  new pCh, okCh in {
+    resolveProveValidated!(vpUri, *dId, atHeight, *pCh) |
+    for (@pr <- pCh) {
+      match pr {
+        (true, proofUri) => {
+          checkValidatedProof!(proofUri, caller, atHeight, *okCh) |
+          for (@ok <- okCh) { ret!(ok) }
+        }
+        _ => { ret!(false) }
+      }
+    }
+  }
+} |
+
+  claimRegistryState!({}) |
 
   contract claimReqOk(@req, ret) = {
     match req.get("work") {
@@ -147,113 +247,58 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
   } |
 
   rl!(`__CREDENTIAL_FACTORY_URI__`, *cfCh) |
-  rl!(`__IDENTITY_DIRECTORY_URI__`, *idCh) |
+  rl!(`__VALUE_PROPOSITION_FACTORY_URI__`, *vpCh) |
   rl!(`__ORACLE_FACTORY_URI__`, *ofCh) |
-  for (CredentialFactory <- cfCh; IdentityDirectory <- idCh; OracleFactory <- ofCh) {
+  for (CredentialFactory <- cfCh; ValuePropositionFactory <- vpCh; OracleFactory <- ofCh) {
 // K-Asset as a private library used by the Claim cell. Only the Claim may create one; a public
 // factory would let an attacker create a K-Asset with a fake claim. The cell owns approval,
-// nesting and the private applyDecision capability that an Oracle case receives.
+// two-phase nesting, and the private applyDecision capability that an Oracle case receives.
 //
 // Paper: @robles2020innovation p.4-5 (claim+validation pair is the K-Asset);
 //        @zhong2019bridge p.4 (approval), p.6 (nesting/risk transfer).
 // RGen decision: parent-owned nesting edges with a strict (approvedAt,id) order make cycles
-// non-representable without graph traversal.
+// non-representable without graph traversal. Nesting phase 1 is a read-only hint; the child
+// `proveApproved` proof is the authority. Phase 2 acquires child proofs in ascending order
+// without holding the parent. Phase 3 consumes the parent and re-checks duplicates.
 
-contract makeKAsset(@init, oracleFactory, ret) = {
-  new kState, KAsset, Apply, nestCheck, uriCh in {
+contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
+  new kState, KAsset, Apply, uriCh, commitApproval, checkApprovalVp, verifyChildClaim, nestChildCheck, nestOne, nestCheck, nestProofs in {
     kState!(init) |
 
-    contract KAsset(@"get", ret2) = {
-      for (@s <<- kState) { ret2!((true, s)) }
+    contract commitApproval(@s, @approver, @height, @approval, ret2) = {
+      kState!(s.set("status", "approved")
+                .set("approver", approver)
+                .set("approval", {
+                  "decision": "approve",
+                  "conditionsHash": approval.get("conditionsHash"),
+                  "credentialUri": approval.get("credentialUri"),
+                  "liability": approval.get("liability"),
+                  "at": height})
+                .set("approvedAt", height)
+                .set("approvalVersion", s.get("version") + 1)
+                .set("version", s.get("version") + 1)) |
+      ret2!((true, {
+        "approvalVersion": s.get("version") + 1,
+        "approvedAt": height,
+        "liability": approval.get("liability")}))
     } |
 
-    contract KAsset(@"approve", dId, credCap, @approval, ret2) = {
-      new aCh, hCh in {
-        authSubject!(*dId, *aCh) |
-        nowHeight!(*hCh) |
-        for (@(true, approver) <- aCh; @height <- hCh) {
-          for (@s <- kState) {
-            if (s.get("status") != "validated" && s.get("status") != "conditional") {
-              kState!(s) | ret2!((false, "not validated"))
-            } else {
-              if (approver == s.get("claimant") || approver == s.get("validator")) {
-                kState!(s) | ret2!((false, "conflict"))
-              } else {
-                new vfCh in {
-                  CredentialFactory!("verify", approval.get("credentialUri"), *vfCh) |
-                  for (@vf <- vfCh) {
-                    match vf {
-                      (true, _) => {
-                        new reqCh in {
-                          reqCh!({
-                            "ctype": "Approver",
-                            "discipline": s.get("discipline"),
-                            "jurisdiction": s.get("jurisdiction"),
-                            "role": "approver",
-                            "minLevel": 1
-                          }) |
-                          for (@req <- reqCh) {
-                            new cCh in {
-                              credCap!("check", approver, req, height, *cCh) |
-                              for (@c <- cCh) {
-                                match c {
-                                  (true, true, _) => {
-                                    new vpCh, vpc in {
-                                      match s.get("valuePropositionRef") {
-                                        Nil => { vpCh!(true) }
-                                        vpRef => {
-                                          rl!(vpRef.get("uri"), *vpc) |
-                                          for (VP <- vpc) {
-                                            new gCh in {
-                                              VP!("get", *gCh) |
-                                              for (@g <- gCh) {
-                                                match g {
-                                                  (true, vp) => {
-                                                    if (vp.get("status") == "validated") {
-                                                      vpCh!(true)
-                                                    } else { vpCh!(false) }
-                                                  }
-                                                  _ => { vpCh!(false) }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
-                                      } |
-                                      for (@vpOk <- vpCh) {
-                                        if (not vpOk) {
-                                          kState!(s) | ret2!((false, "value proposition"))
-                                        } else {
-                                          kState!(s.set("status", "approved")
-                                                    .set("approver", approver)
-                                                    .set("approval", {
-                                                      "decision": "approve",
-                                                      "conditionsHash": approval.get("conditionsHash"),
-                                                      "credentialUri": approval.get("credentialUri"),
-                                                      "liability": approval.get("liability"),
-                                                      "at": height})
-                                                    .set("approvedAt", height)
-                                                    .set("approvalVersion", s.get("version") + 1)
-                                                    .set("version", s.get("version") + 1)) |
-                                          ret2!((true, {
-                                            "approvalVersion": s.get("version") + 1,
-                                            "approvedAt": height,
-                                            "liability": approval.get("liability")}))
-                                        }
-                                      }
-                                    }
-                                  }
-                                  _ => { kState!(s) | ret2!((false, "not qualified")) }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                      _ => { kState!(s) | ret2!((false, "forged credential")) }
-                    }
+    contract checkApprovalVp(@s, dId, @approver, @height, @approval, ret2) = {
+      match s.get("valuePropositionRef") {
+        Nil => { commitApproval!(s, approver, height, approval, *ret2) }
+        vpRef => {
+          new vfCh, okCh in {
+            vpFactory!("verify", vpRef.get("uri"), *vfCh) |
+            for (@vf <- vfCh) {
+              match vf {
+                (true, _) => {
+                  proveValidatedAndCheck!(vpRef.get("uri"), *dId, approver, height, *okCh) |
+                  for (@ok <- okCh) {
+                    if (ok) { commitApproval!(s, approver, height, approval, *ret2) }
+                    else { kState!(s) | ret2!((false, "value proposition")) }
                   }
                 }
+                _ => { kState!(s) | ret2!((false, "forged value proposition")) }
               }
             }
           }
@@ -261,51 +306,269 @@ contract makeKAsset(@init, oracleFactory, ret) = {
       }
     } |
 
-    contract KAsset(@"reject", dId, credCap, @approval, ret2) = {
+    contract KAsset(@"get", ret2) = {
+      for (@s <<- kState) { ret2!((true, s)) }
+    } |
+
+    contract KAsset(@"approve", dId, @credentialUri, @approval, ret2) = {
       new aCh, hCh in {
         authSubject!(*dId, *aCh) |
         nowHeight!(*hCh) |
         for (@(true, approver) <- aCh; @height <- hCh) {
           for (@s <- kState) {
-            if (s.get("status") != "validated" && s.get("status") != "conditional") {
-              kState!(s) | ret2!((false, "not validated"))
-            } else {
-              if (approver == s.get("claimant") || approver == s.get("validator")) {
-                kState!(s) | ret2!((false, "conflict"))
-              } else {
-                new vfCh in {
-                  CredentialFactory!("verify", approval.get("credentialUri"), *vfCh) |
+            match (s.get("status") == "validated" || s.get("status") == "conditional",
+                   approver == s.get("claimant") || approver == s.get("validator")) {
+              (true, false) => {
+                new vfCh, okCh in {
+                  CredentialFactory!("verify", credentialUri, *vfCh) |
                   for (@vf <- vfCh) {
                     match vf {
                       (true, _) => {
-                        new reqCh in {
-                          reqCh!({
-                            "ctype": "Approver",
-                            "discipline": s.get("discipline"),
-                            "jurisdiction": s.get("jurisdiction"),
-                            "role": "approver",
-                            "minLevel": 1
-                          }) |
-                          for (@req <- reqCh) {
-                            new cCh in {
-                              credCap!("check", approver, req, height, *cCh) |
-                              for (@c <- cCh) {
-                                match c {
-                                  (true, true, _) => {
-                                    kState!(s.set("status", "rejected")
-                                              .set("approver", approver)
-                                              .set("rejectedAt", height)
-                                              .set("version", s.get("version") + 1)) |
-                                    ret2!((true, Nil))
-                                  }
-                                  _ => { kState!(s) | ret2!((false, "not qualified")) }
+                        proveAndCheck!(credentialUri, *dId,
+                          {"ctype": "Approver", "discipline": s.get("discipline"),
+                           "jurisdiction": s.get("jurisdiction"), "role": "approver",
+                           "minLevel": 1}, approver, height, *okCh) |
+                        for (@ok <- okCh) {
+                          if (ok) {
+                            checkApprovalVp!(s, *dId, approver, height, approval, *ret2)
+                          } else { kState!(s) | ret2!((false, "not qualified")) }
+                        }
+                      }
+                      _ => { kState!(s) | ret2!((false, "forged credential")) }
+                    }
+                  }
+                }
+              }
+              (_, true) => { kState!(s) | ret2!((false, "conflict")) }
+              _ => { kState!(s) | ret2!((false, "not validated")) }
+            }
+          }
+        }
+      }
+    } |
+
+    contract KAsset(@"reject", dId, @credentialUri, @approval, ret2) = {
+      new aCh, hCh in {
+        authSubject!(*dId, *aCh) |
+        nowHeight!(*hCh) |
+        for (@(true, approver) <- aCh; @height <- hCh) {
+          for (@s <- kState) {
+            match (s.get("status") == "validated" || s.get("status") == "conditional",
+                   approver == s.get("claimant") || approver == s.get("validator")) {
+              (true, false) => {
+                new vfCh, okCh in {
+                  CredentialFactory!("verify", credentialUri, *vfCh) |
+                  for (@vf <- vfCh) {
+                    match vf {
+                      (true, _) => {
+                        proveAndCheck!(credentialUri, *dId,
+                          {"ctype": "Approver", "discipline": s.get("discipline"),
+                           "jurisdiction": s.get("jurisdiction"), "role": "approver",
+                           "minLevel": 1}, approver, height, *okCh) |
+                        for (@ok <- okCh) {
+                          if (ok) {
+                            kState!(s.set("status", "rejected")
+                                      .set("approver", approver)
+                                      .set("rejectedAt", height)
+                                      .set("version", s.get("version") + 1)) |
+                            ret2!((true, "ok"))
+                          } else { kState!(s) | ret2!((false, "not qualified")) }
+                        }
+                      }
+                      _ => { kState!(s) | ret2!((false, "forged credential")) }
+                    }
+                  }
+                }
+              }
+              (_, true) => { kState!(s) | ret2!((false, "conflict")) }
+              _ => { kState!(s) | ret2!((false, "not validated")) }
+            }
+          }
+        }
+      }
+    } |
+
+    contract KAsset(@"proveApproved", ret2) = {
+      for (@s <- kState) {
+        match s.get("status") {
+          "approved" => {
+            match s.get("approver") {
+              Nil => { kState!(s) | ret2!((false, "not approved")) }
+              approver => {
+                new proofState, Proof, proofUriCh in {
+                  proofState!({
+                    "data": {
+                      "id": s.get("id"),
+                      "uri": s.get("uri").toString(),
+                      "approvedAt": s.get("approvedAt"),
+                      "discipline": s.get("discipline"),
+                      "jurisdiction": s.get("jurisdiction"),
+                      "approver": approver
+                    },
+                    "used": false
+                  }) |
+                  contract Proof(@"take", ret3) = {
+                    for (@p <- proofState) {
+                      if (p.get("used")) {
+                        proofState!(p) | ret3!((false, "used"))
+                      } else {
+                        proofState!(p.set("used", true)) |
+                        ret3!((true, p.get("data")))
+                      }
+                    }
+                  } |
+                  rs!(bundle+{*Proof}, *proofUriCh) |
+                  for (@proofUri <- proofUriCh) {
+                    kState!(s) |
+                    ret2!((true, proofUri))
+                  }
+                }
+              }
+            }
+          }
+          _ => { kState!(s) | ret2!((false, "not approved")) }
+        }
+      }
+    } |
+
+    contract verifyChildClaim(@child, @ref, ret2) = {
+      match child.get("claimRef") {
+        Nil => { ret2!((false, "no claim")) }
+        claimRef => {
+          new vfCh in {
+            claimFactory!("verify", claimRef.get("uri"), *vfCh) |
+            for (@vf <- vfCh) {
+              match vf {
+                (true, _) => {
+                  new ccCh in {
+                    rl!(claimRef.get("uri"), *ccCh) |
+                    for (Claim <- ccCh) {
+                      new cgCh in {
+                        Claim!("get", *cgCh) |
+                        for (@cg <- cgCh) {
+                          match cg {
+                            (true, claim) => {
+                              match claim.get("kassetRef") {
+                                Nil => { ret2!((false, "claim not validated")) }
+                                kr => {
+                                  if (kr.get("uri") == child.get("uri")) {
+                                    ret2!((true, "ok"))
+                                  } else { ret2!((false, "claim kasset mismatch")) }
                                 }
+                              }
+                            }
+                            _ => { ret2!((false, "unknown claim")) }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                _ => { ret2!((false, "forged claim")) }
+              }
+            }
+          }
+        }
+      }
+    } |
+
+    contract nestChildCheck(@ref, @parent, ret2) = {
+      new cch in {
+        rl!(ref.get("uri"), *cch) |
+        for (Child <- cch) {
+          new gCh in {
+            Child!("get", *gCh) |
+            for (@g <- gCh) {
+              match g {
+                (true, child) => {
+                  match (child.get("status") == "approved",
+                         child.get("discipline") == parent.get("discipline")
+                           && child.get("jurisdiction") == parent.get("jurisdiction"),
+                         child.get("approvedAt") < parent.get("approvedAt")) {
+                    (true, true, true) => { verifyChildClaim!(child, ref, *ret2) }
+                    (false, _, _) => { ret2!((false, "child not approved")) }
+                    (_, false, _) => { ret2!((false, "scope mismatch")) }
+                    _ => { ret2!((false, "order")) }
+                  }
+                }
+                _ => { ret2!((false, "unknown child")) }
+              }
+            }
+          }
+        }
+      }
+    } |
+
+    contract nestOne(@ref, @parent, ret2) = {
+      new dupCh in {
+        listHasId!(parent.get("childRefs"), ref.get("id"), 0, *dupCh) |
+        for (@dup <- dupCh) {
+          if (dup) { ret2!((false, "duplicate child")) }
+          else { nestChildCheck!(ref, parent, *ret2) }
+        }
+      }
+    } |
+
+    contract nestCheck(@refs, @i, @parent, ret2) = {
+      if (i >= refs.length()) {
+        ret2!((true, "ok"))
+      } else {
+        new refCh, oneCh in {
+          refCh!(refs.nth(i)) |
+          for (@ref <- refCh) {
+            nestOne!(ref, parent, *oneCh) |
+            for (@one <- oneCh) {
+              match one {
+                (true, "ok") => { nestCheck!(refs, i + 1, parent, *ret2) }
+                _ => { ret2!(one) }
+              }
+            }
+          }
+        }
+      }
+    } |
+
+    contract nestProofs(@refs, @i, @prev, ret2) = {
+      if (i >= refs.length()) {
+        ret2!((true, "ok"))
+      } else {
+        new refCh in {
+          refCh!(refs.nth(i)) |
+          for (@ref <- refCh) {
+            new cch in {
+              rl!(ref.get("uri"), *cch) |
+              for (Child <- cch) {
+                new pCh in {
+                  Child!("proveApproved", *pCh) |
+                  for (@pr <- pCh) {
+                    match pr {
+                      (true, proofUri) => {
+                        new pc, tCh in {
+                          rl!(proofUri, *pc) |
+                          for (Proof <- pc) {
+                            Proof!("take", *tCh) |
+                            for (@t <- tCh) {
+                              match t {
+                                (true, data) => {
+                                  if (data.get("id") == ref.get("id")
+                                      && data.get("uri") == ref.get("uri")) {
+                                    match prev {
+                                      "none" => { nestProofs!(refs, i + 1, data, *ret2) }
+                                      p => {
+                                        if (data.get("approvedAt") > p.get("approvedAt")) {
+                                          nestProofs!(refs, i + 1, data, *ret2)
+                                        } else { ret2!((false, "order")) }
+                                      }
+                                    }
+                                  } else { ret2!((false, "child proof")) }
+                                }
+                                _ => { ret2!((false, "proof used")) }
                               }
                             }
                           }
                         }
                       }
-                      _ => { kState!(s) | ret2!((false, "forged credential")) }
+                      _ => { ret2!(pr) }
                     }
                   }
                 }
@@ -320,27 +583,54 @@ contract makeKAsset(@init, oracleFactory, ret) = {
       new aCh in {
         authSubject!(*dId, *aCh) |
         for (@(true, who) <- aCh) {
-          for (@s <- kState) {
-            if (s.get("status") != "approved") {
-              kState!(s) | ret2!((false, "parent not approved"))
-            } else {
-              if (who != s.get("claimant")) {
-                kState!(s) | ret2!((false, "not claimant"))
-              } else {
-                new checkCh in {
-                  nestCheck!(childRefs, 0, s, *checkCh) |
-                  for (@c <- checkCh) {
-                    match c {
-                      (true, Nil) => {
-                        kState!(s.set("childRefs", s.get("childRefs") ++ childRefs)
-                                  .set("version", s.get("version") + 1)) |
-                        ret2!((true, Nil))
+          for (@snap <<- kState) {
+            match (snap.get("claimant") == who, snap.get("status") == "approved") {
+              (true, true) => {
+                new preCh in {
+                  nestCheck!(childRefs, 0, snap, *preCh) |
+                  for (@p <- preCh) {
+                    match p {
+                      (true, "ok") => {
+                        new prCh in {
+                          nestProofs!(childRefs, 0, "none", *prCh) |
+                          for (@pr <- prCh) {
+                            match pr {
+                              (true, "ok") => {
+                                for (@s <- kState) {
+                                  match (s.get("claimant") == who,
+                                         s.get("status") == "approved") {
+                                    (true, true) => {
+                                      new finalCh in {
+                                        nestCheck!(childRefs, 0, s, *finalCh) |
+                                        for (@f <- finalCh) {
+                                          match f {
+                                            (true, "ok") => {
+                                              kState!(s.set("childRefs",
+                                                s.get("childRefs") ++ childRefs)
+                                                .set("version", s.get("version") + 1)) |
+                                              ret2!((true, "ok"))
+                                            }
+                                            _ => { kState!(s) | ret2!(f) }
+                                          }
+                                        }
+                                      }
+                                    }
+                                    _ => { kState!(s) | ret2!((false, "parent changed")) }
+                                  }
+                                }
+                              }
+                              _ => { ret2!(pr) }
+                            }
+                          }
+                        }
                       }
-                      _ => { kState!(s) | ret2!(c) }
+                      _ => { ret2!(p) }
                     }
                   }
                 }
               }
+              (false, _) => { ret2!((false, "not claimant")) }
+              _ => { ret2!((false, "parent not approved")) }
             }
           }
         }
@@ -348,38 +638,41 @@ contract makeKAsset(@init, oracleFactory, ret) = {
     } |
 
     contract KAsset(@"openDispute", dId, @caseReq, ret2) = {
-      new aCh, hCh in {
+      new aCh in {
         authSubject!(*dId, *aCh) |
-        nowHeight!(*hCh) |
-        for (@(true, who) <- aCh; @height <- hCh) {
+        for (@(true, who) <- aCh) {
           for (@s <- kState) {
-            if (who != s.get("claimant") && who != s.get("validator")) {
-              kState!(s) | ret2!((false, "not a party"))
-            } else {
-              if (s.get("status") != "approved" && s.get("status") != "validated"
-                  && s.get("status") != "conditional") {
-                kState!(s) | ret2!((false, "not disputable"))
-              } else {
-                match s.get("dispute") {
-                  Nil => {
-                    new oCh in {
-                      oracleFactory!("open", s.get("claimRef"), caseReq, *Apply, *oCh) |
-                      for (@o <- oCh) {
-                        match o {
-                          (true, caseRef) => {
-                            kState!(s.set("status", "disputed")
-                                      .set("dispute", caseRef)
-                                      .set("version", s.get("version") + 1)) |
-                            ret2!((true, caseRef))
-                          }
-                          _ => { kState!(s) | ret2!(o) }
-                        }
+            match (who == s.get("claimant") || who == s.get("validator"),
+                   s.get("status") == "approved") {
+              (true, true) => {
+                new oCh in {
+                  oracleFactory!("open", s.get("claimRef"), {
+                    "kind": caseReq.get("kind"),
+                    "openedBy": who,
+                    "parties": [s.get("claimant"), s.get("approver")],
+                    "groundsHash": caseReq.get("groundsHash"),
+                    "requirement": {"ctype": "Oracle", "discipline": s.get("discipline"),
+                                    "jurisdiction": s.get("jurisdiction"),
+                                    "role": "oracle", "minLevel": 1},
+                    "adjudicator": caseReq.get("adjudicator"),
+                    "adjudicatorCredentialUri": caseReq.get("adjudicatorCredentialUri"),
+                    "deadlineHeight": caseReq.get("deadlineHeight")
+                  }, *Apply, *oCh) |
+                  for (@o <- oCh) {
+                    match o {
+                      (true, caseRef) => {
+                        kState!(s.set("status", "disputed")
+                                  .set("dispute", caseRef)
+                                  .set("version", s.get("version") + 1)) |
+                        ret2!((true, caseRef))
                       }
+                      _ => { kState!(s) | ret2!(o) }
                     }
                   }
-                  _ => { kState!(s) | ret2!((false, "already disputed")) }
                 }
               }
+              (false, _) => { kState!(s) | ret2!((false, "not a party")) }
+              _ => { kState!(s) | ret2!((false, "not disputable")) }
             }
           }
         }
@@ -433,62 +726,22 @@ contract makeKAsset(@init, oracleFactory, ret) = {
       }
     } |
 
-    contract nestCheck(@refs, @i, @parent, ret2) = {
-      if (i >= refs.length()) {
-        ret2!((true, Nil))
-      } else {
-        match refs.nth(i) {
-          ref => {
-            new dupCh, cch in {
-              listHasId!(parent.get("childRefs"), ref.get("id"), 0, *dupCh) |
-              for (@dup <- dupCh) {
-                if (dup) {
-                  ret2!((false, "duplicate child"))
-                } else {
-                  rl!(ref.get("uri"), *cch) |
-                  for (Child <- cch) {
-                    new gCh in {
-                      Child!("get", *gCh) |
-                      for (@g <- gCh) {
-                        match g {
-                          (true, child) => {
-                            if (child.get("status") != "approved") {
-                              ret2!((false, "child not approved"))
-                            } else {
-                              if (child.get("discipline") != parent.get("discipline")
-                                  || child.get("jurisdiction") != parent.get("jurisdiction")) {
-                                ret2!((false, "scope mismatch"))
-                              } else {
-                                if (child.get("approvedAt") > parent.get("approvedAt")
-                                    || (child.get("approvedAt") == parent.get("approvedAt")
-                                        && child.get("id") >= parent.get("id"))) {
-                                  ret2!((false, "order"))
-                                } else {
-                                  nestCheck!(refs, i + 1, parent, *ret2)
-                                }
-                              }
-                            }
-                          }
-                          _ => { ret2!((false, "unknown child")) }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    } |
-
     rs!(bundle+{*KAsset}, *uriCh) |
     for (@uri <- uriCh) {
-      for (@s <- kState) { kState!(s.set("uri", uri)) } |
+      for (@s <- kState) { kState!(s.set("uri", uri).set("id", uri.toString())) } |
       ret!((true, bundle+{*KAsset}, uri))
     }
   }
 } |
+
+    contract ClaimFactory(@"verify", @uri, ret) = {
+      for (@r <<- claimRegistryState) {
+        match r.get(uri.toString()) {
+          Nil => { ret!((false, "unknown claim")) }
+          rec => { ret!((true, rec)) }
+        }
+      }
+    } |
 
     contract ClaimFactory(@"create", dId, @req, ret) = {
       new aCh, hCh in {
@@ -501,7 +754,7 @@ contract makeKAsset(@init, oracleFactory, ret) = {
               if (not ok) {
                 ret!((false, "fields"))
               } else {
-                new claimState, Claim, uriCh in {
+                new claimState, Claim, finalizeValidation, uriCh in {
                   claimState!({
                     "uri": "",
                     "claimant": claimant,
@@ -544,24 +797,14 @@ contract makeKAsset(@init, oracleFactory, ret) = {
                             if (now > s.get("commentUntilHeight")) {
                               claimState!(s) | ret2!((false, "comment closed"))
                             } else {
-                              new iCh in {
-                                IdentityDirectory!("lookup", who, *iCh) |
-                                for (@i <- iCh) {
-                                  match i {
-                                    (true, _) => {
-                                      claimState!(s.set("comments",
-                                        s.get("comments") ++ [{
-                                          "id": "cm:" ++ who ++ ":" ++ now.toString(),
-                                          "by": who, "hash": comment.get("hash"),
-                                          "at": now}])
-                                        .set("updatedAt", now)
-                                        .set("version", s.get("version") + 1)) |
-                                      ret2!((true, Nil))
-                                    }
-                                    _ => { claimState!(s) | ret2!((false, "not registered")) }
-                                  }
-                                }
-                              }
+                              claimState!(s.set("comments",
+                                s.get("comments") ++ [{
+                                  "id": "cm:" ++ who ++ ":" ++ now.toString(),
+                                  "by": who, "hash": comment.get("hash"),
+                                  "at": now}])
+                                .set("updatedAt", now)
+                                .set("version", s.get("version") + 1)) |
+                              ret2!((true, Nil))
                             }
                           }
                         }
@@ -614,105 +857,53 @@ contract makeKAsset(@init, oracleFactory, ret) = {
                     }
                   } |
 
-                  contract Claim(@"validate", dId2, credCap, @validation, ret2) = {
-                    new a2, h2 in {
-                      authSubject!(*dId2, *a2) |
-                      nowHeight!(*h2) |
-                      for (@(true, validator) <- a2; @height <- h2) {
-                        for (@s <- claimState) {
-                          if (s.get("status") != "open") {
-                            claimState!(s) | ret2!((false, "not open"))
-                          } else {
-                            if (validator == s.get("claimant")) {
-                              claimState!(s) | ret2!((false, "self validation"))
-                            } else {
-                              if (height > s.get("deadlineHeight")) {
-                                claimState!(s.set("status", "expired")
-                                              .set("updatedAt", height)
-                                              .set("version", s.get("version") + 1)) |
-                                ret2!((false, "expired"))
-                              } else {
-                                new vfCh in {
-                                  CredentialFactory!("verify",
-                                    validation.get("credentialUri"), *vfCh) |
-                                  for (@vf <- vfCh) {
-                                    match vf {
-                                      (true, _) => {
-                                        new cCh in {
-                                          credCap!("check", validator,
-                                                   s.get("selectionCriteria"), height, *cCh) |
-                                          for (@c <- cCh) {
-                                            match c {
-                                              (true, true, _) => {
-                                                new stCh in {
-                                                  claimStatus!(validation.get("verdict"), *stCh) |
-                                                  for (@claimSt <- stCh) {
-                                                    new ksCh in {
-                                                      kassetStatus!(validation.get("verdict"), *ksCh) |
-                                                      for (@kassetSt <- ksCh) {
-                                                        new kaCh in {
-                                                          makeKAsset!({
-                                                            "uri": "",
-                                                            "claimRef": {"id": s.get("uri"),
-                                                                         "uri": s.get("uri")},
-                                                            "validation": validation,
-                                                            "validator": validator,
-                                                            "validatorCredential": validation.get("credentialUri"),
-                                                            "claimant": s.get("claimant"),
-                                                            "verdict": validation.get("verdict"),
-                                                            "quality": validation.get("quality"),
-                                                            "quantity": s.get("quantity"),
-                                                            "discipline": s.get("work").get("discipline"),
-                                                            "jurisdiction": s.get("work").get("jurisdiction"),
-                                                            "valuePropositionRef": s.get("valuePropositionRef"),
-                                                            "status": kassetSt,
-                                                            "approver": Nil,
-                                                            "approval": Nil,
-                                                            "approvedAt": Nil,
-                                                            "approvalVersion": Nil,
-                                                            "childRefs": [],
-                                                            "dispute": Nil,
-                                                            "revocation": Nil,
-                                                            "createdAt": height,
-                                                            "version": 1
-                                                          }, *OracleFactory, *kaCh) |
-                                                          for (@ka <- kaCh) {
-                                                            match ka {
-                                                              (true, _, kassetUri) => {
-                                                                claimState!(s
-                                                                  .set("status", claimSt)
-                                                                  .set("validationRef", {
-                                                                    "credentialUri": validation.get("credentialUri"),
-                                                                    "verdict": validation.get("verdict"),
-                                                                    "quality": validation.get("quality"),
-                                                                    "validator": validator})
-                                                                  .set("kassetRef", {"id": kassetUri,
-                                                                                     "uri": kassetUri})
-                                                                  .set("updatedAt", height)
-                                                                  .set("version", s.get("version") + 1)) |
-                                                                ret2!((true, {"id": kassetUri,
-                                                                              "uri": kassetUri}))
-                                                              }
-                                                              _ => {
-                                                                claimState!(s) |
-                                                                ret2!(ka)
-                                                              }
-                                                            }
-                                                          }
-                                                        }
-                                                      }
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                              _ => { claimState!(s) | ret2!((false, "not qualified")) }
-                                            }
-                                          }
-                                        }
-                                      }
-                                      _ => { claimState!(s) | ret2!((false, "forged credential")) }
-                                    }
+                  contract finalizeValidation(@s, @validator, @height, @validation, ret2) = {
+                    new stCh in {
+                      claimStatus!(validation.get("verdict"), *stCh) |
+                      for (@claimSt <- stCh) {
+                        new ksCh in {
+                          kassetStatus!(validation.get("verdict"), *ksCh) |
+                          for (@kassetSt <- ksCh) {
+                            new kaCh in {
+                              makeKAsset!({
+                                "uri": "",
+                                "claimRef": {"id": s.get("uri"), "uri": s.get("uri")},
+                                "validation": validation,
+                                "validator": validator,
+                                "validatorCredential": validation.get("credentialUri"),
+                                "claimant": s.get("claimant"),
+                                "verdict": validation.get("verdict"),
+                                "quality": validation.get("quality"),
+                                "quantity": s.get("quantity"),
+                                "discipline": s.get("work").get("discipline"),
+                                "jurisdiction": s.get("work").get("jurisdiction"),
+                                "valuePropositionRef": s.get("valuePropositionRef"),
+                                "status": kassetSt,
+                                "approver": Nil,
+                                "approval": Nil,
+                                "approvedAt": Nil,
+                                "approvalVersion": Nil,
+                                "childRefs": [],
+                                "dispute": Nil,
+                                "revocation": Nil,
+                                "createdAt": height,
+                                "version": 1
+                              }, *OracleFactory, *ValuePropositionFactory, *ClaimFactory, *kaCh) |
+                              for (@ka <- kaCh) {
+                                match ka {
+                                  (true, _, kassetUri) => {
+                                    claimState!(s.set("status", claimSt)
+                                      .set("validationRef", {
+                                        "credentialUri": validation.get("credentialUri"),
+                                        "verdict": validation.get("verdict"),
+                                        "quality": validation.get("quality"),
+                                        "validator": validator})
+                                      .set("kassetRef", {"id": kassetUri, "uri": kassetUri})
+                                      .set("updatedAt", height)
+                                      .set("version", s.get("version") + 1)) |
+                                    ret2!((true, {"id": kassetUri, "uri": kassetUri}))
                                   }
+                                  _ => { claimState!(s) | ret2!(ka) }
                                 }
                               }
                             }
@@ -722,10 +913,60 @@ contract makeKAsset(@init, oracleFactory, ret) = {
                     }
                   } |
 
+                  contract Claim(@"validate", dId2, @credentialUri, @validation, ret2) = {
+                    new a2, h2 in {
+                      authSubject!(*dId2, *a2) |
+                      nowHeight!(*h2) |
+                      for (@(true, validator) <- a2; @height <- h2) {
+                        for (@s <- claimState) {
+                          match (s.get("status"), validator == s.get("claimant"),
+                                 height > s.get("deadlineHeight")) {
+                            ("open", false, false) => {
+                              new vfCh, okCh in {
+                                CredentialFactory!("verify", credentialUri, *vfCh) |
+                                for (@vf <- vfCh) {
+                                  match vf {
+                                    (true, _) => {
+                                      proveAndCheck!(credentialUri, *dId2,
+                                        s.get("selectionCriteria"), validator, height, *okCh) |
+                                      for (@ok <- okCh) {
+                                        if (ok) {
+                                          finalizeValidation!(s, validator, height, validation, *ret2)
+                                        } else { claimState!(s) | ret2!((false, "proof")) }
+                                      }
+                                    }
+                                    _ => { claimState!(s) | ret2!((false, "forged credential")) }
+                                  }
+                                }
+                              }
+                            }
+                            ("open", true, _) => { claimState!(s) | ret2!((false, "self validation")) }
+                            ("open", _, true) => {
+                              claimState!(s.set("status", "expired")
+                                .set("updatedAt", height)
+                                .set("version", s.get("version") + 1)) |
+                              ret2!((false, "expired"))
+                            }
+                            _ => { claimState!(s) | ret2!((false, "not open")) }
+                          }
+                        }
+                      }
+                    }
+                  } |
+
                   rs!(bundle+{*Claim}, *uriCh) |
                   for (@uri <- uriCh) {
-                    for (@s2 <- claimState) { claimState!(s2.set("uri", uri)) } |
-                    ret!((true, {"id": uri, "uri": uri}))
+                    for (@s2 <- claimState) {
+                      claimState!(s2.set("uri", uri)) |
+                      for (@r <- claimRegistryState) {
+                        claimRegistryState!(r.set(uri.toString(), {
+                          "uri": uri,
+                          "claimant": claimant,
+                          "subjectRef": req.get("subjectRef")
+                        })) |
+                        ret!((true, {"id": uri, "uri": uri}))
+                      }
+                    }
                   }
                 }
               }

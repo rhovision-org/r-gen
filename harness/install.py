@@ -21,8 +21,8 @@ import deploy as node  # noqa: E402
 import preflight  # noqa: E402
 from minify_rho import minify  # noqa: E402
 
-# 30_oracle needs the credential factory; 22_value and 20_claim need oracle+credential;
-# 20_claim also needs the identity directory.
+# 30_oracle needs the credential factory; 22_value needs oracle+credential; 20_claim needs
+# oracle+credential+value-proposition factories.
 ORDER = [
     "00_root.rho",
     "10_identity.rho",
@@ -135,6 +135,7 @@ def main(argv: list[str] | None = None) -> int:
         "__IDENTITY_DIRECTORY_URI__": "rho:id:dryrun-identity-directory",
         "__CREDENTIAL_FACTORY_URI__": "rho:id:dryrun-credential-factory",
         "__ORACLE_FACTORY_URI__": "rho:id:dryrun-oracle-factory",
+        "__VALUE_PROPOSITION_FACTORY_URI__": "rho:id:dryrun-value-proposition-factory",
     }
 
     build = ROOT / "contracts" / "build" / "deploy"
@@ -184,6 +185,8 @@ def main(argv: list[str] | None = None) -> int:
                 common["__CREDENTIAL_FACTORY_URI__"] = found["credential-factory"]
             if "oracle-factory" in found:
                 common["__ORACLE_FACTORY_URI__"] = found["oracle-factory"]
+            if "value-proposition-factory" in found:
+                common["__VALUE_PROPOSITION_FACTORY_URI__"] = found["value-proposition-factory"]
             print(f"install: {name} -> {found}")
 
     if not args.dry_run:

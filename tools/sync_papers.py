@@ -2,7 +2,7 @@
 """Copy the page-cited extracts into mdBook's source tree.
 
 The full PDF archive stays under docs/papers/ and is not copied into the mdBook source; it
-is third-party material and may not be redistributable.
+is third-party material and is included as cited reference material.
 """
 
 from __future__ import annotations

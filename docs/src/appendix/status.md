@@ -8,11 +8,13 @@
 - All 7 rendered terms parse with the pinned rholo parser.
 - `harness/unit_core.py`: pass — identity → credential → value proposition → claim →
   validation → K-Asset → approval → dispute → oracle → provenance.
-- `harness/concurrency_core.py`: pass — one of two validations wins; one of two approvals
-  wins; exactly one oracle apply; cross-subject isolation; two comments both stored; eight
-  independent claims validate in one deploy; a revoked credential refuses.
+- Ten behavioural suites pass: identity, credentials, claim, K-asset, value, oracle,
+  provenance, integration, vertical slice, and behavioural race regression.
+- Lean proof gates: 36 files, no `sorry`/axiom; 131 public theorems audited
+  (`propext`, `Quot.sound` only); `core_races_not_representable`; 32-pair race matrix;
+  no `proved-conformance` claim.
 - Static gates: build, parse, arch, captures, placeholders, money, core boundary,
-  concurrency, citations.
+  concurrency, citations, flows, race matrix, arm guards.
 
 ## Core boundaries
 
@@ -23,9 +25,8 @@ handles, metrics, or a web client.
 ## Owed
 
 - Extension suites: receipt/KAT, payments/r-cash, risk/SPE, panels, governance, metrics.
-- A broader core suite set (the current tree has the vertical slice and the race suite).
-- Lean models and a flow-to-theorem map.
-- A public-release paper profile that replaces non-redistributable PDFs with links.
+- A mechanized Rholang refinement; the current proof is model-level with a hand-encoded
+  arm map.
 
 ## Honest limits
 
@@ -36,4 +37,6 @@ handles, metrics, or a web client.
 - Oracle selection is deterministic and named by the parties, not a random beacon.
 - Nesting uses a strict `(approvedAt, id)` order; a later-approved child cannot be nested
   into an older parent.
+- Race freedom is proved for the Lean model (`core_races_not_representable`), not for a
+  mechanized Rholang semantics. The behavioural suites are regression evidence.
 - The papers are third-party copyrighted works and are not AGPL; see `docs/papers/README.md`.

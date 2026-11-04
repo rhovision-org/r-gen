@@ -5,10 +5,26 @@
 - [Bridge inspection walkthrough](cases/bridge-inspection.md)
 - [Quickstart](guides/quickstart.md)
 
+## Primitives
+
+- [Identity](primitives/identity.md)
+- [Issuer, credential, proof](primitives/credential.md)
+- [Claim](primitives/claim.md)
+- [Validation](primitives/validation.md)
+- [K-Asset](primitives/k-asset.md)
+- [Value proposition](primitives/value-proposition.md)
+- [Oracle](primitives/oracle.md)
+- [Provenance](primitives/provenance.md)
+- [Creation registries](primitives/registry.md)
+
 ## Reference
 
 - [Pareto ledger](reference/pareto-ledger.md)
+- [Paper-to-code matrix](reference/paper-to-code.md)
 - [Design rationale](reference/design-rationale.md)
+- [Formal model](reference/formal-model.md)
+- [Race-freedom proof](reference/race-freedom-proof.md)
+- [Concurrency and proofs](reference/concurrency-and-proofs.md)
 - [Adversarial review](reference/adversarial-review.md)
 - [Rholang model](reference/rholang-model.md)
 - [Core arm reference](reference/arms.md)

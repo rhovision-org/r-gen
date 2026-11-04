@@ -8,7 +8,7 @@ make check-core-boundary
 make check-concurrency
 make check-citations
 
-export RHOLO_DIR=/home/patrick/RNodeRust
+export RHOLO_DIR=../RNodeRust
 DEVNET_PREFIX=rgen make devnet-up keys install
 make unit-core
 make concurrency

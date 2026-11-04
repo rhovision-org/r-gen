@@ -17,6 +17,26 @@
   wins; exactly one oracle apply; cross-subject isolation; two comments both stored; eight
   independent claims validate in one deploy; a revoked credential refuses.
 
+## Lean model (2026-11-04)
+
+- `cd spec/lean && lake build`: 36 Lean files build on Lean `v4.12.0`, no Mathlib.
+- `tools/check_lean.py`: 36 files, no `sorry`, `admit`, `native_decide`, or declared
+  axioms.
+- `tools/check_lean.py --audit`: 131 public theorems, only `propext` and `Quot.sound`;
+  no `Classical.choice` use in the audited set.
+- `tools/check_core_vectors.py`: 21 emitted rows match `spec/vectors/core.tsv`.
+- `tools/check_flows.py`: 66 arms mapped — 35 `proved-model`, 0 `proved-conformance`,
+  31 `owed` (read-only arms, creation registries, and extensions).
+- `tools/check_race_matrix.py`: 32 pairs (19 exclusive, 12 ordered, 1 independent).
+- `tools/check_arm_guards.py`: 35 mutating arms tied to a consumed cell.
+
+The model proves `run_frame`, `run_agree`, `disjoint_cells_commute`,
+`disjoint_cells_commute_wf`, the three commit lemmas, D1–D3, the versioned no-same-
+generation theorem `core_races_not_representable`, the arm authority theorem
+`core_arm_authority`, and the 32-pair race matrix in `spec/flows/races.yaml`. The
+behavioural race suite is regression evidence only; it is not the proof. It is a model
+proof: no mechanized Rholang semantics and no refinement theorem.
+
 ## Baseline
 
 The pre-Pareto 12-term prototype is on tag `legacy-2026-11-04`; its 12/12 suite result is
@@ -27,8 +47,9 @@ admin, handles, or metrics; those are extensions.
 
 ```sh
 make venv
+make lean-check
 make build-check parse-check
-make check-core-boundary check-concurrency check-citations
+make check-core-boundary check-concurrency check-citations check-flows
 make install
 make unit-core
 make concurrency
