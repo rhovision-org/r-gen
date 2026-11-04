@@ -26,7 +26,7 @@
   `propext` and `Quot.sound`; no `Classical.choice` use in the audited set. The list is
   hand-maintained (RGA-006).
 - `tools/check_core_vectors.py`: 21 emitted rows match `spec/vectors/core.tsv`.
-- `tools/check_flows.py`: 65 deployed arms mapped — 34 `proved-model`, 1
+- `tools/check_flows.py`: 65 deployed arms mapped — 32 `proved-model`, 3
   `proved-conformance`, 30 `owed` (read-only arms, creation registries, and extensions).
   The former phantom `Issuer.revoke` entry is removed. `Identity.update`,
   `IdentityFactory.create`, and `ValueProposition.comment` now have Arm values.

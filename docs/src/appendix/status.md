@@ -12,7 +12,7 @@
   provenance, integration, vertical slice, and behavioural race regression.
 - Lean proof gates: 37 files, no `sorry`/axiom; the 192 theorems listed in `Audit.lean`
   are axiom-clean (`propext`, `Quot.sound` only); `core_races_not_representable`; 32-pair
-  race matrix; 1 `proved-conformance` arm (credential prove). The audit list is hand-maintained (RGA-006).
+  race matrix; 3 `proved-conformance` arms (credential prove, VP validate, VP proveValidated). The audit list is hand-maintained (RGA-006).
 - Static gates: build, parse, arch, captures, placeholders, money, core boundary,
   concurrency, citations, flows, race matrix, arm guards, audit.
 - Phase 1 audit: 65 deployed arms dispositioned; 10 HAZOP nodes, 150 coverage cells, 146 rows;

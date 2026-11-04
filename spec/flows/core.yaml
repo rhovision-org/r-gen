@@ -283,12 +283,14 @@
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: validate
-  lean: RGen.VPState.validate_once
+  lean: RGen.V1_validate_once
   cell: vpState
   transition: RGen.vpValidate
   guard_eq: RGen.vpValidate_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_value.py
+  note: suite asserts the V1-validate-twice vector row
   consumedProofs: [credentialProof]
   classification: RGen.vp_validate_withdraw_two_way
 
@@ -523,13 +525,14 @@
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: proveValidated
-  lean: RGen.VPState.proveValidated_requires_validated
+  lean: RGen.V2_dispute_blocks_prove
   cell: vpState
   transition: RGen.vpProveValidated
   guard_eq: RGen.vpProveValidated_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
-  note: planned core arm: one-shot validated proof
+  status: proved-conformance
+  suite: harness/unit_value.py
+  note: suite asserts the V2-prove-disputed vector row
   consumedProofs: []
   classification: RGen.vp_proveValidated_openDispute_ordered
 

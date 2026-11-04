@@ -117,8 +117,8 @@ findings:
   actions:
   - LR-06
   disposition: fixed
-  note: Phase 2 defines the evidence bundle in check_conformance.py and promotes credential prove (C1-prove-active + harness/unit_credentials.py).
-    The other arms remain unpromoted.
+  note: Phase 2 defines the evidence bundle and promotes credential prove, VP validate, and VP proveValidated. The other proved
+    arms remain unpromoted.
 - id: RGA-006
   title: The axiom audit is a hand-maintained list
   severity: S3
@@ -970,8 +970,8 @@ arms:
   arm: validate
   node: value-proposition
   disposition: model-reviewed
-  flow_status: proved-model
-  lean: RGen.VPState.validate_once
+  flow_status: proved-conformance
+  lean: RGen.V1_validate_once
   divergences: []
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
@@ -1277,8 +1277,8 @@ arms:
   arm: proveValidated
   node: value-proposition
   disposition: model-reviewed
-  flow_status: proved-model
-  lean: RGen.VPState.proveValidated_requires_validated
+  flow_status: proved-conformance
+  lean: RGen.V2_dispute_blocks_prove
   divergences:
   - DIV-010
   guard_fidelity: guarded

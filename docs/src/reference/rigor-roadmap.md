@@ -42,7 +42,7 @@ say the table is complete over unbounded inputs. The target set is the 35 proved
 | LR-03 | partial | proof-cell membership theorems for seven arms; the trace-consumption relation is pending |
 | LR-04 | done | Independent arm events commute to the same final world; `core_independent_cells_commute` remains as a compatibility alias |
 | LR-05 | partial | The model-only finish/execute row is removed; the matrix is 32 rows against 48 distinct modeled pairs |
-| LR-06 | partial | `check_conformance.py` enforces theorem + vector + suite; credential prove is promoted via `C1-prove-active` and `harness/unit_credentials.py` |
+| LR-06 | partial | `check_conformance.py` enforces theorem + vector + suite; credential prove, VP validate, and VP proveValidated are promoted via emitted vectors and unit_credentials/unit_value |
 | LR-07 | done | `check_lean.py --audit-coverage` requires every Pareto `#check` in `Audit.lean`; 83 Pareto checks and 192 axiom checks pass |
 | LR-08 | partial | Identity update is now modeled; the other divergences remain in the ledger |
 
