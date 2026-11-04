@@ -187,7 +187,8 @@ items:
   tests:
   - harness/unit_oracle.py
   - harness/concurrency_core.py
-  status: proposed
+  status: partial
+  note: Apply is idempotent for a matching terminal status; no explicit execution receipt yet.
 - id: RR-09
   priority: P2
   title: Decide and document whether identity is required for participation

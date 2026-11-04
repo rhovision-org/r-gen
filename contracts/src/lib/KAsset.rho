@@ -447,7 +447,12 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
               kState!(s) | ret2!((false, "case mismatch"))
             } else {
               if (s.get("status") != "disputed") {
-                kState!(s) | ret2!((false, "not disputed"))
+                match (s.get("status"), decision.get("outcome")) {
+                  ("upheld", "uphold") => { kState!(s) | ret2!((true, "already applied")) }
+                  ("revoked", "revoke") => { kState!(s) | ret2!((true, "already applied")) }
+                  ("partially_revoked", "partial") => { kState!(s) | ret2!((true, "already applied")) }
+                  _ => { kState!(s) | ret2!((false, "not disputed")) }
+                }
               } else {
                 match decision.get("outcome") {
                   "uphold" => {

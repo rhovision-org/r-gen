@@ -372,10 +372,9 @@ findings:
   actions:
   - RR-08
   disposition: accepted
-  note: execute sets "executing", calls the subject Apply, then sets "executed" or reverts to "decided". Apply refuses a second
-    application by status and case id, so a retry does not normally double-apply, but a failure between the two state writes
-    can leave the case unable to record the successful application. The model's execute_once does not cover this cross-contract
-    retry window.
+  note: 'Phase 2 makes Apply.applyDecision idempotent for a matching terminal status: a retry returns "already applied" instead
+    of "not disputed", so OracleCase.execute can record the success after a partial cross-contract failure. There is still
+    no explicit receipt field for an audit trail or for an ambiguous failure.'
 - id: RGA-025
   title: KAsset.nest performs unbounded recursive resolve/prove/take work
   severity: S3
