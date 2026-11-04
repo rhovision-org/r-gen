@@ -206,7 +206,9 @@
   transition: RGen.claimValidate
   guard_eq: RGen.claimValidate_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_claim.py
+  note: suite asserts the C1-claim-validate-once vector row
   consumedProofs: [credentialProof]
   classification: RGen.claim_validate_expire_two_way
 

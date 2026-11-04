@@ -118,8 +118,8 @@ findings:
   actions:
   - LR-06
   disposition: fixed
-  note: 'Phase 2 promotes eight arms: credential prove, VP validate, VP proveValidated, K-Asset approve/nest, oracle execute/close,
-    and provenance anchor. The other proved arms remain unpromoted.'
+  note: 'Phase 2 promotes nine arms: credential prove, VP validate, VP proveValidated, Claim validate, K-Asset approve/nest,
+    oracle execute/close, and provenance anchor. The other proved arms remain unpromoted.'
 - id: RGA-006
   title: The axiom audit is a hand-maintained list
   severity: S3
@@ -860,7 +860,7 @@ arms:
   arm: validate
   node: claim-validation
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.ClaimState.validate_once
   divergences:
   - DIV-007

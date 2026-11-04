@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT / "harness"))
 
 import actors
 import assertions
+import corpus
 import fixtures
 import suite_base
 
@@ -56,6 +57,7 @@ def main() -> int:
     reply = fixtures.claim_validate(claim2_uri, bob_cred, "bob",
                                     suite_base.validation(bob_cred, "invalid"))
     assertions.expect_refusal("second validate refused", reply, "not open")
+    corpus.assert_row("C1-claim-validate-once", reply)
 
     # Self-validation.
     alice_cred = suite_base.issue(addrs, "alice", "Validator", "validator")
