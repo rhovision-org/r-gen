@@ -54,6 +54,28 @@ in {
                   "updatedAt": height,
                   "version": 1
                 }) |
+                contract IdentityFactory(@"resume", dId3, @subject, ret3) = {
+                  new a3 in {
+                    authSubject!(*dId3, *a3) |
+                    for (@(true, who) <- a3) {
+                      if (who != subject) {
+                        ret3!((false, "not subject"))
+                      } else {
+                        for (@s <- directoryState) {
+                          match s.get("pending").get(subject) {
+                            Nil => { directoryState!(s) | ret3!((false, "no pending")) }
+                            uri => {
+                              directoryState!(s.set("byAddress", s.get("byAddress").set(subject, uri))
+                                                .set("version", s.get("version") + 1)) |
+                              ret3!((true, uri))
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                } |
+
                 contract Identity(@"get", ret2) = {
                   for (@i <<- identityState) { ret2!((true, i)) }
                 } |
@@ -83,9 +105,13 @@ in {
                   for (@i2 <- identityState) {
                     identityState!(i2.set("uri", uri))
                   } |
-                  directoryState!(s.set("byAddress", s.get("byAddress").set(subject, uri))
+                  directoryState!(s.set("pending", s.get("pending").set(subject, uri))
                                    .set("version", s.get("version") + 1)) |
-                  ret!((true, uri))
+                  for (@s2 <- directoryState) {
+                    directoryState!(s2.set("byAddress", s2.get("byAddress").set(subject, uri))
+                                      .set("version", s2.get("version") + 1)) |
+                    ret!((true, uri))
+                  }
                 }
               }
             }
@@ -96,7 +122,7 @@ in {
     }
   } |
 
-  directoryState!({"byAddress": {}, "version": 0}) |
+  directoryState!({"byAddress": {}, "pending": {}, "version": 0}) |
 
   rs!(bundle+{*IdentityFactory}, *c1) |
   rs!(bundle+{*IdentityDirectory}, *c2) |

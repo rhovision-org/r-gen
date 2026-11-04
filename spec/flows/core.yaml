@@ -78,6 +78,14 @@
   suite: harness/unit_identity.py
   note: suite asserts the ID-create-duplicate vector row
 
+- file: contracts/src/deploy/10_identity.rho
+  contract: IdentityFactory
+  arm: resume
+  lean: -
+  cell: directoryState
+  status: owed
+  note: recovery arm for a pending directory entry; not formalized in Lean
+
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
   arm: attest

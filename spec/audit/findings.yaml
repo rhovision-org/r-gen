@@ -119,7 +119,7 @@ findings:
   actions:
   - LR-06
   disposition: fixed
-  note: Phase 2 promotes all 35 proved arms; the 31 owed arms are outside the model and remain unpromoted.
+  note: Phase 2 promotes all 35 proved arms; the 32 owed arms are outside the model and remain unpromoted.
 - id: RGA-006
   title: The axiom audit is a hand-maintained list
   severity: S3
@@ -497,10 +497,9 @@ findings:
   - IdentityFactory.create
   actions:
   - RR-11
-  disposition: accepted
-  note: The arm consumes directoryState, writes identityState, registers the Identity bundle, then writes directoryState.
-    A failure between those writes can leave an identity cell that the directory does not reference, or a directory entry
-    whose bundle was not registered. The model proves first-writer-wins only.
+  disposition: fixed
+  note: Phase 3 writes a pending directory entry after bundle registration and adds IdentityFactory.resume to complete it.
+    A failure before the pending write remains the residual window; the devnet suite cannot inject it.
 - id: RGA-032
   title: Claim validation mints a K-Asset before the claim state write is complete
   severity: S2
@@ -1371,3 +1370,15 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_fidelity_reason: recovery arm; model-level receipt not formalized
+- file: contracts/src/deploy/10_identity.rho
+  contract: IdentityFactory
+  arm: resume
+  node: identity
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  guard_eq: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+  guard_fidelity_reason: recovery arm; pending directory entry not formalized

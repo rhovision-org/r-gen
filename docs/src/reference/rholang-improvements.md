@@ -57,7 +57,7 @@ The HAZOP rows for each item are in the manifest. Representative links:
   larger batches before proof consumption.
 - RR-07 is partial: claim creation now requires a deadline and rejects a comment window after the
   deadline. Claim and VP creation now require a future deadline; oracle future-ness remains open.
-- RR-11 is partial: claim validation writes a `validating` receipt and gains a `Claim.resume` arm; identity-create and nest recovery records remain.
+- RR-11 is partial: claim validation writes a `validating` receipt and gains `Claim.resume`; identity create writes a pending directory entry and gains `IdentityFactory.resume`. Nest proof-consumption recovery remains.
 - The other items remain proposed. The devnet suites were not re-run after the contract changes in
   this environment because the isolated node failed to start (exit 137); `parse-check` passes and
   the changes are static. Re-run `make install unit-all` before promotion.

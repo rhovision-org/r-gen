@@ -13,7 +13,7 @@ items remain traceable to accepted findings; an external review is still require
 
 ## Scope
 
-Audited: the seven deploy terms and all 66 deployed arms under `contracts/src`, the Lean model that
+Audited: the seven deploy terms and all 67 deployed arms under `contracts/src`, the Lean model that
 claims to describe them, the flow/race manifests, and the current documentation claims.
 
 Not audited: `legacy/` (the tagged pre-Pareto prototype), `crates/` (client tooling), the node's

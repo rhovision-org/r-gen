@@ -26,13 +26,13 @@
   `propext` and `Quot.sound`; no `Classical.choice` use in the audited set. The list is
   hand-maintained (RGA-006).
 - `tools/check_core_vectors.py`: 46 emitted rows match `spec/vectors/core.tsv`.
-- `tools/check_flows.py`: 66 deployed arms mapped — 0 `proved-model`, 35
-  `proved-conformance`, 31 `owed` (read-only arms, creation registries, and extensions).
+- `tools/check_flows.py`: 67 deployed arms mapped — 0 `proved-model`, 35
+  `proved-conformance`, 32 `owed` (read-only arms, creation registries, and extensions).
   The former phantom `Issuer.revoke` entry is removed. `Identity.update`,
   `IdentityFactory.create`, and `ValueProposition.comment` now have Arm values.
 - `tools/check_race_matrix.py`: 32 pairs (19 exclusive, 11 ordered, 2 independent).
 - `tools/check_arm_guards.py`: the mutating arms are tied to a consumed cell.
-- `tools/check_audit.py --strict`: 66 arms dispositioned, 10 HAZOP nodes, 150 coverage cells,
+- `tools/check_audit.py --strict`: 67 arms dispositioned, 10 HAZOP nodes, 150 coverage cells,
   146 rows, 39 claims, 27 findings, 11 Rholang items. Review status is `approved` by the owner; independent technical review has not been performed. The reviewed
   pages start at the [audit charter](audit-charter.md); the findings are in
   [`spec/audit/findings.yaml`](https://github.com/rhovision-org/r-gen/blob/main/spec/audit/findings.yaml).
