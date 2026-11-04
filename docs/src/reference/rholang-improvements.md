@@ -61,6 +61,16 @@ The HAZOP rows for each item are in the manifest. Representative links:
   this environment because the isolated node failed to start (exit 137); `parse-check` passes and
   the changes are static. Re-run `make install unit-all` before promotion.
 
+## Policy decisions
+
+- RR-06: `Credential.check` is advisory. It accepts a caller-nominated subject and no core commit
+  may use it; `tools/check_concurrency.py` forbids it as a commit authority.
+- RR-09: identity is not a prerequisite for claim or comment participation. This is documented as
+  intentional; `harness/unit_claim.py` already exercises an unregistered commenter. It can be
+  revisited if Sybil resistance becomes a requirement.
+- RR-10: `directoryState` and `factoryState` remain explicit serialization points. No cap or
+  sharding is implemented; a cap would be a breaking change at the cap.
+
 ## Why these orderings
 
 - **State integrity first.** RR-04 and RR-11 prevent a claim and its K-Asset, or a parent and its

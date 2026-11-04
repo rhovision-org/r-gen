@@ -27,7 +27,7 @@ say the table is complete over unbounded inputs. The target set is the 35 `prove
 | LR-02 | Add `VWorld.set_commute`, `VWorld.commit_commute`, `VWorld.commit_preserves_other`, `take_post_commute`; `runExec_append`, `runExec_commute_distinct`, `runExec_frame` | Ties the versioned execution layer to the independence layer |
 | LR-03 | Give `proofCells` a consumption relation; prove `Arm.proofCells_consumed_before_commit` and `core_no_proof_reuse_across_arms` | Makes the one-shot proof a property of arm runs, not a standalone cell |
 | LR-04 | Add `core_independent_arms_commute`, `core_cross_cell_frame`, `core_shared_cell_serializes`; restate authority as dependence, not permission | States precisely what the concurrency layer proves |
-| LR-05 | Close the pair matrix to the 48 distinct pairs over the six modeled cells, or mark unmodeled pairs with a reason | Removes the “31 rows implies complete” overclaim |
+| LR-05 | Close the pair matrix to the 48 distinct pairs over the six modeled cells, or mark unmodeled pairs with a reason | Removes the “32 rows implies complete” overclaim |
 | LR-06 | Define `proved-conformance` as theorem + emitted vector + deployed-suite assertion; add `tools/check_conformance.py` | Makes the status mean something and gives first candidates (revoke, validate, approve, execute) |
 | LR-07 | Add `check_lean.py --audit-coverage`; require every public theorem in `Audit.lean` | Stops new theorems from escaping the axiom audit |
 | LR-08 | Resolve every divergence in DIV-001…016: align the model or record an abstraction with a soundness argument | Removes model-stricter and effect-omitting gaps |
@@ -37,17 +37,18 @@ say the table is complete over unbounded inputs. The target set is the 35 `prove
 | Item | Status | What changed |
 |---|---|---|
 | LR-00 | done | `ProfileState.updateProfile` and `IdentityPatch`; Arm values for identity update, identity create, and VP comment; model-only arms listed in `spec/proofs/rigor.yaml` |
-| LR-01 | partial | 21 `*_guard_eq` theorems and a manifest `guard_eq` field; K-Asset nest, credential prove, VP proveValidated, and 11 other proved-model arms remain |
+| LR-01 | done | `*_guard_eq` theorems for all 32 mutating proved-model arms and a manifest `guard_eq` field; the three read-only arms have no guard obligation |
 | LR-02 | partial | `VWorld.set_commute`, `VWorld.commit_commute`, `Event.apply_commute_distinct`, `core_independent_arms_commute`, and `runExec_append`; a full `runExec` commute theorem remains |
 | LR-03 | partial | proof-cell membership theorems for seven arms; the trace-consumption relation is pending |
 | LR-04 | done | Independent arm events commute to the same final world; `core_independent_cells_commute` remains as a compatibility alias |
-| LR-05 | partial | The model-only finish/execute row is removed; the matrix is 31 rows against 48 distinct modeled pairs |
+| LR-05 | partial | The model-only finish/execute row is removed; the matrix is 32 rows against 48 distinct modeled pairs |
 | LR-06 | partial | `check_conformance.py` enforces theorem + vector + suite; 0 arms are promoted because no deployed suite assertion is recorded |
-| LR-07 | done | `check_lean.py --audit-coverage` requires every Pareto `#check` in `Audit.lean`; 72 Pareto checks and 181 axiom checks pass |
+| LR-07 | done | `check_lean.py --audit-coverage` requires every Pareto `#check` in `Audit.lean`; 82 Pareto checks and 191 axiom checks pass |
 | LR-08 | partial | Identity update is now modeled; the other divergences remain in the ledger |
 
-The guard count is 21 of 35 proved-model arms. The rest are recorded as `unverified` or
-`divergence` in `spec/audit/findings.yaml`; no arm is silently treated as aligned.
+The guard count is 32 of 35 proved-model arms; the remaining three are read-only verification
+arms with no committed transition. Divergences are still tracked separately; a `guard_eq` proves
+the model guard, not the deployed guard.
 
 ## Guard extraction in practice
 

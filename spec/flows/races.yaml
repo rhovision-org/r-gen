@@ -167,3 +167,10 @@
   b: comment
   class: ordered
   theorem: RGen.provenance_comment_comment_appends
+
+- cell: Provenance
+  a: anchor
+  b: comment
+  class: independent
+  theorem: RGen.provenance_anchor_comment_independent
+  note: anchor and comment append to disjoint fields; either order is admitted

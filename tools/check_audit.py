@@ -212,8 +212,9 @@ def check_arms(data: dict, errors: list[str], node_ids: set[str],
             if not DIV.match(div):
                 errors.append(f"arms: bad divergence id {div!r} for {key}")
         if entry.get("flow_status") in {"proved-model", "proved-conformance"} and \
-                entry.get("guard_fidelity") == "not-applicable":
-            errors.append(f"arms: {key} is proved-model but guard fidelity is not-applicable")
+                entry.get("guard_fidelity") == "not-applicable" and \
+                not entry.get("guard_fidelity_reason"):
+            errors.append(f"arms: {key} is proved-model, not-applicable, and has no reason")
         guard_eq = entry.get("guard_eq", "-")
         if entry.get("guard_fidelity") == "guarded":
             if guard_eq == "-":

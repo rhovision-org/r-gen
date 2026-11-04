@@ -52,7 +52,7 @@ proof take, the next take rejects; the payload is a snapshot and is not reachabl
 
 `spec/flows/races.yaml` records every proved arm pair, its class, and the Lean theorem.
 `tools/check_race_matrix.py` verifies the class vocabulary, uniqueness, and theorem
-existence. There are 31 pairs: 19 `exclusive`, 11 `ordered`, and 1 `independent`.
+existence. There are 32 pairs: 19 `exclusive`, 11 `ordered`, and 2 `independent`.
 
 - `exclusive`: whichever arm runs first, the second arm's guard refuses on the post-state.
 - `ordered`: one direction is refused; the other is the serialized/non-retroactive order

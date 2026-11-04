@@ -234,6 +234,7 @@
   lean: RGen.VPState.decision_once
   cell: vpState
   transition: RGen.vpDecision
+  guard_eq: RGen.vpDecision_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
 
@@ -268,6 +269,7 @@
   lean: RGen.VPState.openDispute_requires_status
   cell: vpState
   transition: RGen.vpOpenDispute
+  guard_eq: RGen.vpOpenDispute_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
 
@@ -296,6 +298,7 @@
   lean: RGen.VPState.withdraw_requires_proposer
   cell: vpState
   transition: RGen.vpWithdraw
+  guard_eq: RGen.vpWithdraw_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
 
@@ -431,6 +434,7 @@
   lean: RGen.KAssetState.decision_once
   cell: kState
   transition: RGen.kassetDecision
+  guard_eq: RGen.kassetDecision_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
 
@@ -466,6 +470,7 @@
   lean: RGen.KAssetState.nest_acyclic
   cell: kState
   transition: RGen.kassetNest
+  guard_eq: RGen.kassetNest_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
   consumedProofs: [childApprovedProof]
@@ -507,6 +512,7 @@
   lean: RGen.CredentialState.prove_requires_active
   cell: credState
   transition: RGen.credentialProve
+  guard_eq: RGen.credentialProve_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
   note: planned core arm: one-shot credential proof
@@ -519,6 +525,7 @@
   lean: RGen.VPState.proveValidated_requires_validated
   cell: vpState
   transition: RGen.vpProveValidated
+  guard_eq: RGen.vpProveValidated_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
   note: planned core arm: one-shot validated proof
@@ -531,6 +538,7 @@
   lean: RGen.KAssetState.proveApproved_requires_approved
   cell: kState
   transition: RGen.kassetProveApproved
+  guard_eq: RGen.kassetProveApproved_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
   note: planned core arm: one-shot approval proof
@@ -538,6 +546,7 @@
   contract: Proof
   arm: take
   lean: RGen.ProofState.take_take
+  guard_eq: RGen.take_guard_eq
   status: proved-model
   note: one-shot proof capability; second take returns used
 
@@ -545,6 +554,7 @@
   contract: Proof
   arm: take
   lean: RGen.ProofState.take_take
+  guard_eq: RGen.take_guard_eq
   status: proved-model
   note: one-shot validated proof capability
 
@@ -552,6 +562,7 @@
   contract: Proof
   arm: take
   lean: RGen.ProofState.take_take
+  guard_eq: RGen.take_guard_eq
   status: proved-model
   note: one-shot approval proof capability
 

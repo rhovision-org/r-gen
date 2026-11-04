@@ -80,4 +80,9 @@ theorem proof_take_marks_used {α : Type} {p : ProofState α} {d : α} {p' : Pro
 theorem proof_take_data {α : Type} {p : ProofState α} {d : α} {p' : ProofState α}
     (h : p.take = some (d, p')) : p.data = d := ProofState.take_data h
 
+
+theorem take_guard_eq {α : Type} (p : ProofState α) : p.take.isSome = !p.used := by
+  unfold ProofState.take
+  by_cases h : p.used <;> simp [h]
+
 end RGen

@@ -97,10 +97,9 @@ findings:
   actions:
   - LR-01
   - LR-08
-  disposition: accepted
-  note: Phase 2 adds guard definitions and guard_eq theorems for 21 arms, including the identity, credential, claim, K-Asset
-    approval/rejection, oracle, and provenance write guards. KAsset.nest, credential prove, VP proveValidated, and 11 other
-    proved-model arms still lack guard equivalence.
+  disposition: fixed
+  note: Phase 2 adds guard definitions and guard_eq theorems for all 32 mutating proved-model arms; the remaining three proved-model
+    arms are read-only. The model/code divergences are still recorded in the divergence ledger and are not claimed to be aligned.
 - id: RGA-005
   title: proved-conformance is zero; vectors are emitted but not asserted end-to-end
   severity: S2
@@ -136,10 +135,10 @@ findings:
   actions:
   - LR-07
   disposition: accepted
-  note: 'Phase 2 adds check_lean.py --audit-coverage: every Pareto #check must appear in Audit.lean. The audit is now 72 Pareto
-    theorems and 181 axiom checks, but public theorems outside the Pareto vocabulary can still escape the list.'
+  note: 'Phase 2 adds check_lean.py --audit-coverage: every Pareto #check must appear in Audit.lean. The audit is now 82 Pareto
+    theorems and 191 axiom checks, but public theorems outside the Pareto vocabulary can still escape the list.'
 - id: RGA-007
-  title: The pair matrix covers 31 rows, not the 48 distinct pairs over modeled cells
+  title: The pair matrix covers 32 rows, not the 48 distinct pairs over modeled cells
   severity: S3
   likelihood: B
   risk: 6
@@ -154,8 +153,8 @@ findings:
   actions:
   - LR-05
   disposition: accepted
-  note: Coverage is 31 rows over six modeled cells; the distinct cross-product is 48 pairs. The model-only finish/execute
-    row was removed in Phase 2; provenance anchor/comment and several cross-primitive pairs remain unproved.
+  note: Coverage is 32 rows over six modeled cells; the distinct cross-product is 48 pairs. The model-only finish/execute
+    row was removed and the provenance anchor/comment pair was added in Phase 2; several cross-primitive pairs remain unproved.
 - id: RGA-008
   title: Three deployed mutating arms have no Arm value; three model-only arms remain in the matrix
   severity: S3
@@ -573,6 +572,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/00_root.rho
   contract: GenRoot
   arm: keys
@@ -584,6 +584,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/00_root.rho
   contract: GenRoot
   arm: register
@@ -595,6 +596,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/00_root.rho
   contract: GenRoot
   arm: resolve
@@ -606,6 +608,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/10_identity.rho
   contract: Identity
   arm: get
@@ -617,6 +620,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/10_identity.rho
   contract: Identity
   arm: update
@@ -629,6 +633,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.identityUpdate_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/10_identity.rho
   contract: IdentityDirectory
   arm: count
@@ -640,6 +645,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/10_identity.rho
   contract: IdentityDirectory
   arm: lookup
@@ -651,6 +657,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/10_identity.rho
   contract: IdentityFactory
   arm: create
@@ -663,6 +670,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.identityCreate_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
   arm: attest
@@ -674,6 +682,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.credentialAttest_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
   arm: check
@@ -685,6 +694,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
   arm: get
@@ -696,6 +706,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
   arm: renew
@@ -708,6 +719,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.credentialRenew_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
   arm: revoke
@@ -720,6 +732,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.credentialRevoke_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/11_credentials.rho
   contract: CredentialFactory
   arm: count
@@ -731,6 +744,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/11_credentials.rho
   contract: CredentialFactory
   arm: issue
@@ -742,6 +756,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/11_credentials.rho
   contract: CredentialFactory
   arm: verify
@@ -753,6 +768,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/11_credentials.rho
   contract: Issuer
   arm: authorize
@@ -764,6 +780,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/11_credentials.rho
   contract: Issuer
   arm: covers
@@ -775,6 +792,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/11_credentials.rho
   contract: Issuer
   arm: get
@@ -786,6 +804,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
   arm: comment
@@ -797,6 +816,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.claimComment_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
   arm: comments
@@ -808,6 +828,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
   arm: expire
@@ -819,6 +840,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.claimExpire_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
   arm: get
@@ -830,6 +852,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
   arm: validate
@@ -844,6 +867,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.claimValidate_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
   arm: withdraw
@@ -855,6 +879,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.claimWithdraw_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/20_claim.rho
   contract: ClaimFactory
   arm: create
@@ -866,6 +891,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/22_value.rho
   contract: Apply
   arm: applyDecision
@@ -874,9 +900,10 @@ arms:
   flow_status: proved-model
   lean: RGen.VPState.decision_once
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
-  guard_eq: '-'
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.vpDecision_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: comment
@@ -888,6 +915,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.vpComment_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: comments
@@ -899,6 +927,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: get
@@ -910,6 +939,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: openDispute
@@ -918,9 +948,10 @@ arms:
   flow_status: proved-model
   lean: RGen.VPState.openDispute_requires_status
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
-  guard_eq: '-'
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.vpOpenDispute_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: revocation
@@ -932,6 +963,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: validate
@@ -943,6 +975,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.vpValidate_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: withdraw
@@ -951,9 +984,10 @@ arms:
   flow_status: proved-model
   lean: RGen.VPState.withdraw_requires_proposer
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
-  guard_eq: '-'
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.vpWithdraw_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/22_value.rho
   contract: ValuePropositionFactory
   arm: propose
@@ -965,6 +999,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: close
@@ -976,6 +1011,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.oracleClose_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: decide
@@ -987,6 +1023,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.oracleDecide_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: evidence
@@ -998,6 +1035,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.oracleEvidence_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: execute
@@ -1010,6 +1048,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.oracleExecute_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: expire
@@ -1021,6 +1060,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.oracleExpire_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: get
@@ -1032,6 +1072,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleFactory
   arm: open
@@ -1043,6 +1084,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/40_provenance.rho
   contract: Provenance
   arm: anchor
@@ -1054,6 +1096,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.provenanceAnchor_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/40_provenance.rho
   contract: Provenance
   arm: anchors
@@ -1065,6 +1108,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/40_provenance.rho
   contract: Provenance
   arm: comment
@@ -1076,6 +1120,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.provenanceComment_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/40_provenance.rho
   contract: Provenance
   arm: get
@@ -1087,6 +1132,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/40_provenance.rho
   contract: Provenance
   arm: verify
@@ -1095,9 +1141,10 @@ arms:
   flow_status: proved-model
   lean: RGen.ProvenanceState.verify_monotone
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: read-only or verification arm; no committed transition to guard
 - file: contracts/src/deploy/40_provenance.rho
   contract: ProvenanceFactory
   arm: create
@@ -1110,6 +1157,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/lib/KAsset.rho
   contract: Apply
   arm: applyDecision
@@ -1118,9 +1166,10 @@ arms:
   flow_status: proved-model
   lean: RGen.KAssetState.decision_once
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
-  guard_eq: '-'
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.kassetDecision_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: approve
@@ -1133,6 +1182,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.kassetApprove_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: children
@@ -1144,6 +1194,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: get
@@ -1155,6 +1206,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: nest
@@ -1166,9 +1218,10 @@ arms:
   - DIV-005
   - DIV-006
   - DIV-016
-  guard_fidelity: divergence
-  guard_fidelity_finding: RGA-004
-  guard_eq: '-'
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.kassetNest_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: openDispute
@@ -1180,6 +1233,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.kassetOpenDispute_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: reject
@@ -1191,6 +1245,7 @@ arms:
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
   guard_eq: RGen.kassetReject_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: revocation
@@ -1202,6 +1257,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: owed read-only, registry, or extension arm
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
   arm: prove
@@ -1211,9 +1267,10 @@ arms:
   lean: RGen.CredentialState.prove_requires_active
   divergences:
   - DIV-002
-  guard_fidelity: divergence
-  guard_fidelity_finding: RGA-004
-  guard_eq: '-'
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.credentialProve_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: proveValidated
@@ -1223,9 +1280,10 @@ arms:
   lean: RGen.VPState.proveValidated_requires_validated
   divergences:
   - DIV-010
-  guard_fidelity: divergence
-  guard_fidelity_finding: RGA-004
-  guard_eq: '-'
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.vpProveValidated_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: proveApproved
@@ -1234,9 +1292,10 @@ arms:
   flow_status: proved-model
   lean: RGen.KAssetState.proveApproved_requires_approved
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
-  guard_eq: '-'
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.kassetProveApproved_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/11_credentials.rho
   contract: Proof
   arm: take
@@ -1245,9 +1304,10 @@ arms:
   flow_status: proved-model
   lean: RGen.ProofState.take_take
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
-  guard_eq: '-'
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.take_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/22_value.rho
   contract: Proof
   arm: take
@@ -1256,9 +1316,10 @@ arms:
   flow_status: proved-model
   lean: RGen.ProofState.take_take
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
-  guard_eq: '-'
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.take_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/lib/KAsset.rho
   contract: Proof
   arm: take
@@ -1267,9 +1328,10 @@ arms:
   flow_status: proved-model
   lean: RGen.ProofState.take_take
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
-  guard_eq: '-'
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.take_guard_eq
+  guard_fidelity_reason: ''
 - file: contracts/src/deploy/20_claim.rho
   contract: ClaimFactory
   arm: verify
@@ -1278,9 +1340,10 @@ arms:
   flow_status: proved-model
   lean: RGen.Registry.verify_monotone
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: read-only or verification arm; no committed transition to guard
 - file: contracts/src/deploy/22_value.rho
   contract: ValuePropositionFactory
   arm: verify
@@ -1289,6 +1352,7 @@ arms:
   flow_status: proved-model
   lean: RGen.Registry.verify_monotone
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
   guard_eq: '-'
+  guard_fidelity_reason: read-only or verification arm; no committed transition to guard

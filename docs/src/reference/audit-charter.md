@@ -40,9 +40,10 @@ The audit is fixed at `527ed95`. Phase 1 changes manifests, tools, and documenta
 | Proposed Rholang items | 11 |
 | Proposed Lean items | 9 |
 | Arms with a recorded model/code divergence | 11 |
-| Arms with a proved `guard_eq` | 21 |
-| Proved-model arms still without guard equivalence | 14 |
-| Read-only/infrastructure arms (no guard obligation) | 30 |
+| Arms with a proved `guard_eq` | 32 |
+| Proved-model mutating arms without a `guard_eq` | 0 |
+| Read-only proved-model arms | 3 |
+| Owed/read-only/infrastructure arms | 30 |
 
 The priority counts follow the severity/likelihood rubric below. They are not a claim that twelve
 critical exploits exist; they mean twelve findings cross the rubric's P0 line and need a review

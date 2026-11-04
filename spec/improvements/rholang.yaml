@@ -136,7 +136,9 @@ items:
   compatibility: Additive for authenticated checks; breaking for callers that rely on a nominated caller string.
   tests:
   - harness/unit_credentials.py
-  status: proposed
+  status: fixed
+  note: Documented as advisory in the credential primitive page; no core commit uses it and check_concurrency forbids it as
+    authority.
 - id: RR-07
   priority: P1
   title: Validate deadlines and orderings at creation
@@ -207,7 +209,8 @@ items:
   compatibility: Breaking only if identity enforcement is chosen.
   tests:
   - harness/unit_claim.py
-  status: proposed
+  status: fixed
+  note: Permissionless participation is documented as intentional; unit_claim asserts an unregistered actor can comment.
 - id: RR-11
   priority: P1
   title: Make cross-cell factory, validation, and nesting steps recovery-safe
@@ -267,4 +270,5 @@ items:
   tests:
   - harness/unit_identity.py
   - harness/unit_credentials.py
-  status: proposed
+  status: accepted
+  note: Directory and factory states remain explicit serialization points; a cap/sharding plan is deferred.

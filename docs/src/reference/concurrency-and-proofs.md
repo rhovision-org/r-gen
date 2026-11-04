@@ -83,7 +83,7 @@ non-consumed cell does not factor through the consumed cell; any authority set m
 contain the other cell. A peek can be a linearization point at that other cell, but then
 it must be authority, not a peek.
 
-The pair matrix `spec/flows/races.yaml` records 31 rows (19 exclusive, 11 ordered, 1
+The pair matrix `spec/flows/races.yaml` records 32 rows (19 exclusive, 11 ordered, 2
 independent) and is checked by `tools/check_race_matrix.py`. It is not the complete
 cross-product over the six modeled cells; the [proof audit](proof-audit.md) records the
 gap (RGA-007). The model's arm encoding is hand-written; `tools/check_arm_guards.py` ties

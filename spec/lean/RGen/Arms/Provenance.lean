@@ -37,3 +37,21 @@ theorem provenance_comment_comment_appends {s s1 s2 : ProvenanceState}
   rw [ProvenanceState.addComment_appends h2, ProvenanceState.addComment_appends h1]
 
 end RGen
+
+namespace RGen
+
+/-- Anchoring and commenting write disjoint fields; either order is admitted. -/
+theorem provenance_anchor_comment_independent {s s1 s2 : ProvenanceState}
+    {writer : Id} {a : Id × Id} {comment : Id}
+    (h1 : s.addAnchor writer a = some s1)
+    (h2 : s1.addComment writer comment = some s2) :
+    (s.addComment writer comment).isSome = true ∧
+      (s.addComment writer comment).bind (fun s' => s'.addAnchor writer a) = some s2 := by
+  unfold ProvenanceState.addAnchor ProvenanceState.addComment at *
+  split at h1 <;> simp at h1
+  split at h2 <;> simp at h2
+  rcases h1 with rfl
+  rcases h2 with rfl
+  simp [ProvenanceState.addComment, ProvenanceState.addAnchor, *]
+
+end RGen

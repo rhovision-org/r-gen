@@ -17,7 +17,7 @@ exact quantifiers, premises, and missing coverage.
 | Every arm decision is authorized by its consumed cell | `core_arm_authority`: the decision function depends only on the cell value | proved-but-narrower |
 | Proof payloads are consumed once | `proof_take_once_versioned`: a second take on the same proof cell rejects | proved-but-narrower |
 | Independent cells commute | `L1_disjoint_commute` / `commit_commute` on `Store`/`World` | proved-but-narrower |
-| Identity update is modeled | The model's `updateOwner` transfers ownership; the deployed arm patches profile hashes | false |
+| Identity update is modeled | `ProfileState.updateProfile` models the deployed profile patch; `updateOwner` remains a separate ownership model | proved |
 | Nesting is a forest with strict order | `nest_acyclic` plus order; multiple parents are not excluded | proved-but-narrower |
 | Oracle execution is exactly once and subject-bound | `execute_once`; the deployed two-contract retry window is not modeled | proved-but-narrower |
 | Provenance is append-only | `anchors_append_only`; creation authenticity is not modeled | proved-but-narrower |
@@ -72,7 +72,7 @@ These assumptions are mirrored in the [formal model](formal-model.md) and the
 | `check_lean.py` | No `sorry`/`admit`/`native_decide`; no declared axiom; hand-listed theorems are axiom-clean | The list is complete (RGA-006) |
 | `check_flows.py` | Deployed arms appear in the manifest; mapped entries are deployed; named Lean declarations exist | Names are the right declarations; no guard equality |
 | `check_race_matrix.py` | Class vocabulary, pair uniqueness, theorem existence | The theorem matches the pair; matrix is not complete (RGA-007) |
-| `check_arm_guards.py` | Consumed cell matches the manifest; named transitions/guards exist | No guard semantics; no `guard_eq` (RGA-004) |
+| `check_arm_guards.py` | Consumed cell matches the manifest; named transitions, authorities, and `guard_eq` entries exist | The `guard_eq` proves the model guard, not the deployed Rholang guard (RGA-004) |
 | `check_pareto.py` | Terms, cells, modules, theorems, docs citations exist and are in `Pareto.lean` | The curated set is minimal and correct |
 | `check_audit.py` | This record is internally consistent and traceable to arms, theorems, docs, and actions | The review has not yet approved it |
 
@@ -87,9 +87,9 @@ were:
 
 - RGA-002: proof-cell metadata is inert; no cross-arm proof-reuse theorem.
 - RGA-003: versioned independence is missing; the L1 alias is a plain-Store theorem.
-- RGA-004: no guard equivalence; several model guards differ from the deployed guards.
+- RGA-004: guard definitions and `guard_eq` theorems now exist for all 32 mutating proved-model arms; the model/code divergences remain in the ledger.
 - RGA-005: `proved-conformance` is zero; vectors are not asserted end-to-end.
-- RGA-013: `Identity.update` is mapped to a different operation.
+- RGA-013: `Identity.update` was mapped to a different operation; now modeled by `ProfileState.updateProfile`.
 
 The remaining P0 items are contract-state and atomicity findings: RGA-020 (verdict mapping),
 RGA-022 (provenance creation), RGA-023 (oracle open), RGA-024 (oracle execute retry), RGA-031
@@ -104,7 +104,7 @@ The owner authorized Phase 2 with the independence limitation recorded. Since th
 - `ProfileState.updateProfile` and an `IdentityPatch` model replace the wrong `Identity.update`
   mapping, and `Identity.update`, `IdentityFactory.create`, and `ValueProposition.comment` have Arm
   values (LR-00, RGA-013, RGA-008).
-- 21 core arms have a `guard_eq` theorem and a manifest entry, including identity, credential,
+- 32 core mutating arms have a `guard_eq` theorem and a manifest entry, including identity, credential,
   claim, K-Asset approval/rejection, oracle, and provenance write guards (LR-01).
 - `VWorld.set_commute`, `VWorld.commit_commute`, `Event.apply_commute_distinct`, and
   `core_independent_arms_commute` connect the versioned layer to independence (LR-02, LR-04).

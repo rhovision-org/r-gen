@@ -98,3 +98,13 @@ end RGen
 #check RGen.oracleDecideArm_proof_cell
 #check RGen.claimRejectArm_proof_cell
 #check RGen.runExec_append
+#check RGen.vpWithdraw_guard_eq
+#check RGen.vpOpenDispute_guard_eq
+#check RGen.vpDecision_guard_eq
+#check RGen.kassetDecision_guard_eq
+#check RGen.kassetProveApproved_guard_eq
+#check RGen.kassetNest_guard_eq
+#check RGen.credentialProve_guard_eq
+#check RGen.vpProveValidated_guard_eq
+#check RGen.take_guard_eq
+#check RGen.provenance_anchor_comment_independent

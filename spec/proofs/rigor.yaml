@@ -567,6 +567,7 @@ roadmap:
   findings:
   - RGA-007
   status: partial
+  note: 32 rows; model-only row removed and anchor/comment added; cross-primitive pairs remain.
 - id: LR-06
   title: Define and populate proved-conformance
   priority: P1

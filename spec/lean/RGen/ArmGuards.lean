@@ -254,3 +254,101 @@ theorem oracleDecideArm_proof_cell : credentialProofCell ∈ oracleDecideArm.pro
 theorem claimRejectArm_proof_cell : credentialProofCell ∈ claimRejectArm.proofCells := by decide
 
 end RGen
+
+namespace RGen
+
+def vpWithdrawGuard (s : VPState) (p : Id) : Bool :=
+  decide (p = s.proposer ∧ s.status = VPStatus.proposed)
+
+theorem vpWithdraw_guard_eq (s : VPState) (p : Id) :
+    (vpWithdrawArm.step s p).isSome = vpWithdrawGuard s p := by
+  change (vpWithdraw s p).isSome = vpWithdrawGuard s p
+  unfold vpWithdraw VPState.withdraw vpWithdrawGuard
+  by_cases h : p = s.proposer ∧ s.status = VPStatus.proposed <;> simp [h]
+
+def vpOpenDisputeGuard (s : VPState) (p : Id × Id) : Bool :=
+  decide ((s.status = VPStatus.proposed ∨ s.status = VPStatus.validated) ∧
+    (p.1 = s.proposer ∨ s.validatedBy = some p.1) ∧ s.disputeCase = none)
+
+theorem vpOpenDispute_guard_eq (s : VPState) (p : Id × Id) :
+    (vpOpenDisputeArm.step s p).isSome = vpOpenDisputeGuard s p := by
+  change (vpOpenDispute s p.1 p.2).isSome = vpOpenDisputeGuard s p
+  unfold vpOpenDispute VPState.openDispute vpOpenDisputeGuard
+  by_cases h : (s.status = VPStatus.proposed ∨ s.status = VPStatus.validated) ∧
+      (p.1 = s.proposer ∨ s.validatedBy = some p.1) ∧ s.disputeCase = none <;> simp [h]
+
+def vpDecisionGuard (s : VPState) (p : Id × VPDecision) : Bool :=
+  decide (s.status = VPStatus.disputed ∧ s.disputeCase = some p.1)
+
+theorem vpDecision_guard_eq (s : VPState) (p : Id × VPDecision) :
+    (vpDecisionArm.step s p).isSome = vpDecisionGuard s p := by
+  change (vpDecision s p.1 p.2).isSome = vpDecisionGuard s p
+  unfold vpDecision VPState.applyDecision vpDecisionGuard
+  by_cases h : s.status = VPStatus.disputed ∧ s.disputeCase = some p.1 <;> simp [h]
+
+def kassetDecisionGuard (s : KAssetState) (p : Id × VPDecision) : Bool :=
+  decide (s.status = KAssetStatus.disputed ∧ s.disputeCase = some p.1)
+
+theorem kassetDecision_guard_eq (s : KAssetState) (p : Id × VPDecision) :
+    (kassetDecisionArm.step s p).isSome = kassetDecisionGuard s p := by
+  change (kassetDecision s p.1 p.2).isSome = kassetDecisionGuard s p
+  unfold kassetDecision KAssetState.applyDecision kassetDecisionGuard
+  by_cases h : s.status = KAssetStatus.disputed ∧ s.disputeCase = some p.1 <;> simp [h]
+
+def kassetProveApprovedGuard (s : KAssetState) (_ : Id) : Bool :=
+  decide (s.approver.isSome ∧ s.status = KAssetStatus.approved)
+
+theorem kassetProveApproved_guard_eq (s : KAssetState) (uri : Id) :
+    (kassetProveApprovedArm.step s uri).isSome = kassetProveApprovedGuard s uri := by
+  change (kassetProveApproved s uri).isSome = kassetProveApprovedGuard s uri
+  unfold kassetProveApproved KAssetState.proveApproved kassetProveApprovedGuard
+  cases h : s.approver <;> by_cases hs : s.status = KAssetStatus.approved <;> simp [h, hs]
+
+def vpProveValidatedGuard (s : VPState) (_ : Id × Height) : Bool :=
+  decide (s.status = VPStatus.validated)
+
+theorem vpProveValidated_guard_eq (s : VPState) (p : Id × Height) :
+    (vpProveValidatedArm.step s p).isSome = vpProveValidatedGuard s p := by
+  change (vpProveValidated s p.1 p.2).isSome = vpProveValidatedGuard s p
+  unfold vpProveValidated VPState.proveValidated vpProveValidatedGuard
+  by_cases h : s.status = VPStatus.validated <;> simp [h]
+
+def credentialProveGuard (s : CredentialState) (a : ProveArgs) : Bool :=
+  CredentialState.proveAllowed s a.issuerScope a.caller a.requirement a.height
+
+theorem credentialProve_guard_eq (s : CredentialState) (a : ProveArgs) :
+    (credentialProveArm.step s a).isSome = credentialProveGuard s a := by
+  change (credentialProve s a).isSome = credentialProveGuard s a
+  unfold credentialProve CredentialState.prove credentialProveGuard
+  by_cases h : CredentialState.proveAllowed s a.issuerScope a.caller a.requirement a.height <;>
+    simp [h]
+
+def kassetNestGuard (s : KAssetState) (p : Id × List ApprovedProofData) : Bool :=
+  if p.1 = s.claimant ∧
+      (s.status = KAssetStatus.validated ∨ s.status = KAssetStatus.conditional ∨
+        s.status = KAssetStatus.approved) ∧
+      KAssetState.nodupIds (p.2.map (fun c => c.id)) = true ∧
+      (decide (s.id ∉ p.2.map (fun c => c.id))) = true ∧
+      KAssetState.strictRising (p.2.map KAssetState.childKey) = true ∧
+      KAssetState.idsNotIn s.children p.2 = true ∧
+      KAssetState.allBelow s.approvedAt p.2 = true ∧
+      KAssetState.allScope s.discipline s.jurisdiction p.2 = true
+  then true else false
+
+theorem kassetNest_guard_eq (s : KAssetState) (p : Id × List ApprovedProofData) :
+    (kassetNestArm.step s p).isSome = kassetNestGuard s p := by
+  change (kassetNest s p.1 p.2).isSome = kassetNestGuard s p
+  unfold kassetNest KAssetState.nest kassetNestGuard
+  by_cases h : p.1 = s.claimant ∧
+      (s.status = KAssetStatus.validated ∨ s.status = KAssetStatus.conditional ∨
+        s.status = KAssetStatus.approved) ∧
+      KAssetState.nodupIds (p.2.map (fun c => c.id)) = true ∧
+      (decide (s.id ∉ p.2.map (fun c => c.id))) = true ∧
+      KAssetState.strictRising (p.2.map KAssetState.childKey) = true ∧
+      KAssetState.idsNotIn s.children p.2 = true ∧
+      KAssetState.allBelow s.approvedAt p.2 = true ∧
+      KAssetState.allScope s.discipline s.jurisdiction p.2 = true
+  · rw [if_pos h]; rw [if_pos h]; rfl
+  · rw [if_neg h]; rw [if_neg h]; rfl
+
+end RGen
