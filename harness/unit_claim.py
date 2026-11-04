@@ -32,6 +32,7 @@ def main() -> int:
     # Comment no longer requires directory registration; frank has no identity.
     reply = fixtures.claim_comment(claim_uri, "frank", {"hash": "frank-comment"})
     assertions.expect_ok("unregistered actor comments", reply)
+    corpus.assert_row("CLAIM-comment", reply)
     reply = fixtures.read(claim_uri, "comments")
     assertions.expect("comment stored", len(reply[1]), 1)
 

@@ -42,6 +42,7 @@ def main() -> int:
 
     reply = fixtures.oracle_execute(case_uri)
     assertions.expect_ok("execute", reply)
+    corpus.assert_row("KASSET-applyDecision", reply)
     reply = fixtures.oracle_execute(case_uri)
     assertions.expect("second execute is already executed", reply[1], "already executed")
     corpus.assert_row("O1-execute-twice", reply)
@@ -76,6 +77,7 @@ def main() -> int:
     reply = fixtures.call_uri(third_case, "evidence", [__import__("terms").Raw("*dId"),
                                                        {"hash": "ev"}], key="dave")
     assertions.expect_ok("adjudicator evidence", reply)
+    corpus.assert_row("ORACLE-evidence-party", reply)
     reply = fixtures.call_uri(third_case, "evidence", [__import__("terms").Raw("*dId"),
                                                        {"hash": "ev"}], key="bob")
     assertions.expect_refusal("non-party evidence refused", reply, "not a party")

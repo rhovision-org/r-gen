@@ -177,7 +177,9 @@
   transition: RGen.claimComment
   guard_eq: RGen.claimComment_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_claim.py
+  note: suite asserts the CLAIM-comment vector row
   note: comment appends and preserves status; window guard is modeled
 
 - file: contracts/src/deploy/20_claim.rho
@@ -355,12 +357,14 @@
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: evidence
-  lean: RGen.OracleState.addEvidence_requires_open
+  lean: RGen.OracleState.addEvidence_requires_party
   cell: caseState
   transition: RGen.oracleEvidence
   guard_eq: RGen.oracleEvidence_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_oracle.py
+  note: suite asserts the ORACLE-evidence-party vector row
   note: evidence appends only while open; duplicates are refused
 
 - file: contracts/src/deploy/30_oracle.rho
@@ -462,7 +466,9 @@
   transition: RGen.kassetDecision
   guard_eq: RGen.kassetDecision_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
+  status: proved-conformance
+  suite: harness/unit_oracle.py
+  note: suite asserts the KASSET-applyDecision vector row
 
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset

@@ -118,7 +118,7 @@ findings:
   actions:
   - LR-06
   disposition: fixed
-  note: Phase 2 promotes twenty arms across credential, value, claim, K-Asset, oracle, and provenance. Fifteen proved-model
+  note: Phase 2 promotes twenty-three arms across credential, value, claim, K-Asset, oracle, and provenance. Twelve proved-model
     arms remain unpromoted.
 - id: RGA-006
   title: The axiom audit is a hand-maintained list
@@ -812,7 +812,7 @@ arms:
   arm: comment
   node: claim-validation
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.ClaimState.comment_requires_open
   divergences: []
   guard_fidelity: guarded
@@ -1031,8 +1031,8 @@ arms:
   arm: evidence
   node: oracle
   disposition: model-reviewed
-  flow_status: proved-model
-  lean: RGen.OracleState.addEvidence_requires_open
+  flow_status: proved-conformance
+  lean: RGen.OracleState.addEvidence_requires_party
   divergences: []
   guard_fidelity: guarded
   guard_fidelity_finding: '-'
@@ -1165,7 +1165,7 @@ arms:
   arm: applyDecision
   node: kasset-nesting
   disposition: model-reviewed
-  flow_status: proved-model
+  flow_status: proved-conformance
   lean: RGen.KAssetState.decision_once
   divergences: []
   guard_fidelity: guarded

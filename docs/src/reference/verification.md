@@ -25,8 +25,8 @@
 - `tools/check_lean.py --audit`: the 194 theorems listed in `RGen/Audit.lean`, only
   `propext` and `Quot.sound`; no `Classical.choice` use in the audited set. The list is
   hand-maintained (RGA-006).
-- `tools/check_core_vectors.py`: 33 emitted rows match `spec/vectors/core.tsv`.
-- `tools/check_flows.py`: 65 deployed arms mapped — 15 `proved-model`, 20
+- `tools/check_core_vectors.py`: 36 emitted rows match `spec/vectors/core.tsv`.
+- `tools/check_flows.py`: 65 deployed arms mapped — 12 `proved-model`, 23
   `proved-conformance`, 30 `owed` (read-only arms, creation registries, and extensions).
   The former phantom `Issuer.revoke` entry is removed. `Identity.update`,
   `IdentityFactory.create`, and `ValueProposition.comment` now have Arm values.
