@@ -110,13 +110,14 @@ The owner authorized Phase 2 with the independence limitation recorded. Since th
   `core_independent_arms_commute` connect the versioned layer to independence (LR-02, LR-04).
 - `check_lean.py --audit-coverage` requires every Pareto `#check` in `Audit.lean`; 64 Pareto checks
   and 173 axiom checks pass (LR-07).
-- The model-only finish/execute race row is removed; the matrix is 31 rows (LR-05 partial).
+- The model-only finish/execute race row is removed and provenance anchor/comment is added; the matrix is 32 rows (LR-05 partial).
 - Claim and K-Asset verdict mappings now agree for `valid`, `partial`, `invalid`, and unknown
   verdicts; claim deadline presence and comment-window ordering are checked at creation (RR-04,
   RR-07 partial).
 
-Still open: `proofCells` trace consumption (LR-03), `runExec` commute, 14 proved-model arms without
-guard equivalence, conformance vectors (LR-06), and the remaining model/code divergences (LR-08).
+Still open: `proofCells` trace consumption (LR-03), a full `runExec` commute theorem, conformance
+promotion (LR-06), the remaining model/code divergences (LR-08), and the three atomicity findings
+(RGA-031…033). All 32 mutating proved-model arms have a `guard_eq`; the other three are read-only.
 
 ## What would change the verdict
 
