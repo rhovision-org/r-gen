@@ -116,9 +116,9 @@ findings:
   arms: []
   actions:
   - LR-06
-  disposition: accepted
-  note: The status vocabulary exists and the Lean emitter produces 21 rows, but no arm satisfies the full theorem + vector
-    + deployed-suite evidence definition.
+  disposition: fixed
+  note: Phase 2 defines the evidence bundle in check_conformance.py and promotes credential prove (C1-prove-active + harness/unit_credentials.py).
+    The other arms remain unpromoted.
 - id: RGA-006
   title: The axiom audit is a hand-maintained list
   severity: S3
@@ -1145,7 +1145,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
-  guard_fidelity_reason: read-only or verification arm; no committed transition to guard
+  guard_fidelity_reason: read-only verification
 - file: contracts/src/deploy/40_provenance.rho
   contract: ProvenanceFactory
   arm: create
@@ -1264,8 +1264,8 @@ arms:
   arm: prove
   node: issuer-credential-proof
   disposition: model-reviewed
-  flow_status: proved-model
-  lean: RGen.CredentialState.prove_requires_active
+  flow_status: proved-conformance
+  lean: RGen.C1_prove_requires_active
   divergences:
   - DIV-002
   guard_fidelity: guarded
@@ -1344,7 +1344,7 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
-  guard_fidelity_reason: read-only or verification arm; no committed transition to guard
+  guard_fidelity_reason: read-only verification
 - file: contracts/src/deploy/22_value.rho
   contract: ValuePropositionFactory
   arm: verify
@@ -1356,4 +1356,4 @@ arms:
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
   guard_eq: '-'
-  guard_fidelity_reason: read-only or verification arm; no committed transition to guard
+  guard_fidelity_reason: read-only verification

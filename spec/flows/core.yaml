@@ -509,13 +509,14 @@
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
   arm: prove
-  lean: RGen.CredentialState.prove_requires_active
+  lean: RGen.C1_prove_requires_active
   cell: credState
   transition: RGen.credentialProve
   guard_eq: RGen.credentialProve_guard_eq
   authority: RGen.core_arm_authority
-  status: proved-model
-  note: planned core arm: one-shot credential proof
+  status: proved-conformance
+  suite: harness/unit_credentials.py
+  note: one-shot credential proof; suite asserts the C1-prove-active vector row
   consumedProofs: []
   classification: RGen.credential_prove_revoke_never_after
 

@@ -10,13 +10,13 @@ the current suite is R1. The roadmap targets R2 for the core arms and leaves R3/
 |---|---|---|---|
 | R0 | Prose invariant | Review and tests | Supporting material only |
 | R1 | Theorem over the hand-transcribed model | Lean, axiom audit | 39 Pareto theorems |
-| R2 | Model guard anchored to a decision table and deployed vectors | R1 plus a table generated from the contract and asserted by a suite | Target for the 35 `proved-model` arms |
+| R2 | Model guard anchored to a decision table and deployed vectors | R1 plus a table generated from the contract and asserted by a suite | Target for the 35 proved arms (34 model + 1 conformance) |
 | R3 | Mechanized extraction or refinement of a Rholang subset | A semantics and a refinement theorem | Not planned |
 | R4 | Full Rholang/node refinement | Mechanized Rholang semantics, COMM, names, phlo | Out of scope |
 
 R2 is not refinement. It says the model's accept/refuse decision matches an explicit table for the
 tested parameter domains, and that the deployed contract agrees with the same table. It does not
-say the table is complete over unbounded inputs. The target set is the 35 `proved-model` arms.
+say the table is complete over unbounded inputs. The target set is the 35 proved arms; credential prove is the first promoted vector-suite pair.
 
 ## Work items
 
@@ -42,7 +42,7 @@ say the table is complete over unbounded inputs. The target set is the 35 `prove
 | LR-03 | partial | proof-cell membership theorems for seven arms; the trace-consumption relation is pending |
 | LR-04 | done | Independent arm events commute to the same final world; `core_independent_cells_commute` remains as a compatibility alias |
 | LR-05 | partial | The model-only finish/execute row is removed; the matrix is 32 rows against 48 distinct modeled pairs |
-| LR-06 | partial | `check_conformance.py` enforces theorem + vector + suite; 0 arms are promoted because no deployed suite assertion is recorded |
+| LR-06 | partial | `check_conformance.py` enforces theorem + vector + suite; credential prove is promoted via `C1-prove-active` and `harness/unit_credentials.py` |
 | LR-07 | done | `check_lean.py --audit-coverage` requires every Pareto `#check` in `Audit.lean`; 83 Pareto checks and 192 axiom checks pass |
 | LR-08 | partial | Identity update is now modeled; the other divergences remain in the ledger |
 
