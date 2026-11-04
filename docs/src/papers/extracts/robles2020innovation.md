@@ -6,7 +6,7 @@
 > ranked on an integer scale, with 1 representing slight … to 100."
 
 **Why it matters.** The risk model is paper-derived, but it is an application extension in
-RGen, not part of the core claim/validation primitive.
+r-gen, not part of the core claim/validation primitive.
 
 ## p.4 — K-Asset pairing and receipt
 
@@ -24,7 +24,7 @@ creates a K-Asset on validation. The receipt is tokenisation; the core does not 
 
 **Why it matters.** The Claim cell carries `quantity`, `statementHash`, and
 `definitionHash`; the Validation carries quality and the evidence hash. It also shows the
-paper's mint timing: the receipt is produced when the pair forms, at validation. RGen's
+paper's mint timing: the receipt is produced when the pair forms, at validation. r-gen's
 core does not mint; the receipt extension must choose validation (this paper) or approval
 (the Bridge paper).
 

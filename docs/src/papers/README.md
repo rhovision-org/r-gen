@@ -5,7 +5,7 @@ extracts, and a manifest with authors, venues and SHA-256. The papers are alread
 Arweave and the authors' websites.
 
 > **NOTICE.** The papers are third-party copyrighted works. They are **not** covered by
-> RGen's AGPL license; they are included as cited reference material. See
+> r-gen's AGPL license; they are included as cited reference material. See
 > `docs/papers/manifest.json`.
 
 ## Citation keys

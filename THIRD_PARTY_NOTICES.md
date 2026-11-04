@@ -1,6 +1,6 @@
 # Third-party notices
 
-RGen is AGPL-3.0-only. The Pareto core has no r-cash or ERTP dependency.
+r-gen is AGPL-3.0-only. The Pareto core has no r-cash or ERTP dependency.
 
 - **rholo** (RNodeRust), AGPL-3.0 — the node, Rholang runtime, registry, and native system
   channels. The Rust client pins `rchain-crypto` at

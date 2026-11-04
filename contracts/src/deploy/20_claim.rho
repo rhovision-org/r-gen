@@ -4,7 +4,7 @@
 // Paper: @robles2020innovation p.5 (claim=quantity, validation=quality);
 //        @zhong2019bridge p.4 Fig.1 (Talent Pool -> Selection Criteria -> Work Element -> Claim
 //        -> Validation -> Approval), p.5 (clock, stakeholder comments).
-// RGen decision: the K-Asset is created by the Claim cell through the private KAsset library,
+// r-gen decision: the K-Asset is created by the Claim cell through the private KAsset library,
 //      not by a public factory, so a fake K-Asset cannot be created for a real claim.
 // Placeholders: __ROOT_URI__, __CREDENTIAL_FACTORY_URI__, __VALUE_PROPOSITION_FACTORY_URI__,
 //               __ORACLE_FACTORY_URI__.

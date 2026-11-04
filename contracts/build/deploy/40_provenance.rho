@@ -3,7 +3,7 @@
 //      comments append under a single writer order, so no update is lost. parentHash gives the
 //      minimal document graph the papers imply without a global registry.
 // Paper: @robles2016nspe p.29; @zhong2019bridge p.3, p.6.
-// RGen decision: comment rights are the asset's declared writers; a broader stakeholder-identity
+// r-gen decision: comment rights are the asset's declared writers; a broader stakeholder-identity
 //      comment gate is an extension.
 // Placeholders: __ROOT_URI__.
 new

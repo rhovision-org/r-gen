@@ -1,6 +1,6 @@
-# RGen — CoEngineers / Ingenesist
+# r-gen — CoEngineers / Ingenesist
 
-RGen is the first reasonably complete suite of Rholang contracts, paired with a Lean 4 model,
+r-gen is the first reasonably complete suite of Rholang contracts, paired with a Lean 4 model,
 for Dan Robles' **CoEngineers** and **Ingenesist Project** vision. The papers start from a
 plain problem: "the value of engineering is invisible" (`@robles2017stewardship p.3`). The
 suite makes the work and its validation first-class, durable records.

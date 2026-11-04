@@ -1,7 +1,7 @@
 // Why: The REV address is the identity. A claim's participants must be authenticated subjects,
 //      and the paper assumes identified practitioners. Identity creation is first-writer-wins.
 // Paper: @robles2016nspe p.40 (records/identity); the identity concept is paper-adjacent.
-// RGen decision: one directory cell is the only deliberate identity-creation serialization
+// r-gen decision: one directory cell is the only deliberate identity-creation serialization
 //      point; the hot-path claim/validation cells never touch it. No handles: a human-readable
 //      handle registry is an extension, because handle uniqueness is inherently global.
 // Placeholders: __ROOT_URI__.

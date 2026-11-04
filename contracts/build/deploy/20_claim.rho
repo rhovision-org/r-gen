@@ -4,7 +4,7 @@
 // Paper: @robles2020innovation p.5 (claim=quantity, validation=quality);
 //        @zhong2019bridge p.4 Fig.1 (Talent Pool -> Selection Criteria -> Work Element -> Claim
 //        -> Validation -> Approval), p.5 (clock, stakeholder comments).
-// RGen decision: the K-Asset is created by the Claim cell through the private KAsset library,
+// r-gen decision: the K-Asset is created by the Claim cell through the private KAsset library,
 //      not by a public factory, so a fake K-Asset cannot be created for a real claim.
 // Placeholders: __ROOT_URI__, __CREDENTIAL_FACTORY_URI__, __VALUE_PROPOSITION_FACTORY_URI__,
 //               __ORACLE_FACTORY_URI__.
@@ -256,7 +256,7 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
 //
 // Paper: @robles2020innovation p.4-5 (claim+validation pair is the K-Asset);
 //        @zhong2019bridge p.4 (approval), p.6 (nesting/risk transfer).
-// RGen decision: parent-owned nesting edges with a strict (approvedAt,id) order make cycles
+// r-gen decision: parent-owned nesting edges with a strict (approvedAt,id) order make cycles
 // non-representable without graph traversal. Nesting phase 1 is a read-only hint; the child
 // `proveApproved` proof is the authority. Phase 2 acquires child proofs in ascending order
 // without holding the parent. Phase 3 consumes the parent and re-checks duplicates.

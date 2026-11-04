@@ -5,7 +5,7 @@
 > "Can we identify the risk exposure? What is the probability that such risk exposure will
 > manifest? If failure occurs, what are the consequences of that failure?"
 
-**Why it matters.** The insurability questions are an extension gate in RGen, not a core
+**Why it matters.** The insurability questions are an extension gate in r-gen, not a core
 claim/validation state.
 
 ## p.25 — the most appropriate adjudicator

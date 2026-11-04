@@ -1,7 +1,7 @@
 // Why: GenRoot is installer-gated discovery infrastructure, not a paper primitive. Core
 //      contracts are wired to factory URIs at install time and never resolve Root at runtime.
 // Paper: none (engineering infrastructure).
-// RGen decision: no admin/freeze/rotate arms; the core is immutable. Upgrade by deploying a
+// r-gen decision: no admin/freeze/rotate arms; the core is immutable. Upgrade by deploying a
 //      new core and a new Root.
 // Placeholders: none.
 new

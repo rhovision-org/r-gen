@@ -1,11 +1,14 @@
-# RGen — CoEngineers / Ingenesist contracts and proofs
+# r-gen — CoEngineers / Ingenesist contracts and proofs
 
 **Devnet-only, unaudited, no real value.**
 
-RGen is the first reasonably complete suite of Rholang contracts, paired with a Lean 4 model,
+r-gen is the first reasonably complete suite of Rholang contracts, paired with a Lean 4 model,
 for the **CoEngineers and Ingenesist Project** vision set out in Dan Robles' papers:
 engineering work becomes a claim, validation is its quality, the claim+validation pair is a
 K-Asset, and qualifications, adjudication, and provenance stay with the asset.
+
+The project is **r-gen**. The Lean namespace remains `RGen` because Lean identifiers cannot
+contain a hyphen.
 
 **Documentation:** <https://rhovision-org.github.io/r-gen/>
 
@@ -145,6 +148,6 @@ legacy/                     the tagged pre-Pareto 12-term implementation
 
 ## License and papers
 
-RGen is AGPL-3.0-only. The papers are third-party copyrighted works, already public on
+r-gen is AGPL-3.0-only. The papers are third-party copyrighted works, already public on
 Arweave and the authors' websites, and are **not** covered by the AGPL; they are included as
 cited reference material. See `docs/papers/README.md` and `THIRD_PARTY_NOTICES.md`.

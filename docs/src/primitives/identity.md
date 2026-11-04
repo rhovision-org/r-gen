@@ -6,7 +6,7 @@
 
 > "'Claim' and 'Validation' represent a key mechanism i.e. the 'handshake'." — `@zhong2019bridge p.4`
 
-The papers assume identified practitioners and participants. RGen turns that assumption into
+The papers assume identified practitioners and participants. r-gen turns that assumption into
 a first-class, per-address identity cell and a first-writer-wins directory.
 
 ## What the paper means

@@ -1,21 +1,21 @@
 # Design rationale
 
-Why the Rholang is written the way it is. Rows marked **RGen** are engineering decisions
+Why the Rholang is written the way it is. Rows marked **r-gen** are engineering decisions
 with no paper basis; they must not be presented as paper-derived.
 
 ## Concurrency
 
 | Construct | Why | Basis |
 |---|---|---|
-| One linear state cell per entity (Claim, K-Asset, Credential, ValueProposition, OracleCase, Provenance, Identity) | Two operations on the same entity cannot both observe the same pre-state. The cell consume serializes them; the loser sees the post-state and refuses. | RGen |
-| Consume-first (`for (@s <- state)`) in every mutating arm | All guards are evaluated after the consume. A peek-then-commit pattern is TOCTOU by construction; this was the legacy P0 defect. | RGen |
-| Read arms use `<<-` (peek) | Reads never block writers and never mutate. | RGen |
-| Exactly one re-post per consume path | A missing re-post deadlocks the entity; a double re-post creates two states. `tools/check_concurrency.py` checks this structurally. | RGen |
-| Private `Apply.applyDecision` capability | The Oracle case stores the subject's capability in its closure, never a caller-supplied id. A decision cannot be applied to another K-Asset. | RGen + `@robles2016nspe p.25` |
-| Parent-owned nesting edges with `(approvedAt,id)` order | Cycles are non-representable without graph traversal; duplicate children are refused under the parent's consume. | RGen + `@zhong2019bridge p.6` |
-| No global nonce cell | IDs are registry URIs; no global counter serializes creation. | RGen |
-| Compile-time factory wiring | Core terms resolve factory URIs at install, not per call. Root is a client directory only. | RGen |
-| Identity directory and credential registry are the only serialization points | Identity creation is first-writer-wins; credential issuance is registered once. Neither is on the claim/validation hot path. | RGen |
+| One linear state cell per entity (Claim, K-Asset, Credential, ValueProposition, OracleCase, Provenance, Identity) | Two operations on the same entity cannot both observe the same pre-state. The cell consume serializes them; the loser sees the post-state and refuses. | r-gen |
+| Consume-first (`for (@s <- state)`) in every mutating arm | All guards are evaluated after the consume. A peek-then-commit pattern is TOCTOU by construction; this was the legacy P0 defect. | r-gen |
+| Read arms use `<<-` (peek) | Reads never block writers and never mutate. | r-gen |
+| Exactly one re-post per consume path | A missing re-post deadlocks the entity; a double re-post creates two states. `tools/check_concurrency.py` checks this structurally. | r-gen |
+| Private `Apply.applyDecision` capability | The Oracle case stores the subject's capability in its closure, never a caller-supplied id. A decision cannot be applied to another K-Asset. | r-gen + `@robles2016nspe p.25` |
+| Parent-owned nesting edges with `(approvedAt,id)` order | Cycles are non-representable without graph traversal; duplicate children are refused under the parent's consume. | r-gen + `@zhong2019bridge p.6` |
+| No global nonce cell | IDs are registry URIs; no global counter serializes creation. | r-gen |
+| Compile-time factory wiring | Core terms resolve factory URIs at install, not per call. Root is a client directory only. | r-gen |
+| Identity directory and credential registry are the only serialization points | Identity creation is first-writer-wins; credential issuance is registered once. Neither is on the claim/validation hot path. | r-gen |
 
 The declared serialization points are `rootState`, `directoryState`, `issuerState`, and `factoryState`.
 

@@ -4,7 +4,7 @@
 //
 // Paper: @robles2020innovation p.4-5 (claim+validation pair is the K-Asset);
 //        @zhong2019bridge p.4 (approval), p.6 (nesting/risk transfer).
-// RGen decision: parent-owned nesting edges with a strict (approvedAt,id) order make cycles
+// r-gen decision: parent-owned nesting edges with a strict (approvedAt,id) order make cycles
 // non-representable without graph traversal. Nesting phase 1 is a read-only hint; the child
 // `proveApproved` proof is the authority. Phase 2 acquires child proofs in ascending order
 // without holding the parent. Phase 3 consumes the parent and re-checks duplicates.

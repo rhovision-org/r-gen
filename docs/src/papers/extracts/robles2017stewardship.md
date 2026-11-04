@@ -7,6 +7,6 @@
 >
 > "The fundamental problem is that the value of engineering is invisible."
 
-**Why it matters.** RGen's core records validation and approval; reputation and Quant-style
+**Why it matters.** r-gen's core records validation and approval; reputation and Quant-style
 tokenisation are extension concerns. The invisibility thesis is the reason the claim and
 validation are first-class records.

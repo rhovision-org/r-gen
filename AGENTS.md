@@ -1,4 +1,4 @@
-# RGen engineering rules
+# r-gen engineering rules
 
 Binding for humans and agents. If a rule conflicts with convenience, the rule wins.
 
@@ -61,7 +61,7 @@ Every core deploy term starts with:
 ```rholang
 // Why: ...
 // Paper: @key p.N; @key2 p.N    (or "none (engineering infrastructure)")
-// RGen decision: ...
+// r-gen decision: ...
 ```
 
 `tools/check_citations.py` verifies keys, page ranges, extract headings, and the papers'

@@ -3,7 +3,7 @@
 //      The case holds the subject's private applyDecision capability, never a subject id the
 //      caller can substitute, so a decision cannot be applied to another K-Asset.
 // Paper: @robles2016nspe p.25; @robles2016naic p.9; @mathews2017bim p.8.
-// RGen decision: single adjudicator in core; panels/votes/tally are an extension. Selection is
+// r-gen decision: single adjudicator in core; panels/votes/tally are an extension. Selection is
 //      deterministic and named by the parties, not a random beacon.
 // Placeholders: __ROOT_URI__, __CREDENTIAL_FACTORY_URI__.
 new

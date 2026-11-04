@@ -1,9 +1,9 @@
-# RGen paper archive
+# r-gen paper archive
 
 The papers are source material for the primitives and are included as cited reference
 material. They are already public on Arweave and the authors' websites.
 
-> **NOTICE.** These are third-party copyrighted works. They are **not** covered by RGen's
+> **NOTICE.** These are third-party copyrighted works. They are **not** covered by r-gen's
 > AGPL-3.0-only license. The PDFs are included as reference material; the copyrights remain
 > with their holders. See `manifest.json` for authors, venues, pages and SHA-256.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare a devnet key file for the RGen core.
+"""Prepare a devnet key file for the r-gen core.
 
 The rholo devnet bakes in one funded deployer key. This tool writes that deployer plus fresh
 secp256k1 keys for the behavioural actors. The REV address derivation matches

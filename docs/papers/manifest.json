@@ -1,7 +1,7 @@
 {
   "schema": "rgen.papers/v1",
   "citation_convention": "p.N means PDF page N (1-based), not the printed page number",
-  "notice": "These papers are third-party copyrighted works, already public on Arweave and the authors' websites. They are NOT covered by RGen's AGPL license; they are included as cited reference material.",
+  "notice": "These papers are third-party copyrighted works, already public on Arweave and the authors' websites. They are NOT covered by r-gen's AGPL license; they are included as cited reference material.",
   "papers": [
     {
       "key": "robles2020innovation",

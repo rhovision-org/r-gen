@@ -6,7 +6,7 @@
 > risk exposure will manifest? 3. If failure occurs, what are the consequences [cost] of that
 > failure?"
 
-**Why it matters.** The three questions are the source of the insurability gate. RGen keeps
+**Why it matters.** The three questions are the source of the insurability gate. r-gen keeps
 risk as an extension so it does not conflate this consequence question with the IMECE
 exposure factor.
 

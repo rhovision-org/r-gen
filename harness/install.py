@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render and deploy the RGen Pareto core in dependency order.
+"""Render and deploy the r-gen Pareto core in dependency order.
 
 The core is wired at install time: factory URIs are captured from each deploy and rendered
 into dependent terms. Core contracts do not resolve GenRoot at runtime; Root is a client

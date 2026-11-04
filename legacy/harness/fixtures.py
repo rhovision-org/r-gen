@@ -1,4 +1,4 @@
-"""Typed helpers for the RGen vertical slice and behavioural suites."""
+"""Typed helpers for the r-gen vertical slice and behavioural suites."""
 
 from __future__ import annotations
 

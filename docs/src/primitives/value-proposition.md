@@ -10,7 +10,7 @@
 ## What the paper means
 
 The papers name a "new value proposition" and connect it to intrinsic intangible value and
-reward. They do **not** define a value-proposition state machine. RGen makes it a separate,
+reward. They do **not** define a value-proposition state machine. r-gen makes it a separate,
 user-requested primitive: a proposition cell that a qualified validator can validate, that can
 be disputed, and whose validated state can be proved to an approver.
 

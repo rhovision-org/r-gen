@@ -3,7 +3,7 @@
 //      first-class primitive: a proposition cell, validated by a qualified subject, composable
 //      with a claim or K-Asset by reference.
 // Paper: @mathews2017bim p.7, p.9 (paper-adjacent phrase); user decision (separate primitive).
-// RGen decision: per-VP linear cell; one validation transition; dispute applies only through a
+// r-gen decision: per-VP linear cell; one validation transition; dispute applies only through a
 //      private capability held by the oracle case.
 // Placeholders: __ROOT_URI__, __CREDENTIAL_FACTORY_URI__, __ORACLE_FACTORY_URI__.
 new

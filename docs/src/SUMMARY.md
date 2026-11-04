@@ -1,6 +1,6 @@
 # Summary
 
-- [RGen — CoEngineers / Ingenesist](orientation/north-star.md)
+- [r-gen — CoEngineers / Ingenesist](orientation/north-star.md)
 - [Claim, validation, K-Asset](concepts/k-asset.md)
 - [Bridge inspection walkthrough](cases/bridge-inspection.md)
 - [Quickstart](guides/quickstart.md)

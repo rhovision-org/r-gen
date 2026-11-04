@@ -1,6 +1,6 @@
 [book]
-title = "RGen — CoEngineers / Ingenesist"
-authors = ["RGen contributors"]
+title = "r-gen — CoEngineers / Ingenesist"
+authors = ["r-gen contributors"]
 language = "en"
 src = "docs/src"
 
