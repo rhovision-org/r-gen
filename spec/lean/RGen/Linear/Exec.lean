@@ -385,3 +385,26 @@ theorem runExec_no_same_expected {α : Type} {w : VWorld α} {es : List (Event �
       exact appliedExpecteds_no_two (runCell_applied hc hv)
 
 end RGen
+
+namespace RGen
+
+/-- Executing a concatenated trace is executing the first trace and then the second. -/
+theorem runExec_append {α : Type} (w : VWorld α) (es1 es2 : List (Event α)) :
+    runExec w (es1 ++ es2) =
+      match runExec w es1 with
+      | none => none
+      | some w1 => runExec w1 es2 := by
+  induction es1 generalizing w with
+  | nil => simp [runExec]
+  | cons e es ih =>
+      simp only [List.cons_append]
+      cases h : e.apply w with
+      | stale => simp [runExec, h]
+      | rejected w1 =>
+          simp only [runExec, h]
+          exact ih w1
+      | accepted w1 =>
+          simp only [runExec, h]
+          exact ih w1
+
+end RGen

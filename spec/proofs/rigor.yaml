@@ -536,6 +536,7 @@ roadmap:
   findings:
   - RGA-003
   status: partial
+  note: set/commit/event commute and runExec_append added; a full runExec commute theorem remains.
 - id: LR-03
   title: Wire proofCells to arm consumption and prove no cross-arm reuse
   priority: P1

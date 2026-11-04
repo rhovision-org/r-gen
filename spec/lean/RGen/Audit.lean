@@ -194,3 +194,4 @@ This file is not imported by `RGen.lean`; it is an audit artefact.
 #print axioms RGen.kassetNestArm_proof_cell
 #print axioms RGen.oracleDecideArm_proof_cell
 #print axioms RGen.claimRejectArm_proof_cell
+#print axioms RGen.runExec_append

@@ -22,7 +22,7 @@
 - `cd spec/lean && lake build`: 36 Lean files build on Lean `v4.12.0`, no Mathlib.
 - `tools/check_lean.py`: 37 files, no `sorry`, `admit`, `native_decide`, or declared
   axioms.
-- `tools/check_lean.py --audit`: the 180 theorems listed in `RGen/Audit.lean`, only
+- `tools/check_lean.py --audit`: the 181 theorems listed in `RGen/Audit.lean`, only
   `propext` and `Quot.sound`; no `Classical.choice` use in the audited set. The list is
   hand-maintained (RGA-006).
 - `tools/check_core_vectors.py`: 21 emitted rows match `spec/vectors/core.tsv`.

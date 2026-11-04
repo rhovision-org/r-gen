@@ -97,3 +97,4 @@ end RGen
 #check RGen.kassetNestArm_proof_cell
 #check RGen.oracleDecideArm_proof_cell
 #check RGen.claimRejectArm_proof_cell
+#check RGen.runExec_append
