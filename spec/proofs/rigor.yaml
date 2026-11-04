@@ -283,14 +283,14 @@ divergences:
   model_decl: RGen.KAssetState.approve
   deployed: contracts/src/lib/KAsset.rho:61
   direction: model-permissive
-  consequence: Model omits the deployed Approver credential and VP-proof qualification checks.
+  consequence: Phase 2 requires the Approver credential type. Registry-level and minLevel qualification remain unmodeled.
   finding: RGA-004
 - id: DIV-005
   arm: KAsset.nest
   model_decl: RGen.KAssetState.nest
   deployed: contracts/src/lib/KAsset.rho:330
   direction: model-permissive
-  consequence: Model admits validated and conditional parents; deployed requires approved.
+  consequence: 'Resolved in Phase 2: the model nest now requires an approved parent.'
   finding: RGA-004
 - id: DIV-006
   arm: KAsset.nest

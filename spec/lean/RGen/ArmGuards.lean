@@ -64,6 +64,7 @@ theorem claimValidate_guard_eq (s : ClaimState) (a : ClaimValidateArgs) :
 def kassetApproveGuard (s : KAssetState) (a : KApproveArgs) : Bool :=
   decide ((s.status = KAssetStatus.validated ∨ s.status = KAssetStatus.conditional) ∧
     a.approver ≠ s.claimant ∧ a.credProof.subject = a.approver ∧
+    a.credProof.requirement.ctype = "Approver" ∧
     a.vpProof.subject = a.approver ∧
     a.vpProof.requirement.ctype = "ValueProposition" ∧ s.validator ≠ some a.approver)
 
@@ -72,6 +73,7 @@ theorem kassetApprove_guard_eq (s : KAssetState) (a : KApproveArgs) :
   unfold kassetApprove KAssetState.approve kassetApproveGuard
   by_cases h : (s.status = KAssetStatus.validated ∨ s.status = KAssetStatus.conditional) ∧
       a.approver ≠ s.claimant ∧ a.credProof.subject = a.approver ∧
+      a.credProof.requirement.ctype = "Approver" ∧
       a.vpProof.subject = a.approver ∧
       a.vpProof.requirement.ctype = "ValueProposition" ∧ s.validator ≠ some a.approver <;>
     simp [h]
@@ -324,9 +326,7 @@ theorem credentialProve_guard_eq (s : CredentialState) (a : ProveArgs) :
     simp [h]
 
 def kassetNestGuard (s : KAssetState) (p : Id × List ApprovedProofData) : Bool :=
-  if p.1 = s.claimant ∧
-      (s.status = KAssetStatus.validated ∨ s.status = KAssetStatus.conditional ∨
-        s.status = KAssetStatus.approved) ∧
+  if p.1 = s.claimant ∧ s.status = KAssetStatus.approved ∧
       KAssetState.nodupIds (p.2.map (fun c => c.id)) = true ∧
       (decide (s.id ∉ p.2.map (fun c => c.id))) = true ∧
       KAssetState.strictRising (p.2.map KAssetState.childKey) = true ∧
@@ -339,9 +339,7 @@ theorem kassetNest_guard_eq (s : KAssetState) (p : Id × List ApprovedProofData)
     (kassetNestArm.step s p).isSome = kassetNestGuard s p := by
   change (kassetNest s p.1 p.2).isSome = kassetNestGuard s p
   unfold kassetNest KAssetState.nest kassetNestGuard
-  by_cases h : p.1 = s.claimant ∧
-      (s.status = KAssetStatus.validated ∨ s.status = KAssetStatus.conditional ∨
-        s.status = KAssetStatus.approved) ∧
+  by_cases h : p.1 = s.claimant ∧ s.status = KAssetStatus.approved ∧
       KAssetState.nodupIds (p.2.map (fun c => c.id)) = true ∧
       (decide (s.id ∉ p.2.map (fun c => c.id))) = true ∧
       KAssetState.strictRising (p.2.map KAssetState.childKey) = true ∧

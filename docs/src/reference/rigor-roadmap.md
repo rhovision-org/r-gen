@@ -43,7 +43,7 @@ say the table is complete over unbounded inputs. The target set is the 35 `prove
 | LR-04 | done | Independent arm events commute to the same final world; `core_independent_cells_commute` remains as a compatibility alias |
 | LR-05 | partial | The model-only finish/execute row is removed; the matrix is 32 rows against 48 distinct modeled pairs |
 | LR-06 | partial | `check_conformance.py` enforces theorem + vector + suite; 0 arms are promoted because no deployed suite assertion is recorded |
-| LR-07 | done | `check_lean.py --audit-coverage` requires every Pareto `#check` in `Audit.lean`; 82 Pareto checks and 191 axiom checks pass |
+| LR-07 | done | `check_lean.py --audit-coverage` requires every Pareto `#check` in `Audit.lean`; 83 Pareto checks and 192 axiom checks pass |
 | LR-08 | partial | Identity update is now modeled; the other divergences remain in the ledger |
 
 The guard count is 32 of 35 proved-model arms; the remaining three are read-only verification

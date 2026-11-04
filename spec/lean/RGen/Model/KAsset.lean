@@ -67,7 +67,9 @@ namespace KAssetState
 def approve (s : KAssetState) (approver : Id) (credProof vpProof : ProofData)
     (atHeight : Height) : Option KAssetState :=
   if (s.status = KAssetStatus.validated ∨ s.status = KAssetStatus.conditional) ∧
-      approver ≠ s.claimant ∧ credProof.subject = approver ∧ vpProof.subject = approver ∧
+      approver ≠ s.claimant ∧ credProof.subject = approver ∧
+      credProof.requirement.ctype = "Approver" ∧
+      vpProof.subject = approver ∧
       vpProof.requirement.ctype = "ValueProposition" ∧ s.validator ≠ some approver then
     some { s with status := KAssetStatus.approved, approver := some approver, approvedAt := atHeight }
   else none
@@ -130,9 +132,7 @@ def allScope (discipline jurisdiction : String) (children : List ApprovedProofDa
 
 def nest (s : KAssetState) (caller : Id) (children : List ApprovedProofData) :
     Option KAssetState :=
-  if caller = s.claimant ∧
-      (s.status = KAssetStatus.validated ∨ s.status = KAssetStatus.conditional ∨
-        s.status = KAssetStatus.approved) ∧
+  if caller = s.claimant ∧ s.status = KAssetStatus.approved ∧
       nodupIds (children.map (fun c => c.id)) ∧
       decide (s.id ∉ children.map (fun c => c.id)) ∧
       strictRising (children.map childKey) ∧
@@ -181,7 +181,17 @@ theorem approve_requires_vp_proof {s s' : KAssetState} {approver : Id}
   unfold approve at h
   split at h
   · rename_i hg
-    exact ⟨hg.2.2.2.1, hg.2.2.2.2.1⟩
+    exact ⟨hg.2.2.2.2.1, hg.2.2.2.2.2.1⟩
+  · simp at h
+
+theorem approve_requires_credential_type {s s' : KAssetState} {approver : Id}
+    {credProof vpProof : ProofData} {atHeight : Height}
+    (h : s.approve approver credProof vpProof atHeight = some s') :
+    credProof.requirement.ctype = "Approver" := by
+  unfold approve at h
+  split at h
+  · rename_i hg
+    exact hg.2.2.2.1
   · simp at h
 
 theorem approve_requires_non_validator {s s' : KAssetState} {approver : Id}
@@ -191,7 +201,7 @@ theorem approve_requires_non_validator {s s' : KAssetState} {approver : Id}
   unfold approve at h
   split at h
   · rename_i hg
-    exact hg.2.2.2.2.2
+    exact hg.2.2.2.2.2.2
   · simp at h
 
 theorem approve_sets_status {s s' : KAssetState} {approver : Id}
@@ -352,8 +362,7 @@ theorem nest_requires_claimant {s s' : KAssetState} {caller : Id}
 
 theorem nest_requires_status {s s' : KAssetState} {caller : Id}
     {children : List ApprovedProofData} (h : s.nest caller children = some s') :
-    s.status = KAssetStatus.validated ∨ s.status = KAssetStatus.conditional ∨
-      s.status = KAssetStatus.approved := by
+    s.status = KAssetStatus.approved := by
   unfold nest at h
   split at h
   · rename_i hg
