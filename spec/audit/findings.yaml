@@ -46,8 +46,8 @@ findings:
   actions:
   - LR-03
   disposition: accepted
-  note: Arm.proofCells is never read by Arm.decision or Arm.event. The one-shot theorem is about a standalone proof cell,
-    not about an arm consuming the proof cells it declares.
+  note: Phase 2 adds proof-cell membership theorems for seven arms, so the declared proof cells are now checked metadata.
+    The trace-ordering theorem (proofCells consumed before the arm commit) and cross-arm reuse theorem are still open.
 - id: RGA-003
   title: Versioned independence is missing; the L1 alias is a plain-Store theorem
   severity: S2
@@ -136,8 +136,8 @@ findings:
   actions:
   - LR-07
   disposition: accepted
-  note: 'Phase 2 adds check_lean.py --audit-coverage: every Pareto #check must appear in Audit.lean. The audit is now 64 Pareto
-    theorems and 173 axiom checks, but public theorems outside the Pareto vocabulary can still escape the list.'
+  note: 'Phase 2 adds check_lean.py --audit-coverage: every Pareto #check must appear in Audit.lean. The audit is now 71 Pareto
+    theorems and 180 axiom checks, but public theorems outside the Pareto vocabulary can still escape the list.'
 - id: RGA-007
   title: The pair matrix covers 31 rows, not the 48 distinct pairs over modeled cells
   severity: S3

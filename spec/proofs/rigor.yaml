@@ -544,7 +544,8 @@ roadmap:
   - spec/lean/RGen/RaceFreedom.lean
   findings:
   - RGA-002
-  status: proposed
+  status: partial
+  note: Proof-cell membership theorems added; trace consumption still open.
 - id: LR-04
   title: Cross-cell composition and precise authority statement
   priority: P1
@@ -554,7 +555,8 @@ roadmap:
   findings:
   - RGA-001
   - RGA-012
-  status: proposed
+  status: done
+  note: Independent arm events commute; the Store alias remains as a compatibility name.
 - id: LR-05
   title: Close the pair matrix over modeled cells
   priority: P2
@@ -572,7 +574,8 @@ roadmap:
   - tools/check_conformance.py
   findings:
   - RGA-005
-  status: proposed
+  status: partial
+  note: check_conformance.py enforces the evidence bundle; 0 arms promoted because no suite assertion is recorded.
 - id: LR-07
   title: Automate audit coverage for every public theorem
   priority: P2

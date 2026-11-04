@@ -90,3 +90,10 @@ end RGen
 #check RGen.oracleEvidence_guard_eq
 #check RGen.provenanceComment_guard_eq
 #check RGen.credentialAttest_guard_eq
+#check RGen.vpValidateArm_proof_cell
+#check RGen.claimValidateArm_proof_cell
+#check RGen.kassetApproveArm_proof_cells
+#check RGen.kassetRejectArm_proof_cell
+#check RGen.kassetNestArm_proof_cell
+#check RGen.oracleDecideArm_proof_cell
+#check RGen.claimRejectArm_proof_cell

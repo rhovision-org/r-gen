@@ -187,3 +187,10 @@ This file is not imported by `RGen.lean`; it is an audit artefact.
 #print axioms RGen.oracleEvidence_guard_eq
 #print axioms RGen.provenanceComment_guard_eq
 #print axioms RGen.credentialAttest_guard_eq
+#print axioms RGen.vpValidateArm_proof_cell
+#print axioms RGen.claimValidateArm_proof_cell
+#print axioms RGen.kassetApproveArm_proof_cells
+#print axioms RGen.kassetRejectArm_proof_cell
+#print axioms RGen.kassetNestArm_proof_cell
+#print axioms RGen.oracleDecideArm_proof_cell
+#print axioms RGen.claimRejectArm_proof_cell

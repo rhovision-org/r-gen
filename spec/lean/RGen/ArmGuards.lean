@@ -233,3 +233,24 @@ theorem credentialAttest_guard_eq (s : CredentialState) (caller : Id) :
   by_cases h : caller ≠ s.subject ∧ caller ∉ s.attestations <;> simp [h]
 
 end RGen
+
+namespace RGen
+
+/-! ### Declared proof cells
+
+These are the metadata obligations: an arm that validates, approves, decides, or nests declares
+the proof cell it must consume. The theorems are deliberately small; the trace-ordering theorem
+(`proofCells_consumed_before_commit`) remains open.
+-/
+
+theorem vpValidateArm_proof_cell : credentialProofCell ∈ vpValidateArm.proofCells := by decide
+theorem claimValidateArm_proof_cell : credentialProofCell ∈ claimValidateArm.proofCells := by decide
+theorem kassetApproveArm_proof_cells :
+    credentialProofCell ∈ kassetApproveArm.proofCells ∧
+      vpProofCell ∈ kassetApproveArm.proofCells := by decide
+theorem kassetRejectArm_proof_cell : credentialProofCell ∈ kassetRejectArm.proofCells := by decide
+theorem kassetNestArm_proof_cell : kassetProofCell ∈ kassetNestArm.proofCells := by decide
+theorem oracleDecideArm_proof_cell : credentialProofCell ∈ oracleDecideArm.proofCells := by decide
+theorem claimRejectArm_proof_cell : credentialProofCell ∈ claimRejectArm.proofCells := by decide
+
+end RGen
