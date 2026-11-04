@@ -71,6 +71,25 @@ The HAZOP rows for each item are in the manifest. Representative links:
 - RR-10: `directoryState` and `factoryState` remain explicit serialization points. No cap or
   sharding is implemented; a cap would be a breaking change at the cap.
 
+## Atomicity residual risk (RR-11)
+
+The remaining P0 findings are cross-cell failure windows, not guard bypasses:
+
+- **Identity create:** `identityState` and the bundle registration precede the `directoryState`
+  write. A failure after registration but before the directory write can leave an identity cell
+  and bundle that the directory does not reference; a retry can create a second one. A recovery
+  record needs the emitted identity URI and a pending/finalized directory status.
+- **Claim validation:** `finalizeValidation` mints the K-Asset before writing the claim's
+  `validationRef` and `kassetRef`. A failure between those writes can leave a K-Asset with no
+  claim reference, or allow a retry to mint another. A validation receipt in the claim state is
+  the intended fix.
+- **K-Asset nest:** `nestProofs` consumes each child approval proof before the parent writes
+  `childRefs`. A failed parent write consumes the proofs while the parent is unchanged. A nest
+  receipt that records the consumed child ids or the proof payloads is the intended fix.
+
+No current Phase 2 change claims to close these. They remain accepted P0 items with the failure
+window documented; the devnet suites cannot exercise them without crash/failure injection.
+
 ## Why these orderings
 
 - **State integrity first.** RR-04 and RR-11 prevent a claim and its K-Asset, or a parent and its
