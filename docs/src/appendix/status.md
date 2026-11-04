@@ -18,12 +18,30 @@
 - Phase 1 audit: 67 deployed arms dispositioned; 10 HAZOP nodes, 150 coverage cells, 146 rows;
   27 findings (12 P0, 13 P1, 2 P2; no S1); 39 Pareto claim entries; 11 Rholang items and 9 Lean
   items. The record is in `spec/audit`, `spec/hazop`, `spec/proofs`, and `spec/improvements`.
+- Oracle `open` now checks the `subjectRef` argument, not `caseReq.subjectRef`. The Phase 2
+  check had made every K-Asset/VP `openDispute` refuse with `case fields`; `unit_core` now
+  reaches dispute, decision, execution and provenance on the rebuilt contracts.
+
+## Web client
+
+- `web/` is a React/Vite/TypeScript reference client over `rgen-wasm`. It reads the deployed
+  contracts and signs real deploys; there is no backend and no mock data.
+- Routes cover claims, K-Assets, credentials, value propositions, oracle cases, provenance,
+  identity, activity and settings. There is no indexer: lists are the local journal, pasted
+  share links and the seeded catalogue, and every detail page re-reads its entity.
+- A local devnet is one command (`make setup`); the public testnet is opt-in
+  (`TESTNET_ALLOW=--allow-live`). The testnet profile pins network id
+  `testnet-133b1d307b175012`, shard `/testnet` and the genesis hash.
+- On 2026-11-04 the UI was exercised end to end on the isolated devnet: wallet create,
+  faucet, identity, claim, validation, K-Asset approval, dispute/decide/execute, provenance
+  anchor and verify. Each action waited for finality and the entity was re-read.
 
 ## Core boundaries
 
 The core installs only: Root, Identity, Issuer/Credential, Claim/K-Asset, ValueProposition,
 Oracle, Provenance. It does **not** install KAT, payments, risk scoring, panels, admin,
-handles, metrics, or a web client.
+handles, or metrics. The web client is a reference consumer of the core, not part of the
+installed contract set.
 
 ## Owed
 

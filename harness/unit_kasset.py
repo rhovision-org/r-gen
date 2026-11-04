@@ -82,7 +82,7 @@ def main() -> int:
     # Nest on a validated but not approved parent.
     claim5, kasset5, _ = suite_base.validated_kasset(addrs, "bob")
     reply = fixtures.kasset_nest(kasset5, "alice", refs)
-    assertions.expect_refusal("unapproved parent refused", reply, "parent not approved")
+    assertions.expect_refusal("unapproved parent refused", reply, "parent not approved or limit")
 
     # Dispute parties.
     case_req = {

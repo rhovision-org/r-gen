@@ -48,7 +48,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.95.0
-      - run: cargo test -p rgen-core -p rgen-sdk
+        with:
+          targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
+      - run: cargo test -p rgen-core -p rgen-keystore -p rgen-sdk -p rgen-cli
+      - run: cargo check -p rgen-wasm --target wasm32-unknown-unknown
+
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@wasm-pack
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --prefix web
+      - run: npm --prefix web run wasm:build
+      - run: npm --prefix web run test:wasm
+      - run: npm --prefix web run typecheck
+      - run: npm --prefix web test
+      - run: npm --prefix web run build
 
   parse:
     runs-on: ubuntu-latest
@@ -77,8 +101,28 @@ jobs:
           repository: rchain-community/rchain-rust
           ref: e2d073dcd02f1e560ccb84749937138a1e184b0b
           path: rnode-rust
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          targets: wasm32-unknown-unknown
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - run: make venv PY=.venv/bin/python
-      - run: DEVNET_PREFIX=rgen RHOLO_DIR=$PWD/rnode-rust make devnet-up keys install unit-all PY=.venv/bin/python
+      - run: cargo build -p rgen-cli
+      - run: DEVNET_PREFIX=rgen DEVNET_NODE_MEMORY=8g RHOLO_DIR=$PWD/rnode-rust \
+          make devnet-up keys install unit-all demo-seed demo-verify PY=.venv/bin/python
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: taiki-e/install-action@wasm-pack
+      - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - run: npm ci --prefix web
+      - run: npm --prefix web run build
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - run: npm run test:e2e
+        working-directory: web
+        env:
+          RGEN_E2E: "1"

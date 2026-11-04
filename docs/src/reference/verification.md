@@ -17,6 +17,26 @@
   wins; exactly one oracle apply; cross-subject isolation; two comments both stored; eight
   independent claims validate in one deploy; a revoked credential refuses.
 
+## Web client and devnet (2026-11-04)
+
+- `harness/demo_seed.py`: pass on the isolated devnet — identities for issuer/alice/bob/
+  carol/dave, three credentials, a value proposition, an approved claim/K-Asset, a disputed
+  and upheld claim/K-Asset, an oracle case with decision and execution, and provenance with
+  two anchors and a comment.
+- `harness/demo_verify.py`: 14 catalogue entries verified; identity directory lookups,
+  factory `verify` calls, and the claim ↔ K-Asset ↔ case ↔ provenance relationships checked
+  in both directions.
+- `harness/unit_all`: ten behavioural suites pass after rebuilding the contracts.
+- `web`: Vitest 11/11; offline WASM smoke (wallet create/unlock/export, BLAKE2b-256, claim
+  payload validation); TypeScript strict build; Playwright read journey and full
+  claim → validation → approval handshake against the seeded devnet.
+- Browser journey exercised manually with real keystores: wallet create, faucet, identity,
+  claim, validation, K-Asset approval, dispute → decide → execute, provenance anchor and
+  verify. Every action waited for finality and the entity was re-read.
+- Oracle `open` regression fixed: the Phase 2 guard checked `caseReq.subjectRef`, which the
+  K-Asset/VP dispute arms never set. It now checks the `subjectRef` argument. This restored
+  the dispute path that `unit_core` exercises.
+
 ## Lean model (2026-11-04)
 
 - `cd spec/lean && lake build`: 36 Lean files build on Lean `v4.12.0`, no Mathlib.
@@ -58,8 +78,15 @@ make lean-check
 make build-check parse-check
 make check-core-boundary check-concurrency check-citations check-flows check-audit
 make install
-make unit-core
-make unit-race
+make unit-all
+make demo-seed demo-verify
+
+npm --prefix web ci
+npm --prefix web run test:wasm
+npm --prefix web test
+npm --prefix web run typecheck
+npm --prefix web run build
+RGEN_E2E=1 npm --prefix web run test:e2e
 ```
 
 **Honest limit:** the core has two behavioural suites (vertical slice and race suite). The

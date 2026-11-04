@@ -12,6 +12,10 @@ path = "src/main.rs"
 
 [dependencies]
 rgen-core = { workspace = true }
-rgen-sdk = { workspace = true }
+rgen-keystore = { workspace = true }
+rgen-sdk = { workspace = true, features = ["native"] }
+rcash-chain = { workspace = true, features = ["native"] }
 clap = { workspace = true }
 serde_json = { workspace = true }
+tokio = { workspace = true }
+ureq = { workspace = true }

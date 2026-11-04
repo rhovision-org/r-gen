@@ -55,9 +55,13 @@ ERTP dependency.
 ## Extensions (deliberately not core)
 
 KAT/receipt and pricing, r-cash payments, SPE/insurability risk, oracle panels, admin
-governance, human-readable handles, Metcalfe/CAPM/WIKiD metrics, and the web client. The
-core exposes approval/decision facts; an extension consumes them without the core calling
-the extension. The Pareto ledger states the paper basis and removal reason for each.
+governance, human-readable handles, and Metcalfe/CAPM/WIKiD metrics. The core exposes
+approval/decision facts; an extension consumes them without the core calling the extension.
+The Pareto ledger states the paper basis and removal reason for each.
+
+The repository also ships a reference web client (`web/`) and a WASM facade
+(`crates/rgen-wasm`). They are consumers of the seven installed terms, not part of the
+installed contract set, and they show no KAT, payment, risk or metrics data.
 
 ## Race freedom and concurrency
 
@@ -95,15 +99,44 @@ make parse-check
 make docs-check
 
 export RHOLO_DIR=../RNodeRust
-DEVNET_PREFIX=rgen make devnet-up keys install
+DEVNET_PREFIX=rgen make setup
 make unit-core
 make unit-race
 make unit-all
+
+# web client
+npm --prefix web ci
+npm --prefix web run dev
 ```
 
-`make keys` generates the devnet's baked-in deployer plus fresh actor keys; no r-cash keys
-file is needed. `DEVNET_PREFIX=rgen` starts an isolated `rgen-bootstrap` on 40403/40405 and
-leaves any existing default devnet alone.
+`make setup` is `devnet-up keys install sync-manifest`. The node needs 8 GB
+(`DEVNET_NODE_MEMORY=8g`); 4 GB is OOM-killed with exit 137. `make keys` generates the
+devnet's baked-in deployer plus fresh actor keys; no r-cash keys file is needed.
+`DEVNET_PREFIX=rgen` starts an isolated `rgen-bootstrap` on 40403/40405 and leaves any
+existing default devnet alone.
+
+## Web client
+
+`web/` is a reference application over the deployed contracts: React 18, Vite, strict
+TypeScript, HashRouter, react-query and zustand. A Rust `rgen-wasm` facade owns the
+secp256k1 key and returns JSON operation envelopes; the browser stores only an encrypted
+Web3 v3 keystore in IndexedDB. There is no backend and no indexer: the chain is the
+backend, entity URIs are share links, and the local journal plus the seeded catalogue are
+the only lists.
+
+It supports a local devnet and the public testnet at `https://testnet.rhobot.net` (network
+`testnet-133b1d307b175012`, shard `/testnet`). Every screen re-reads chain state and every
+action is a signed deploy. See `docs/src/guides/devnet.md`, `testnet.md` and `web.md`.
+
+Demonstration seed:
+
+```sh
+make demo-seed     # real identities, credentials, VP, claims, K-Assets, case, provenance
+make demo-verify   # re-reads every catalogue URI and its relationships
+```
+
+Devnet keystores are written to `.demo/keystores-devnet/` with the demo password
+`rgen-demo-password`; testnet keys live under `.testnet/`. Both are gitignored.
 
 ## Verification
 
@@ -149,7 +182,9 @@ spec/audit/, spec/hazop/    findings, arm dispositions, HAZOP worksheet
 spec/proofs/, spec/improvements/  claim/divergence ledger and ranked Rholang backlog
 spec/                       legacy/extension vector material
 tools/                      build, parse, measure, formal, boundary/concurrency/citation checks
-crates/                     rgen-core, rgen-sdk, rgen-cli
+crates/                     rgen-core, rgen-keystore, rgen-sdk, rgen-cli, rgen-wasm
+web/                        React/Vite reference client over the installed terms
+harness/demo/               off-chain demo documents; only their hashes reach the chain
 legacy/                     the tagged pre-Pareto 12-term implementation
 ```
 

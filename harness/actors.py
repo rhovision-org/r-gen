@@ -49,6 +49,17 @@ def ensure_vault(name: str, min_phlo: int = 8_000_000) -> None:
         if "insufficient funds" not in str(error):
             raise
 
+    # The local devnet deployer is genesis-funded. The faucet allows one drip per
+    # address, so a long suite run cannot top up through it; a native REV transfer can.
+    if not node.REMOTE:
+        try:
+            node.transfer_rev("deployer", public(name))
+            one(PING, key=name, phlo_limit=min_phlo)
+            print(f"  top-up {name}")
+            return
+        except node.DevnetError:
+            pass
+
     last: Exception | None = None
     for _ in range(8):
         try:

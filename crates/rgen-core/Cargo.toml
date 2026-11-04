@@ -1,5 +1,6 @@
 [package]
 name = "rgen-core"
+description = "Pure r-gen client types: component catalogue, manifests, payloads and rendering"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,6 +8,7 @@ rust-version.workspace = true
 repository.workspace = true
 
 [dependencies]
-serde = { workspace = true }
-serde_json = { workspace = true }
-thiserror = { workspace = true }
+rcash-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

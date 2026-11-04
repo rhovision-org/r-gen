@@ -157,6 +157,10 @@ def provenance_anchor(prov_uri: str, writer: str, doc: dict):
     return call_uri(prov_uri, "anchor", [Raw("*dId"), doc], key=writer)
 
 
+def provenance_comment(prov_uri: str, writer: str, comment: dict):
+    return call_uri(prov_uri, "comment", [Raw("*dId"), comment], key=writer)
+
+
 def two_claim_validations(claim_uri: str, cred_uri: str, validator: str, validation: dict):
     """Two validate calls on the same claim in one deploy: exactly one must win."""
     term = f"""
@@ -315,13 +319,18 @@ new rl(`rho:registry:lookup`), c1, ret, pc, t1, t2,
     return _one(term, key=subject_key)
 
 
-def vp_prove_validated(vp_uri: str, caller: str, at_height: int = 0):
+def vp_prove_validated(vp_uri: str, caller: str, at_height: int | None = None):
+    height_setup = ""
+    height_arg = str(at_height) if at_height is not None else "height"
+    if at_height is None:
+        height_setup = 'bd!(*hCh) | for (@height, @sender, @ts <- hCh) {'
     term = f"""
-new rl(`rho:registry:lookup`), c1, ret, pc, tCh,
+new rl(`rho:registry:lookup`), c1, ret, pc, tCh, bd(`rho:block:data`), hCh,
     dId(`rho:rchain:deployerId`), deployId(`rho:rchain:deployId`) in {{
   rl!(`{vp_uri}`, *c1) |
+  {height_setup}
   for (VP <- c1) {{
-    VP!("proveValidated", *dId, {at_height}, *ret) |
+    VP!("proveValidated", *dId, {height_arg}, *ret) |
     for (@p <- ret) {{
       match p {{
         (true, proofUri) => {{
@@ -335,6 +344,7 @@ new rl(`rho:registry:lookup`), c1, ret, pc, tCh,
       }}
     }}
   }}
+  {"" if at_height is not None else "}"}
 }}
 """
     return _one(term, key=caller)

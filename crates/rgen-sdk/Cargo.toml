@@ -1,18 +1,28 @@
 [package]
 name = "rgen-sdk"
+description = "Typed r-gen protocol operations over the r-cash signed-deploy client"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 repository.workspace = true
 
+[features]
+default = ["native"]
+native = ["rcash-sdk/native", "rcash-chain/native", "dep:ureq"]
+wasm = ["rcash-sdk/wasm", "rcash-chain/wasm"]
+
 [dependencies]
-rgen-core = { workspace = true }
-rcash-core = { workspace = true }
-rcash-chain = { workspace = true, features = ["native"] }
-rcash-sdk = { workspace = true, features = ["native"] }
-rchain-crypto = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-thiserror = { workspace = true }
-ureq = { workspace = true }
+rgen-core.workspace = true
+rcash-core.workspace = true
+rcash-chain.workspace = true
+rcash-sdk.workspace = true
+rchain-crypto.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+getrandom.workspace = true
+ureq = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }

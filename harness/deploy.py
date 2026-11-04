@@ -26,12 +26,23 @@ def _devnet_config() -> dict:
 
 
 _CFG = _devnet_config()
+ROOT = Path(__file__).resolve().parent.parent
+REMOTE = os.environ.get("RGEN_REMOTE") == "1"
 NODE = os.environ.get("RGEN_NODE", _CFG.get("node", "http://localhost:40403"))
 ADMIN = os.environ.get("RGEN_ADMIN", _CFG.get("admin_node", "http://localhost:40405"))
 CONTAINER = os.environ.get("RGEN_CONTAINER", "devnet-bootstrap")
 SHARD = os.environ.get("RGEN_SHARD", _CFG.get("shard_id", "/root"))
 PHLO_LIMIT = int(os.environ.get("RGEN_PHLO_LIMIT", _CFG.get("phlo_limit", 8000000)))
 PHLO_PRICE = int(os.environ.get("RGEN_PHLO_PRICE", _CFG.get("phlo_price", 1)))
+FAUCET_URL = os.environ.get("RGEN_FAUCET_URL", f"{NODE}/api/v1/faucet")
+CLI = ROOT / "target" / "debug" / "rgen-cli"
+OPS = Path(os.environ.get("RGEN_OPS", str(ROOT / (".testnet/ops" if REMOTE else ".devnet/ops"))))
+MANIFEST = Path(
+    os.environ.get(
+        "RGEN_MANIFEST",
+        str(ROOT / ("deployments/testnet.json" if REMOTE else "deployments/devnet.json")),
+    )
+)
 DEPLOY_RE = re.compile(r"DeployId is:\s*([0-9a-fA-F]+)")
 
 
@@ -69,8 +80,37 @@ def write_term(term: str) -> str:
     return path
 
 
+def key_name_for(secret: str) -> str:
+    for name, entry in load_keys().items():
+        if entry.get("secret") == secret:
+            return name
+    raise DevnetError("the signing secret is not in the key file; remote deploys need a named key")
+
+
 def deploy(term: str, secret: str, phlo_limit: int = PHLO_LIMIT,
            phlo_price: int = PHLO_PRICE, valid_after: int | None = None) -> str:
+    if REMOTE:
+        name = key_name_for(secret)
+        local = Path(f"/tmp/rgen-{uuid.uuid4().hex}.rho")
+        local.write_text(term)
+        op = f"suite-{uuid.uuid4().hex[:20]}"
+        command = [
+            str(CLI), "--node", NODE, "--keys", str(keys_path()), "--key", name,
+            "--shard", SHARD, "--phlo-limit", str(phlo_limit),
+            "--phlo-price", str(phlo_price), "--manifest", str(MANIFEST),
+            "deploy", str(local), "--op", op, "--op-cache", str(OPS),
+            "--allow-live", "--json",
+        ]
+        proc = subprocess.run(command, capture_output=True, text=True, timeout=900)
+        if proc.returncode != 0:
+            raise DevnetError(f"remote deploy failed: {proc.stderr.strip() or proc.stdout.strip()}")
+        try:
+            receipt = json.loads(proc.stdout)
+        except ValueError as error:
+            raise DevnetError(f"remote deploy returned non-JSON: {proc.stdout[:1000]}") from error
+        if receipt.get("status") != "processedWithSuccess":
+            raise DevnetError(f"remote deploy status {receipt.get('status')}: {receipt}")
+        return receipt["deployId"]
     vabn = height() if valid_after is None else valid_after
     path = write_term(term)
     proc = docker_exec([
@@ -133,7 +173,29 @@ def explore(term: str):
 
 
 def faucet(address: str) -> dict:
-    return http_json("POST", f"{NODE}/api/v1/faucet", body={"address": address})
+    return http_json("POST", FAUCET_URL, body={"address": address})
+
+
+def transfer_rev(source: str, target_public: str, amount: int = 1_000_000_000,
+                 phlo_limit: int = 2_000_000):
+    """Devnet-only top-up: move native REV from the genesis-funded deployer.
+
+    The public faucet allows one drip per address, so a long local suite run cannot
+    top an actor up through it. The devnet deployer is genesis-funded; this is the
+    local equivalent of a bank account, not a testnet operation.
+    """
+    if REMOTE:
+        raise DevnetError("native REV transfers are a local-devnet helper")
+    term = (
+        "new revAddress(`rho:rev:address`), revVault(`rho:rchain:revVault`), "
+        "deployerId(`rho:rchain:deployerId`), deployId(`rho:rchain:deployId`), "
+        "aCh, vCh in { "
+        f'revAddress!("fromPublicKey", "{target_public}".hexToBytes(), *aCh) | '
+        "for (@addr <- aCh) { "
+        f'revVault!("transfer", *deployerId, addr, {amount}, *vCh) | '
+        "for (@ok <- vCh) { deployId!(ok) } } }"
+    )
+    return deploy_and_wait(term, secret_for(source), phlo_limit=phlo_limit)
 
 
 def keys_path() -> Path:

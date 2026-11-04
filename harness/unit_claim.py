@@ -83,16 +83,27 @@ def main() -> int:
                                     suite_base.validation("forged"))
     assertions.expect_refusal("forged credential refused", reply, "forged credential")
 
-    # Late validation marks the claim expired.
+    # Late validation marks the claim expired. Creation now requires a future deadline
+    # (RR-07), so create just ahead of the tip and let a deploy pass it.
+    deadline = actors.block_height() + 2
     late = suite_base.claim_req(addrs["alice"])
-    late["deadlineHeight"] = 0
+    late["deadlineHeight"] = deadline
+    late["commentUntilHeight"] = deadline
     claim5 = fixtures.claim("alice", late)
     assertions.expect_ok("late claim", claim5)
+    for _ in range(6):
+        if actors.block_height() > deadline:
+            break
     reply = fixtures.claim_validate(claim5[1]["uri"], bob_cred, "bob",
                                     suite_base.validation(bob_cred))
     assertions.expect_refusal("late validation refused", reply, "expired")
     assertions.expect("late claim expired",
                       fixtures.read(claim5[1]["uri"], "get")[1].get("status"), "expired")
+
+    # A claim created with a past deadline is refused by the create guard (RR-07).
+    past = suite_base.claim_req(addrs["alice"])
+    past["deadlineHeight"] = 0
+    assertions.expect_refusal("past deadline refused", fixtures.claim("alice", past), "fields")
 
     # Comment window closes.
     closed = suite_base.claim_req(addrs["alice"])

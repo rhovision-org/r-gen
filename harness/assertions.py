@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -13,7 +14,7 @@ sys.path.insert(0, str(ROOT / "harness"))
 import deploy as node  # noqa: E402
 import terms  # noqa: E402
 
-MANIFEST = ROOT / "deployments" / "devnet.json"
+MANIFEST = Path(os.environ.get("RGEN_MANIFEST", ROOT / "deployments" / "devnet.json"))
 
 
 def decode(value):

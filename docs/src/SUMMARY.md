@@ -4,6 +4,9 @@
 - [Claim, validation, K-Asset](concepts/k-asset.md)
 - [Bridge inspection walkthrough](cases/bridge-inspection.md)
 - [Quickstart](guides/quickstart.md)
+- [Local devnet](guides/devnet.md)
+- [Public testnet](guides/testnet.md)
+- [Web client](guides/web.md)
 
 ## Primitives
 

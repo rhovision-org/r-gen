@@ -46,6 +46,10 @@ The HAZOP rows for each item are in the manifest. Representative links:
   a validated claim beside a rejected K-Asset. Pre-write rejection remains a follow-up.
 - RR-01 is partial: `OracleFactory.open` now authenticates the opener and requires it to match
   `caseReq.openedBy`. Parties and `subjectRef` remain caller-supplied; registry binding is open.
+  The Phase 2 guard checked `caseReq.subjectRef`, but `KAsset.openDispute` and
+  `VP.openDispute` pass the subject as a separate argument and never put it in `caseReq`, so
+  every dispute refused with `case fields`. The guard now checks the `subjectRef` parameter.
+  `unit_core` reaches dispute, decision, execution and provenance on the rebuilt contracts.
 - RR-02 is partial: `ProvenanceFactory.create` now authenticates the creator and rejects an empty
   writer list. `assetRef` is still a free string; asset-registry binding is an extension.
 - RR-08 is fixed: `Apply.applyDecision` returns `already applied` when the K-Asset already has the
@@ -58,9 +62,9 @@ The HAZOP rows for each item are in the manifest. Representative links:
 - RR-07 is partial: claim creation now requires a deadline and rejects a comment window after the
   deadline. Claim and VP creation now require a future deadline; oracle future-ness remains open.
 - RR-11 is partial: claim validation writes a `validating` receipt and gains `Claim.resume`; identity create writes a pending directory entry and gains `IdentityFactory.resume`. Nest proof-consumption recovery remains.
-- The other items remain proposed. The devnet suites were not re-run after the contract changes in
-  this environment because the isolated node failed to start (exit 137); `parse-check` passes and
-  the changes are static. Re-run `make install unit-all` before promotion.
+- The other items remain proposed. On 2026-11-04 the isolated devnet was started with 8 GB and
+  `make install unit-all` passed all ten suites on the rebuilt contracts. The earlier 4 GB
+  attempt failed with exit 137; the memory requirement is documented in the devnet guide.
 
 ## Policy decisions
 

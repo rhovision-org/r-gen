@@ -2,10 +2,26 @@
 __pycache__/
 *.pyc
 .devnet/
+.testnet/
+.demo/
+.rgops/
 deployments/*.json
 !deployments/.gitkeep
+!deployments/devnet.json
+!deployments/testnet.json
+!deployments/catalogue.json
 .pytest_cache/
 .DS_Store
+
+# Web build output
+/web/node_modules/
+/web/dist/
+/web/test-results/
+/web/playwright-report/
+/web/src/wasm/pkg/
+/web/public/devnet.json
+/web/public/testnet.json
+/web/public/catalogue.json
 
 # mdBook build output
 /docs/book/

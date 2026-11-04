@@ -1,0 +1,18 @@
+{
+  "networkId": "testnet-133b1d307b175012",
+  "shardId": "/testnet",
+  "genesisBlockHash": "133b1d307b1750129cf0cfb69c4c8f950da21c4e8db2a6a076464d0ccfd98d44",
+  "node": "https://testnet.rhobot.net",
+  "nodeHttp": "http://167.99.43.214:40403",
+  "faucetUrl": "https://testnet.rhobot.net/api/faucet",
+  "faucetAmount": 30000000,
+  "faucetDripsPerAddress": 1,
+  "phloPrice": 1,
+  "phloLimit": 8000000,
+  "keys": ".testnet/keys.json",
+  "ops": ".testnet/ops",
+  "state": ".testnet/install.json",
+  "manifest": "deployments/testnet.json",
+  "nodeBuildObserved": "0a1e02362a7c34e474e068ffd47469c8d4be707a",
+  "notes": "Disposable, no-value public testnet. Re-check the identity before every campaign; a reset invalidates the manifest and all keys. Deploys require --allow-live."
+}

@@ -3,10 +3,16 @@ MDBOOK ?= mdbook
 RHOLO_DIR ?= ../RNodeRust
 NODE ?= http://localhost:40403
 DEVNET_PREFIX ?= devnet
+DEVNET_NODE_MEMORY ?= 8g
 RGEN_CONTAINER ?= $(DEVNET_PREFIX)-bootstrap
+NPM ?= npm
+WEB ?= web
+TESTNET_NODE ?= https://testnet.rhobot.net
+TESTNET_ALLOW ?=
 
 export RHOLO_DIR := $(abspath $(RHOLO_DIR))
 export DEVNET_PREFIX
+export DEVNET_NODE_MEMORY
 export RGEN_CONTAINER
 
 .PHONY: venv build build-check measure measure-check spec-check parse-check docs docs-check \
@@ -16,7 +22,12 @@ export RGEN_CONTAINER
         devnet-up devnet-wait down status keys install unit-identity unit-credentials \
         unit-claim unit-kasset unit-value unit-oracle unit-provenance unit-integration \
         unit-core unit-race unit-all verify \
-        client-lint client-test client-build check ci clean
+        devnet-image devnet-doctor devnet-logs devnet-reset setup devnet-setup \
+        client-lint client-test client-build client-wasm client-check \
+        web-install web-dev web-build web-test web-typecheck web-wasm-smoke sync-manifest \
+        testnet-preflight testnet-keys testnet-fund testnet-install testnet-verify \
+        testnet-seed testnet-campaign demo-seed demo-verify \
+        check ci clean
 
 venv:
 	python3 -m venv .venv
@@ -121,13 +132,28 @@ docs-check: check-docs check-docs-links check-citations
 	$(PY) tools/sync_papers.py
 	$(MDBOOK) build
 
+devnet-image:
+	cd $(RHOLO_DIR) && tools/devnet.sh build
+
+devnet-doctor:
+	$(PY) tools/devnet_doctor.py --rholo-dir $(RHOLO_DIR) --node $(NODE) \
+		--memory $(DEVNET_NODE_MEMORY)
+
 devnet-up:
-	-cd $(RHOLO_DIR) && DEVNET_PREFIX=$(DEVNET_PREFIX) tools/devnet.sh down
-	cd $(RHOLO_DIR) && DEVNET_PREFIX=$(DEVNET_PREFIX) tools/devnet.sh up --validators 1
+	-cd $(RHOLO_DIR) && DEVNET_PREFIX=$(DEVNET_PREFIX) \
+		DEVNET_NODE_MEMORY=$(DEVNET_NODE_MEMORY) tools/devnet.sh down
+	cd $(RHOLO_DIR) && DEVNET_PREFIX=$(DEVNET_PREFIX) \
+		DEVNET_NODE_MEMORY=$(DEVNET_NODE_MEMORY) tools/devnet.sh up --validators 1
 	$(PY) harness/preflight.py --wait 300
 
 devnet-wait:
 	$(PY) harness/preflight.py --wait 300
+
+devnet-logs:
+	cd $(RHOLO_DIR) && DEVNET_PREFIX=$(DEVNET_PREFIX) tools/devnet.sh logs
+
+devnet-reset:
+	cd $(RHOLO_DIR) && DEVNET_PREFIX=$(DEVNET_PREFIX) tools/devnet.sh down -v
 
 down:
 	cd $(RHOLO_DIR) && DEVNET_PREFIX=$(DEVNET_PREFIX) tools/devnet.sh down
@@ -140,6 +166,11 @@ keys:
 
 install:
 	$(PY) harness/install.py --node $(NODE)
+
+setup: devnet-up keys install sync-manifest
+	@echo "setup: devnet, keys, contracts and web manifest are ready"
+
+devnet-setup: setup
 
 unit-identity:
 	$(PY) harness/unit_identity.py
@@ -179,13 +210,72 @@ verify: build-check parse-check install unit-all
 
 client-lint:
 	cargo fmt --all -- --check
-	cargo clippy -p rgen-core -p rgen-sdk -p rgen-cli --all-targets -- -D warnings
+	cargo clippy -p rgen-core -p rgen-keystore -p rgen-sdk -p rgen-cli --all-targets -- -D warnings
 
 client-test:
-	cargo test -p rgen-core -p rgen-sdk
+	cargo test -p rgen-core -p rgen-keystore -p rgen-sdk -p rgen-cli
+
+client-wasm:
+	cargo check -p rgen-wasm --target wasm32-unknown-unknown
 
 client-build:
 	cargo build -p rgen-cli
+
+client-check: client-lint client-test client-wasm web-wasm-smoke web-test web-typecheck web-build
+
+demo-seed:
+	$(PY) harness/demo_seed.py --net devnet
+	$(MAKE) sync-manifest
+
+demo-verify:
+	$(PY) harness/demo_verify.py
+
+testnet-preflight:
+	RGEN_NET=testnet $(PY) harness/testnet_preflight.py --node $(TESTNET_NODE) $(TESTNET_ALLOW)
+
+testnet-keys:
+	$(PY) harness/testnet_keys.py --fresh --keystores .testnet/keystores \
+		--password rgen-testnet-demo
+
+testnet-fund:
+	RGEN_NET=testnet $(PY) harness/testnet_fund.py --node $(TESTNET_NODE) \
+		$(TESTNET_ALLOW) --target deployer
+
+testnet-install:
+	RGEN_NET=testnet $(PY) harness/install_testnet.py --node $(TESTNET_NODE) $(TESTNET_ALLOW)
+
+testnet-verify:
+	target/debug/rgen-cli --node $(TESTNET_NODE) --manifest deployments/testnet.json \
+		manifest verify --json
+	$(PY) harness/demo_verify.py --catalogue deployments/catalogue.json \
+		--manifest deployments/testnet.json
+
+testnet-seed:
+	RGEN_NET=testnet $(PY) harness/demo_seed.py --net testnet
+	$(MAKE) sync-manifest
+
+testnet-campaign: testnet-preflight testnet-keys testnet-fund testnet-install testnet-verify
+
+web-install:
+	cd $(WEB) && $(NPM) ci
+
+web-dev:
+	cd $(WEB) && $(NPM) run dev
+
+web-build:
+	cd $(WEB) && $(NPM) run build
+
+web-test:
+	cd $(WEB) && $(NPM) test
+
+web-wasm-smoke:
+	cd $(WEB) && $(NPM) run test:wasm
+
+web-typecheck:
+	cd $(WEB) && $(NPM) run typecheck
+
+sync-manifest:
+	cd $(WEB) && node scripts/sync-manifest.mjs
 
 check: spec-check parse-check docs-check
 

@@ -246,7 +246,7 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
         openCaseCheck!(caseReq, *okCh) |
         for (@(true, opener) <- aCh; @ok <- okCh) {
         if (opener != caseReq.get("openedBy")) { ret!((false, "not opener")) }
-        else if (caseReq.get("subjectRef") == Nil || caseReq.get("parties") == Nil
+        else if (subjectRef == Nil || caseReq.get("parties") == Nil
                  || caseReq.get("deadlineHeight") == Nil) { ret!((false, "case fields")) }
         else if (not ok) { ret!((false, "adjudicator credential")) }
         else {

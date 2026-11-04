@@ -74,7 +74,15 @@ the Pareto ledger labels every row.
 - `harness/concurrency_core.py` is the same-deploy race suite.
 - A suite that cannot reach a healthy devnet exits 2 (`not run`), never 0.
 - `make spec-check parse-check docs-check` must pass before a commit.
-- The Rust crates must pass `cargo fmt`, `clippy -D warnings`, and `cargo test`.
+- The Rust crates must pass `cargo fmt`, `clippy -D warnings`, and `cargo test`;
+  `rgen-wasm` must pass `cargo check --target wasm32-unknown-unknown`.
+- The web client must pass `npm --prefix web run typecheck`, `test`, `test:wasm` and
+  `build`. Playwright runs against a seeded devnet, never against the testnet.
+- The web client is not an indexer and may not invent entities, balances or statuses. A
+  list is the local journal, a pasted share link or the seeded catalogue; every detail
+  page re-reads the entity. Every write is a real signed deploy.
+- Do not auto-retry a signed write in the browser. Record the deploy id, re-read the
+  entity, and reconcile an unknown outcome with `deploy_status`.
 
 ## Papers and licensing
 
@@ -85,7 +93,11 @@ full-text extracts beyond the short page-cited quotations. Never describe NAIC/N
 
 ## Safety
 
-- Never commit `.devnet/` or private keys.
+- Never commit `.devnet/`, `.testnet/`, `.demo/` or private keys.
 - Never deploy to a network with value. The Phase 1 audit is recorded but not independently
   reviewed; the core remains unaudited for deployment purposes.
+- The public testnet is disposable and valueless, not production. It is opt-in: live
+  commands require `--allow-live` (`TESTNET_ALLOW=--allow-live`). Use fresh keys under
+  `.testnet/`; never reuse a devnet key. Do not retry a value-moving deploy blindly; use
+  the op cache and reconcile the deploy id.
 - Do not use `1/0` to clear a pending flag; use an explicit refusal/re-post path.

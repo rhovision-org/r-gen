@@ -3,11 +3,15 @@ resolver = "2"
 exclude = [".devnet/parse-check"]
 members = [
   "crates/rgen-core",
+  "crates/rgen-keystore",
   "crates/rgen-sdk",
   "crates/rgen-cli",
+  "crates/rgen-wasm",
 ]
+# rgen-wasm is a wasm32-only artifact; keep it out of default members.
 default-members = [
   "crates/rgen-core",
+  "crates/rgen-keystore",
   "crates/rgen-sdk",
   "crates/rgen-cli",
 ]
@@ -21,7 +25,8 @@ repository = "https://github.com/rhovision-org/r-gen"
 
 [workspace.dependencies]
 rgen-core = { path = "crates/rgen-core" }
-rgen-sdk = { path = "crates/rgen-sdk" }
+rgen-keystore = { path = "crates/rgen-keystore" }
+rgen-sdk = { path = "crates/rgen-sdk", default-features = false }
 
 # r-cash is the settlement rail and the single source of the deploy/signing primitives.
 rcash-core = { git = "https://github.com/rhovision-org/r-cash", rev = "49b441dea4f5561992387ed670ab263fcd5dd164" }
@@ -34,3 +39,14 @@ serde_json = "1"
 thiserror = "2"
 clap = { version = "4", features = ["derive", "env"] }
 ureq = { version = "2", features = ["json"] }
+zeroize = "1"
+getrandom = { version = "0.4", features = ["wasm_js"] }
+sha3 = "0.12"
+aes = "0.9"
+ctr = "0.10"
+scrypt = "0.12"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+tokio = { version = "1", features = ["macros", "time", "rt", "rt-multi-thread", "sync"] }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }

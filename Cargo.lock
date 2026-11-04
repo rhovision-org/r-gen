@@ -1492,24 +1492,45 @@ name = "rgen-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "rcash-chain",
  "rgen-core",
+ "rgen-keystore",
  "rgen-sdk",
  "serde_json",
+ "tokio",
+ "ureq",
 ]
 
 [[package]]
 name = "rgen-core"
 version = "0.1.0"
 dependencies = [
+ "rcash-core",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
 ]
 
 [[package]]
+name = "rgen-keystore"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "ctr",
+ "getrandom 0.4.3",
+ "rcash-chain",
+ "scrypt",
+ "serde",
+ "serde_json",
+ "sha3",
+ "zeroize",
+]
+
+[[package]]
 name = "rgen-sdk"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.4.3",
  "rcash-chain",
  "rcash-core",
  "rcash-sdk",
@@ -1518,7 +1539,25 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.21",
+ "tokio",
  "ureq",
+]
+
+[[package]]
+name = "rgen-wasm"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.4.3",
+ "js-sys",
+ "rcash-chain",
+ "rchain-crypto",
+ "rgen-core",
+ "rgen-keystore",
+ "rgen-sdk",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]

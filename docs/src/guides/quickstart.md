@@ -9,10 +9,18 @@ make check-concurrency
 make check-citations
 
 export RHOLO_DIR=../RNodeRust
-DEVNET_PREFIX=rgen make devnet-up keys install
+DEVNET_PREFIX=rgen make setup
 make unit-core
 make concurrency
+
+# Web client
+npm --prefix web ci
+npm --prefix web run dev
 ```
+
+`make setup` is `devnet-up keys install sync-manifest`. The node needs 8 GB
+(`DEVNET_NODE_MEMORY=8g`); 4 GB is OOM-killed with exit 137. See
+[Local devnet](devnet.md) for the pinned checkout, ports and troubleshooting.
 
 The installer deploys seven terms in dependency order and wires factory URIs at install time:
 
