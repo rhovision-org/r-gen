@@ -3,6 +3,7 @@ import RGen.RaceFreedom
 import RGen.Arms.Instances
 import RGen.Model.Registry
 import RGen.Model.Identity
+import RGen.ArmGuards
 
 /-!
 # Axiom audit
@@ -144,3 +145,45 @@ This file is not imported by `RGen.lean`; it is an audit artefact.
 #print axioms RGen.oracle_rollback_arm_authority
 #print axioms RGen.provenance_anchor_arm_authority
 #print axioms RGen.provenance_comment_arm_authority
+#print axioms RGen.VWorld.set_commute
+#print axioms RGen.VWorld.commit_commute
+#print axioms RGen.update_profile_requires_subject
+#print axioms RGen.update_profile_preserves_subject
+#print axioms RGen.identity_update_arm_authority
+#print axioms RGen.identity_create_arm_authority
+#print axioms RGen.vp_comment_arm_authority
+#print axioms RGen.take_put_commit
+#print axioms RGen.C1_prove_requires_active
+#print axioms RGen.C2_revoke_blocks_prove
+#print axioms RGen.C3_issuer_immutable
+#print axioms RGen.V1_validate_once
+#print axioms RGen.V2_dispute_blocks_prove
+#print axioms RGen.K1_approve_credential
+#print axioms RGen.K2_approve_status
+#print axioms RGen.K3_nest_acyclic
+#print axioms RGen.O1_execute_bound_once
+#print axioms RGen.O2_close_finished
+#print axioms RGen.P1_anchors_append_only
+#print axioms RGen.credentialRevoke_guard_eq
+#print axioms RGen.credentialRenew_guard_eq
+#print axioms RGen.vpValidate_guard_eq
+#print axioms RGen.claimValidate_guard_eq
+#print axioms RGen.kassetApprove_guard_eq
+#print axioms RGen.oracleDecide_guard_eq
+#print axioms RGen.provenanceAnchor_guard_eq
+#print axioms RGen.identityUpdate_guard_eq
+#print axioms RGen.core_independent_arms_commute
+#print axioms RGen.Event.apply_commute_distinct
+#print axioms RGen.identityCreate_guard_eq
+#print axioms RGen.vpComment_guard_eq
+#print axioms RGen.claimComment_guard_eq
+#print axioms RGen.claimWithdraw_guard_eq
+#print axioms RGen.claimExpire_guard_eq
+#print axioms RGen.kassetReject_guard_eq
+#print axioms RGen.kassetOpenDispute_guard_eq
+#print axioms RGen.oracleExecute_guard_eq
+#print axioms RGen.oracleExpire_guard_eq
+#print axioms RGen.oracleClose_guard_eq
+#print axioms RGen.oracleEvidence_guard_eq
+#print axioms RGen.provenanceComment_guard_eq
+#print axioms RGen.credentialAttest_guard_eq

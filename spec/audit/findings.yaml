@@ -2,11 +2,13 @@ schema_version: rgen.audit/v1
 audit_id: rgen-core-2026-11
 baseline: 527ed95
 review:
-  status: pending
-  date: 2026-11-04
-  reviewers: []
-  independent_sample: not yet performed
-  note: Phase 1 record; Phase 2 may not start until status is approved.
+  status: approved
+  date: '2026-11-04'
+  reviewers:
+  - Patrick Mockridge (owner)
+  independent_sample: owner approval after the Phase 1 summary; independent technical review not performed
+  note: Owner instruction to proceed. This is acceptance of the audit and backlog, not an independent technical sign-off;
+    external review remains required for any S1 and is recommended for the P0 set.
 findings:
 - id: RGA-001
   title: The headline race theorem is narrower than the public wording
@@ -24,7 +26,7 @@ findings:
   arms: []
   actions:
   - LR-04
-  disposition: open
+  disposition: accepted
   note: 'The theorem is per cell and per valid Run trace: no two same-cell events share an expected generation. It does not
     cover cross-cell races, proof reuse across arms, deployed guards, or scheduler/interleaving semantics.'
 - id: RGA-002
@@ -43,7 +45,7 @@ findings:
   arms: []
   actions:
   - LR-03
-  disposition: open
+  disposition: accepted
   note: Arm.proofCells is never read by Arm.decision or Arm.event. The one-shot theorem is about a standalone proof cell,
     not about an arm consuming the proof cells it declares.
 - id: RGA-003
@@ -63,9 +65,9 @@ findings:
   arms: []
   actions:
   - LR-02
-  disposition: open
-  note: disjoint_cells_commute and commit_commute exist on Store/World. VWorld has no set_commute, commit_commute, or runExec
-    commute theorem, so the concurrency layer used by the headline theorem is not tied to the independence layer.
+  disposition: accepted
+  note: Phase 2 adds VWorld.set_commute and VWorld.commit_commute (final-world equality), but there is still no runExec commute
+    theorem and core_independent_cells_commute remains a Store theorem.
 - id: RGA-004
   title: No guard equivalence; several model guards differ from the deployed guards
   severity: S2
@@ -95,10 +97,10 @@ findings:
   actions:
   - LR-01
   - LR-08
-  disposition: open
-  note: Divergences include credential revoke idempotence, expiry boundaries, K-Asset approver qualification, nest status
-    admission and tie handling, claim K-Asset minting, oracle evidence party gating, and the dropped VP proof caller field.
-    No guard_eq entry exists.
+  disposition: accepted
+  note: Phase 2 adds guard definitions and guard_eq theorems for 21 arms, including the identity, credential, claim, K-Asset
+    approval/rejection, oracle, and provenance write guards. KAsset.nest, credential prove, VP proveValidated, and 11 other
+    proved-model arms still lack guard equivalence.
 - id: RGA-005
   title: proved-conformance is zero; vectors are emitted but not asserted end-to-end
   severity: S2
@@ -115,7 +117,7 @@ findings:
   arms: []
   actions:
   - LR-06
-  disposition: open
+  disposition: accepted
   note: The status vocabulary exists and the Lean emitter produces 21 rows, but no arm satisfies the full theorem + vector
     + deployed-suite evidence definition.
 - id: RGA-006
@@ -133,11 +135,11 @@ findings:
   arms: []
   actions:
   - LR-07
-  disposition: open
-  note: check_lean --audit only checks the theorems listed in Audit.lean. A new public theorem is not audited unless someone
-    remembers to add it.
+  disposition: accepted
+  note: 'Phase 2 adds check_lean.py --audit-coverage: every Pareto #check must appear in Audit.lean. The audit is now 64 Pareto
+    theorems and 173 axiom checks, but public theorems outside the Pareto vocabulary can still escape the list.'
 - id: RGA-007
-  title: The pair matrix covers 32 rows, not the 48 distinct pairs over modeled cells
+  title: The pair matrix covers 31 rows, not the 48 distinct pairs over modeled cells
   severity: S3
   likelihood: B
   risk: 6
@@ -151,9 +153,9 @@ findings:
   arms: []
   actions:
   - LR-05
-  disposition: open
-  note: Coverage is 32 rows over six modeled cells; the distinct cross-product is 48 pairs. The provenance anchor/comment
-    pair is missing and several cross-primitive pairs are unproved.
+  disposition: accepted
+  note: Coverage is 31 rows over six modeled cells; the distinct cross-product is 48 pairs. The model-only finish/execute
+    row was removed in Phase 2; provenance anchor/comment and several cross-primitive pairs remain unproved.
 - id: RGA-008
   title: Three deployed mutating arms have no Arm value; three model-only arms remain in the matrix
   severity: S3
@@ -163,9 +165,8 @@ findings:
   category: mapping
   evidence:
   - spec/lean/RGen/Arms/Instances.lean:30
-  - spec/flows/core.yaml:44
-  - spec/flows/core.yaml:230
-  - spec/flows/races.yaml:158
+  - spec/flows/core.yaml
+  - spec/flows/races.yaml
   claim: Every deployed mutating arm has a model transition.
   verdict: proved-but-narrower
   arms:
@@ -177,9 +178,9 @@ findings:
   - Oracle.rollbackExecute
   actions:
   - LR-00
-  disposition: open
-  note: Identity.update, IdentityFactory.create, and VP.comment are deployed without Arm values. claimReject, oracleFinish,
-    and oracleRollback are model-only; the finish/execute pair is in the race matrix but not in the deployed oracle.
+  disposition: fixed
+  note: Phase 2 adds Arm values for Identity.update, IdentityFactory.create, and ValueProposition.comment. claimReject and
+    the oracle finish/rollback arms remain model-only and are recorded in the rigor ledger.
 - id: RGA-009
   title: Flow manifest contains a phantom arm and a wrong KAsset transition
   severity: S3
@@ -249,7 +250,7 @@ findings:
   arms: []
   actions:
   - LR-04
-  disposition: open
+  disposition: accepted
   note: The theorem says the decision function depends only on the cell value. Who may invoke the arm and which proof must
     be consumed are guard concerns, not consequences of this theorem.
 - id: RGA-013
@@ -270,9 +271,9 @@ findings:
   actions:
   - LR-00
   - LR-08
-  disposition: open
-  note: Deployed update patches displayNameHash/orgHash/contactHash and never changes the subject. The model updateOwner transfers
-    ownership, a transition the deployed Identity does not expose.
+  disposition: fixed
+  note: Phase 2 adds ProfileState.updateProfile and maps Identity.update to it; updateOwner is retained for the ownership
+    model only.
 - id: RGA-020
   title: Claim and K-Asset verdict mappings disagree for unknown verdicts
   severity: S2
@@ -290,10 +291,10 @@ findings:
   - Claim.validate
   actions:
   - RR-04
-  disposition: open
-  note: claimStatus maps every verdict except "invalid" to "validated"; kassetStatus maps only "valid" and "partial" and sends
-    everything else to "rejected". An unknown verdict therefore records a validated claim with a rejected K-Asset. A qualified
-    validator supplies the verdict record.
+  disposition: fixed
+  note: 'Phase 2 aligns claimStatus and kassetStatus: valid -> validated/validated, partial -> validated/conditional, invalid/unknown
+    -> rejected/rejected. The claim still writes a rejected K-Asset for an unknown verdict; the inconsistency is gone but
+    pre-write rejection remains a follow-up.'
 - id: RGA-021
   title: ValueProposition.proveValidated accepts a caller-chosen height
   severity: S3
@@ -311,7 +312,7 @@ findings:
   - ValueProposition.proveValidated
   actions:
   - RR-03
-  disposition: open
+  disposition: accepted
   note: The arm stores the @atHeight argument verbatim. Current core consumers pass the chain height, so the immediate path
     checks out, but the proof API permits arbitrary-height proofs for any future consumer that trusts the payload.
 - id: RGA-022
@@ -330,7 +331,7 @@ findings:
   - ProvenanceFactory.create
   actions:
   - RR-02
-  disposition: open
+  disposition: accepted
   note: Anyone can create a record for any assetRef string and choose the writer list. Empty writers creates a record nobody
     can anchor or comment on. Provenance is advisory in the core, so this is a records-integrity and impersonation hazard,
     not a direct authority bypass.
@@ -351,7 +352,7 @@ findings:
   - OracleFactory.open
   actions:
   - RR-01
-  disposition: open
+  disposition: accepted
   note: openCaseCheck verifies that the named adjudicator credential exists and its subject matches the caller-supplied case
     requirement. It does not bind the opener to subjectRef or verify the parties. decide and execute remain bound to the stored
     adjudicator and the real private Apply, so a forged case cannot apply a decision to another cell; the hazard is griefing
@@ -373,7 +374,7 @@ findings:
   - Apply.applyDecision
   actions:
   - RR-08
-  disposition: open
+  disposition: accepted
   note: execute sets "executing", calls the subject Apply, then sets "executed" or reverts to "decided". Apply refuses a second
     application by status and case id, so a retry does not normally double-apply, but a failure between the two state writes
     can leave the case unable to record the successful application. The model's execute_once does not cover this cross-contract
@@ -395,7 +396,7 @@ findings:
   - KAsset.nest
   actions:
   - RR-05
-  disposition: open
+  disposition: accepted
   note: childRefs is caller-supplied and each child is resolved, proved, taken, and checked. There is no count or depth cap;
     the parent childRefs list grows with every nest. The result is a phlo/liveness ceiling and unbounded state growth, not
     an authority bypass.
@@ -418,9 +419,9 @@ findings:
   - OracleFactory.open
   actions:
   - RR-07
-  disposition: open
-  note: claimReqOk and vpReqOk check presence of strings, not deadline future-ness, comment-window ordering, quantity type,
-    or beneficiary shape. A claim can be born expired or with a comment window after its deadline.
+  disposition: accepted
+  note: Phase 2 adds a claim deadline presence check and a comment-window <= deadline check. Future-ness relative to chain
+    height remains unvalidated for claim and oracle creation.
 - id: RGA-027
   title: Credential.check accepts a caller-nominated subject and must not be used as authority
   severity: S3
@@ -437,7 +438,7 @@ findings:
   - Credential.check
   actions:
   - RR-06
-  disposition: open
+  disposition: accepted
   note: The advisory arm compares the caller argument to the stored subject. It is not signature-derived and no core commit
     may use it; the static gate forbids X!("check") as a commit authority. The hazard is a future caller treating the advisory
     result as a signature.
@@ -458,7 +459,7 @@ findings:
   - Claim.validate
   actions:
   - RR-09
-  disposition: open
+  disposition: accepted
   note: Claim and comment paths authenticate a REV address but do not require an Identity record. This may be intentional
     (permissionless participation); it is currently undocumented and untested as a policy.
 - id: RGA-029
@@ -481,7 +482,7 @@ findings:
   - CredentialFactory.issue
   actions:
   - RR-10
-  disposition: open
+  disposition: accepted
   note: Registries are append-only maps and directoryState/factoryState are documented serialization points. Every identity
     or credential create consumes the same root cell. No cap, sharding, or load metric exists.
 - id: RGA-031
@@ -501,7 +502,7 @@ findings:
   - IdentityFactory.create
   actions:
   - RR-11
-  disposition: open
+  disposition: accepted
   note: The arm consumes directoryState, writes identityState, registers the Identity bundle, then writes directoryState.
     A failure between those writes can leave an identity cell that the directory does not reference, or a directory entry
     whose bundle was not registered. The model proves first-writer-wins only.
@@ -522,7 +523,7 @@ findings:
   - Claim.validate
   actions:
   - RR-11
-  disposition: open
+  disposition: accepted
   note: finalizeValidation creates the K-Asset, then writes claimState with the validation and K-Asset references. The model's
     "exactly one K-Asset" theorem assumes the mint and the claim update are one step; the deployed arm has a cross-cell window.
 - id: RGA-033
@@ -542,7 +543,7 @@ findings:
   - KAsset.nest
   actions:
   - RR-11
-  disposition: open
+  disposition: accepted
   note: nestProofs resolves and takes each child approval proof before the parent writes childRefs. If the parent write or
     acknowledgement fails, the child proofs are used while the parent is unchanged. The two-phase peek/recheck narrows the
     state race but not the proof-consumption window.
@@ -577,6 +578,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/00_root.rho
   contract: GenRoot
   arm: keys
@@ -587,6 +589,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/00_root.rho
   contract: GenRoot
   arm: register
@@ -597,6 +600,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/00_root.rho
   contract: GenRoot
   arm: resolve
@@ -607,6 +611,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/10_identity.rho
   contract: Identity
   arm: get
@@ -617,17 +622,19 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/10_identity.rho
   contract: Identity
   arm: update
   node: identity
   disposition: infrastructure-reviewed
-  flow_status: owed
-  lean: '-'
+  flow_status: proved-model
+  lean: RGen.update_profile_requires_subject
   divergences:
   - DIV-011
-  guard_fidelity: not-applicable
+  guard_fidelity: guarded
   guard_fidelity_finding: '-'
+  guard_eq: RGen.identityUpdate_guard_eq
 - file: contracts/src/deploy/10_identity.rho
   contract: IdentityDirectory
   arm: count
@@ -638,6 +645,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/10_identity.rho
   contract: IdentityDirectory
   arm: lookup
@@ -648,6 +656,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/10_identity.rho
   contract: IdentityFactory
   arm: create
@@ -657,8 +666,9 @@ arms:
   lean: RGen.Directory.create_unique
   divergences:
   - DIV-012
-  guard_fidelity: divergence
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.identityCreate_guard_eq
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
   arm: attest
@@ -667,8 +677,9 @@ arms:
   flow_status: proved-model
   lean: RGen.CredentialState.attest_twice
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.credentialAttest_guard_eq
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
   arm: check
@@ -679,6 +690,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
   arm: get
@@ -689,6 +701,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
   arm: renew
@@ -698,8 +711,9 @@ arms:
   lean: RGen.CredentialState.renew_requires_issuer
   divergences:
   - DIV-003
-  guard_fidelity: divergence
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.credentialRenew_guard_eq
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
   arm: revoke
@@ -709,8 +723,9 @@ arms:
   lean: RGen.CredentialState.revoke_sets_revoked
   divergences:
   - DIV-001
-  guard_fidelity: divergence
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.credentialRevoke_guard_eq
 - file: contracts/src/deploy/11_credentials.rho
   contract: CredentialFactory
   arm: count
@@ -721,6 +736,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/11_credentials.rho
   contract: CredentialFactory
   arm: issue
@@ -731,6 +747,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/11_credentials.rho
   contract: CredentialFactory
   arm: verify
@@ -741,6 +758,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/11_credentials.rho
   contract: Issuer
   arm: authorize
@@ -751,6 +769,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/11_credentials.rho
   contract: Issuer
   arm: covers
@@ -761,6 +780,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/11_credentials.rho
   contract: Issuer
   arm: get
@@ -771,6 +791,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
   arm: comment
@@ -779,8 +800,9 @@ arms:
   flow_status: proved-model
   lean: RGen.ClaimState.comment_requires_open
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.claimComment_guard_eq
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
   arm: comments
@@ -791,6 +813,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
   arm: expire
@@ -799,8 +822,9 @@ arms:
   flow_status: proved-model
   lean: RGen.ClaimState.expire_after_deadline
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.claimExpire_guard_eq
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
   arm: get
@@ -811,6 +835,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
   arm: validate
@@ -822,8 +847,9 @@ arms:
   - DIV-007
   - DIV-008
   - DIV-013
-  guard_fidelity: divergence
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.claimValidate_guard_eq
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
   arm: withdraw
@@ -832,8 +858,9 @@ arms:
   flow_status: proved-model
   lean: RGen.ClaimState.withdraw_requires_claimant
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.claimWithdraw_guard_eq
 - file: contracts/src/deploy/20_claim.rho
   contract: ClaimFactory
   arm: create
@@ -844,6 +871,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/22_value.rho
   contract: Apply
   arm: applyDecision
@@ -854,6 +882,7 @@ arms:
   divergences: []
   guard_fidelity: unverified
   guard_fidelity_finding: RGA-004
+  guard_eq: '-'
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: comment
@@ -862,8 +891,9 @@ arms:
   flow_status: proved-model
   lean: RGen.VPState.comment_requires_proposed
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.vpComment_guard_eq
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: comments
@@ -874,6 +904,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: get
@@ -884,6 +915,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: openDispute
@@ -894,6 +926,7 @@ arms:
   divergences: []
   guard_fidelity: unverified
   guard_fidelity_finding: RGA-004
+  guard_eq: '-'
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: revocation
@@ -904,6 +937,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: validate
@@ -912,8 +946,9 @@ arms:
   flow_status: proved-model
   lean: RGen.VPState.validate_once
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.vpValidate_guard_eq
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: withdraw
@@ -924,6 +959,7 @@ arms:
   divergences: []
   guard_fidelity: unverified
   guard_fidelity_finding: RGA-004
+  guard_eq: '-'
 - file: contracts/src/deploy/22_value.rho
   contract: ValuePropositionFactory
   arm: propose
@@ -934,6 +970,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: close
@@ -942,8 +979,9 @@ arms:
   flow_status: proved-model
   lean: RGen.OracleState.close_requires_finished
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.oracleClose_guard_eq
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: decide
@@ -952,8 +990,9 @@ arms:
   flow_status: proved-model
   lean: RGen.OracleState.decide_once
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.oracleDecide_guard_eq
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: evidence
@@ -962,8 +1001,9 @@ arms:
   flow_status: proved-model
   lean: RGen.OracleState.addEvidence_requires_open
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.oracleEvidence_guard_eq
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: execute
@@ -973,8 +1013,9 @@ arms:
   lean: RGen.OracleState.execute_once
   divergences:
   - DIV-014
-  guard_fidelity: divergence
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.oracleExecute_guard_eq
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: expire
@@ -983,8 +1024,9 @@ arms:
   flow_status: proved-model
   lean: RGen.OracleState.expire_after_deadline
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.oracleExpire_guard_eq
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: get
@@ -995,6 +1037,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleFactory
   arm: open
@@ -1005,6 +1048,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/40_provenance.rho
   contract: Provenance
   arm: anchor
@@ -1013,8 +1057,9 @@ arms:
   flow_status: proved-model
   lean: RGen.ProvenanceState.anchors_append_only
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.provenanceAnchor_guard_eq
 - file: contracts/src/deploy/40_provenance.rho
   contract: Provenance
   arm: anchors
@@ -1025,6 +1070,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/40_provenance.rho
   contract: Provenance
   arm: comment
@@ -1033,8 +1079,9 @@ arms:
   flow_status: proved-model
   lean: RGen.ProvenanceState.addComment_requires_writer
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.provenanceComment_guard_eq
 - file: contracts/src/deploy/40_provenance.rho
   contract: Provenance
   arm: get
@@ -1045,6 +1092,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/40_provenance.rho
   contract: Provenance
   arm: verify
@@ -1055,6 +1103,7 @@ arms:
   divergences: []
   guard_fidelity: unverified
   guard_fidelity_finding: RGA-004
+  guard_eq: '-'
 - file: contracts/src/deploy/40_provenance.rho
   contract: ProvenanceFactory
   arm: create
@@ -1066,6 +1115,7 @@ arms:
   - DIV-015
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/lib/KAsset.rho
   contract: Apply
   arm: applyDecision
@@ -1076,6 +1126,7 @@ arms:
   divergences: []
   guard_fidelity: unverified
   guard_fidelity_finding: RGA-004
+  guard_eq: '-'
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: approve
@@ -1085,8 +1136,9 @@ arms:
   lean: RGen.KAssetState.approve_requires_credential_proof
   divergences:
   - DIV-004
-  guard_fidelity: divergence
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.kassetApprove_guard_eq
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: children
@@ -1097,6 +1149,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: get
@@ -1107,6 +1160,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: nest
@@ -1120,6 +1174,7 @@ arms:
   - DIV-016
   guard_fidelity: divergence
   guard_fidelity_finding: RGA-004
+  guard_eq: '-'
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: openDispute
@@ -1128,8 +1183,9 @@ arms:
   flow_status: proved-model
   lean: RGen.KAssetState.openDispute_once
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.kassetOpenDispute_guard_eq
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: reject
@@ -1138,8 +1194,9 @@ arms:
   flow_status: proved-model
   lean: RGen.KAssetState.reject_requires_credential_proof
   divergences: []
-  guard_fidelity: unverified
-  guard_fidelity_finding: RGA-004
+  guard_fidelity: guarded
+  guard_fidelity_finding: '-'
+  guard_eq: RGen.kassetReject_guard_eq
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: revocation
@@ -1150,6 +1207,7 @@ arms:
   divergences: []
   guard_fidelity: not-applicable
   guard_fidelity_finding: '-'
+  guard_eq: '-'
 - file: contracts/src/deploy/11_credentials.rho
   contract: Credential
   arm: prove
@@ -1161,6 +1219,7 @@ arms:
   - DIV-002
   guard_fidelity: divergence
   guard_fidelity_finding: RGA-004
+  guard_eq: '-'
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
   arm: proveValidated
@@ -1172,6 +1231,7 @@ arms:
   - DIV-010
   guard_fidelity: divergence
   guard_fidelity_finding: RGA-004
+  guard_eq: '-'
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
   arm: proveApproved
@@ -1182,6 +1242,7 @@ arms:
   divergences: []
   guard_fidelity: unverified
   guard_fidelity_finding: RGA-004
+  guard_eq: '-'
 - file: contracts/src/deploy/11_credentials.rho
   contract: Proof
   arm: take
@@ -1192,6 +1253,7 @@ arms:
   divergences: []
   guard_fidelity: unverified
   guard_fidelity_finding: RGA-004
+  guard_eq: '-'
 - file: contracts/src/deploy/22_value.rho
   contract: Proof
   arm: take
@@ -1202,6 +1264,7 @@ arms:
   divergences: []
   guard_fidelity: unverified
   guard_fidelity_finding: RGA-004
+  guard_eq: '-'
 - file: contracts/src/lib/KAsset.rho
   contract: Proof
   arm: take
@@ -1212,6 +1275,7 @@ arms:
   divergences: []
   guard_fidelity: unverified
   guard_fidelity_finding: RGA-004
+  guard_eq: '-'
 - file: contracts/src/deploy/20_claim.rho
   contract: ClaimFactory
   arm: verify
@@ -1222,6 +1286,7 @@ arms:
   divergences: []
   guard_fidelity: unverified
   guard_fidelity_finding: RGA-004
+  guard_eq: '-'
 - file: contracts/src/deploy/22_value.rho
   contract: ValuePropositionFactory
   arm: verify
@@ -1232,3 +1297,4 @@ arms:
   divergences: []
   guard_fidelity: unverified
   guard_fidelity_finding: RGA-004
+  guard_eq: '-'

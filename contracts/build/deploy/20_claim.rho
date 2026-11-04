@@ -223,18 +223,27 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
           (s, d, di, j, sc, q) => {
             if (s == Nil || s == "" || d == Nil || d == ""
                 || di == Nil || di == "" || j == Nil || j == ""
-                || sc == Nil || q == Nil) { ret!(false) }
-            else { ret!(true) }
+                || sc == Nil || q == Nil || req.get("deadlineHeight") == Nil) { ret!(false) }
+            else {
+              if (req.get("commentUntilHeight") != Nil
+                  && req.get("commentUntilHeight") > req.get("deadlineHeight")) {
+                ret!(false)
+              } else { ret!(true) }
+            }
           }
         }
       }
     }
   } |
 
+  // Claim and K-Asset status are derived from the same three verdicts. An unknown
+  // verdict is rejected in both, so the two records cannot disagree.
   contract claimStatus(@verdict, ret) = {
     match verdict {
+      "valid" => { ret!("validated") }
+      "partial" => { ret!("validated") }
       "invalid" => { ret!("rejected") }
-      _ => { ret!("validated") }
+      _ => { ret!("rejected") }
     }
   } |
 
@@ -242,6 +251,7 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
     match verdict {
       "valid" => { ret!("validated") }
       "partial" => { ret!("conditional") }
+      "invalid" => { ret!("rejected") }
       _ => { ret!("rejected") }
     }
   } |

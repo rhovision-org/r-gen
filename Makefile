@@ -12,7 +12,7 @@ export RGEN_CONTAINER
 .PHONY: venv build build-check measure measure-check spec-check parse-check docs docs-check \
         check-arch check-captures check-placeholders check-money check-core-boundary \
         check-concurrency check-citations check-docs check-docs-links check-suites \
-        check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit lean-build lean-audit lean-check gen-core-vectors check-core-vectors \
+        check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit lean-build lean-audit lean-audit-coverage lean-check gen-core-vectors check-core-vectors \
         devnet-up devnet-wait down status keys install unit-identity unit-credentials \
         unit-claim unit-kasset unit-value unit-oracle unit-provenance unit-integration \
         unit-core unit-race unit-all verify \
@@ -95,7 +95,10 @@ check-core-vectors:
 lean-audit:
 	$(PY) tools/check_lean.py --audit
 
-lean-check: lean-build check-lean lean-audit check-core-vectors
+lean-audit-coverage:
+	$(PY) tools/check_lean.py --audit-coverage
+
+lean-check: lean-build check-lean lean-audit lean-audit-coverage check-core-vectors
 
 spec-check: build-check measure-check check-arch check-captures check-placeholders \
             check-money check-core-boundary check-concurrency check-citations \

@@ -4,6 +4,7 @@ import RGen.Arms.Claim
 import RGen.Arms.KAsset
 import RGen.Arms.Oracle
 import RGen.Arms.Provenance
+import RGen.Model.Identity
 import RGen.RaceFreedom
 
 /-!
@@ -25,6 +26,8 @@ def provenanceCell : CellId := 6
 def credentialProofCell : CellId := 7
 def vpProofCell : CellId := 8
 def kassetProofCell : CellId := 9
+def identityCell : CellId := 10
+def directoryCell : CellId := 11
 
 -- Credentials
 def credentialProveArm : Arm CredentialState ProveArgs :=
@@ -118,6 +121,17 @@ def provenanceAnchorArm : Arm ProvenanceState (Id × (Id × Id)) :=
 
 def provenanceCommentArm : Arm ProvenanceState (Id × Id) :=
   ⟨provenanceCell, fun s p => provenanceComment s p.1 p.2, [], 29⟩
+
+-- Identity and directory
+def identityUpdateArm : Arm ProfileState (Id × IdentityPatch) :=
+  ⟨identityCell, fun s p => updateProfile s p.1 p.2, [], 30⟩
+
+def identityCreateArm : Arm Directory (Id × Id) :=
+  ⟨directoryCell, fun d p => d.create p.1 p.2, [], 31⟩
+
+-- Value proposition comment
+def vpCommentArm : Arm VPState (Id × Height) :=
+  ⟨vpCell, fun s p => s.comment p.1 p.2, [], 32⟩
 
 -- Authority instantiations
 theorem credential_prove_arm_authority (p : ProveArgs) :
@@ -235,5 +249,17 @@ theorem provenance_anchor_arm_authority (p : Id × (Id × Id)) :
 theorem provenance_comment_arm_authority (p : Id × Id) :
     DependsOnlyOn (fun w => provenanceCommentArm.decision w p) [provenanceCell] :=
   core_arm_authority provenanceCommentArm p
+
+theorem identity_update_arm_authority (p : Id × IdentityPatch) :
+    DependsOnlyOn (fun w => identityUpdateArm.decision w p) [identityCell] :=
+  core_arm_authority identityUpdateArm p
+
+theorem identity_create_arm_authority (p : Id × Id) :
+    DependsOnlyOn (fun w => identityCreateArm.decision w p) [directoryCell] :=
+  core_arm_authority identityCreateArm p
+
+theorem vp_comment_arm_authority (p : Id × Height) :
+    DependsOnlyOn (fun w => vpCommentArm.decision w p) [vpCell] :=
+  core_arm_authority vpCommentArm p
 
 end RGen

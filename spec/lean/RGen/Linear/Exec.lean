@@ -35,6 +35,42 @@ def apply (e : Event α) (w : VWorld α) : CommitOutcome α :=
         | some v' => .accepted (w.set e.cell v' (e.expected + 1))
       else .stale
 
+/-- The guard an event presents to `VWorld.commit`. -/
+def guard (e : Event α) : α → Bool := fun s => (e.step s).isSome
+
+/-- The effect of an accepted event; the value is ignored when the guard is false. -/
+def effect (e : Event α) : α → α := fun s => (e.step s).getD s
+
+/-- `Event.apply` is the versioned commit with the event's guard and effect. -/
+theorem apply_eq_commit (e : Event α) (w : VWorld α) :
+    e.apply w = w.commit e.cell e.expected e.guard e.effect := by
+  unfold apply VWorld.commit guard effect
+  cases hc : w.cell e.cell with
+  | none => rfl
+  | some vc =>
+      by_cases hgen : vc.gen = e.expected
+      · cases hs : e.step vc.val <;> simp [hc, hgen, hs]
+      · simp [hc, hgen]
+
+/-- Apply an event after another outcome; a stale outcome stays stale. -/
+def applyThen (e : Event α) (o : CommitOutcome α) : CommitOutcome α :=
+  match o with
+  | .stale => .stale
+  | .rejected w => e.apply w
+  | .accepted w => e.apply w
+
+theorem applyThen_eq_commitThen (e : Event α) (o : CommitOutcome α) :
+    e.applyThen o = VWorld.commitThen o e.cell e.expected e.guard e.effect := by
+  cases o <;> simp [applyThen, VWorld.commitThen, apply_eq_commit]
+
+/-- Events on distinct cells reach the same final world in either order. -/
+theorem apply_commute_distinct {e1 e2 : Event α} (h : e1.cell ≠ e2.cell)
+    (w : VWorld α) :
+    (e2.applyThen (e1.apply w)).world = (e1.applyThen (e2.apply w)).world := by
+  rw [applyThen_eq_commitThen, applyThen_eq_commitThen]
+  simp only [apply_eq_commit]
+  exact VWorld.commit_commute h e1.expected e2.expected e1.guard e2.guard e1.effect e2.effect
+
 def IsAccepted (e : Event α) (w : VWorld α) (w' : VWorld α) : Prop :=
   e.apply w = .accepted w'
 

@@ -189,7 +189,7 @@ def check_arms(data: dict, errors: list[str], node_ids: set[str],
     seen: set[tuple[str, str, str]] = set()
     for entry in entries:
         for field in ("file", "contract", "arm", "node", "disposition", "flow_status", "lean",
-                      "divergences", "guard_fidelity", "guard_fidelity_finding"):
+                      "guard_eq", "divergences", "guard_fidelity", "guard_fidelity_finding"):
             if field not in entry or entry.get(field) == "":
                 errors.append(f"arms: missing {field}: {entry}")
         key = (entry.get("file", ""), entry.get("contract", ""), entry.get("arm", ""))
@@ -205,7 +205,8 @@ def check_arms(data: dict, errors: list[str], node_ids: set[str],
             errors.append(f"arms: bad disposition {entry.get('disposition')!r} for {key}")
         if entry.get("flow_status") not in {"proved-model", "proved-conformance", "owed", "open"}:
             errors.append(f"arms: bad flow_status {entry.get('flow_status')!r} for {key}")
-        if entry.get("guard_fidelity") not in {"divergence", "unverified", "not-applicable"}:
+        if entry.get("guard_fidelity") not in {"guarded", "divergence", "unverified",
+                                               "not-applicable"}:
             errors.append(f"arms: bad guard_fidelity {entry.get('guard_fidelity')!r} for {key}")
         for div in entry.get("divergences") or []:
             if not DIV.match(div):
@@ -213,6 +214,12 @@ def check_arms(data: dict, errors: list[str], node_ids: set[str],
         if entry.get("flow_status") in {"proved-model", "proved-conformance"} and \
                 entry.get("guard_fidelity") == "not-applicable":
             errors.append(f"arms: {key} is proved-model but guard fidelity is not-applicable")
+        guard_eq = entry.get("guard_eq", "-")
+        if entry.get("guard_fidelity") == "guarded":
+            if guard_eq == "-":
+                errors.append(f"arms: {key} is guarded without a guard_eq declaration")
+            elif guard_eq.rsplit(".", 1)[-1] not in decls:
+                errors.append(f"arms: {key} guard_eq {guard_eq} not found")
         lean = entry.get("lean", "-")
         if entry.get("flow_status") in {"proved-model", "proved-conformance"}:
             if lean == "-":
@@ -413,7 +420,7 @@ def check_improvements(data: dict, errors: list[str], finding_ids: set[str],
         for field in ("compatibility", "tests", "status", "action", "title"):
             if not item.get(field):
                 errors.append(f"{iid}: missing {field}")
-        if item.get("status") not in {"proposed", "accepted", "fixed", "rejected", "accept-risk"}:
+        if item.get("status") not in {"proposed", "accepted", "partial", "fixed", "rejected", "accept-risk"}:
             errors.append(f"{iid}: bad status {item.get('status')!r}")
     return rr_ids
 

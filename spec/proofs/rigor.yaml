@@ -516,7 +516,7 @@ roadmap:
   - RGA-008
   - RGA-009
   - RGA-013
-  status: proposed
+  status: done
 - id: LR-01
   title: Extract guards and prove per-arm guard equality
   priority: P1
@@ -526,7 +526,7 @@ roadmap:
   findings:
   - RGA-004
   - RGA-012
-  status: proposed
+  status: partial
 - id: LR-02
   title: Versioned VWorld algebra and run commute
   priority: P1
@@ -535,7 +535,7 @@ roadmap:
   - spec/lean/RGen/Linear/Exec.lean
   findings:
   - RGA-003
-  status: proposed
+  status: partial
 - id: LR-03
   title: Wire proofCells to arm consumption and prove no cross-arm reuse
   priority: P1
@@ -563,7 +563,7 @@ roadmap:
   - tools/check_race_matrix.py
   findings:
   - RGA-007
-  status: proposed
+  status: partial
 - id: LR-06
   title: Define and populate proved-conformance
   priority: P1
@@ -581,7 +581,7 @@ roadmap:
   - tools/check_lean.py
   findings:
   - RGA-006
-  status: proposed
+  status: done
 - id: LR-08
   title: Resolve or justify every model-code divergence
   priority: P1
@@ -592,3 +592,13 @@ roadmap:
   - RGA-004
   - RGA-013
   status: proposed
+model_only:
+- arm: Claim.reject
+  reason: No deployed Claim(@"reject") arm; rejection is folded into Claim.validate via finalizeValidation.
+  finding: RGA-008
+- arm: Oracle.finishExecute
+  reason: No deployed finishExecute arm; execute performs the executing/executed transition inline.
+  finding: RGA-008
+- arm: Oracle.rollbackExecute
+  reason: No deployed rollbackExecute arm; execute reverts to decided on apply failure.
+  finding: RGA-008

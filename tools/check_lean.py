@@ -26,6 +26,8 @@ AXIOM_DECL = re.compile(r"^\s*(?:private\s+|protected\s+)?axiom\s+([A-Za-z_][\w.
 ALLOWED_AXIOMS = {"propext", "Classical.choice", "Quot.sound"}
 AUDIT_DEPENDS = re.compile(r"^'([^']+)' depends on axioms: \[(.*)\]$")
 AUDIT_NOAX = re.compile(r"^'([^']+)' does not depend on any axioms$")
+PARETO_CHECK = re.compile(r"^#check\s+([A-Za-z0-9_.']+)\s*$", re.M)
+AUDIT_PRINT = re.compile(r"^#print axioms\s+([A-Za-z0-9_.']+)\s*$", re.M)
 
 
 def strip_comments(text: str) -> str:
@@ -98,13 +100,40 @@ def run_audit() -> int:
     return 0
 
 
+def run_audit_coverage() -> int:
+    """Every theorem in the Pareto vocabulary must appear in Audit.lean."""
+    pareto = LEAN / "RGen" / "Pareto.lean"
+    audit = LEAN / "RGen" / "Audit.lean"
+    if not pareto.is_file() or not audit.is_file():
+        print("check_lean: missing Pareto.lean or Audit.lean", file=sys.stderr)
+        return 2
+    checked = [name.rsplit(".", 1)[-1] for name in PARETO_CHECK.findall(pareto.read_text())]
+    printed = {name.rsplit(".", 1)[-1] for name in AUDIT_PRINT.findall(audit.read_text())}
+    missing = [name for name in checked if name not in printed]
+    if missing:
+        for name in missing:
+            print(f"check_lean: Pareto theorem {name} is not in Audit.lean", file=sys.stderr)
+        print(f"check_lean: {len(missing)} theorem(s) missing from the axiom audit",
+              file=sys.stderr)
+        return 1
+    if not checked:
+        print("check_lean: no #check entries found in Pareto.lean", file=sys.stderr)
+        return 1
+    print(f"check_lean: {len(checked)} Pareto theorem(s) covered by Audit.lean")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--audit", action="store_true",
                         help="elaborate RGen/Audit.lean and check #print axioms")
+    parser.add_argument("--audit-coverage", action="store_true",
+                        help="require every Pareto #check to appear in Audit.lean")
     args = parser.parse_args()
     if args.audit:
         return run_audit()
+    if args.audit_coverage:
+        return run_audit_coverage()
 
     if not LEAN.is_dir():
         print(f"check_lean: missing directory {LEAN.relative_to(ROOT)}", file=sys.stderr)

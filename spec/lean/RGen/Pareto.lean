@@ -1,5 +1,6 @@
 import RGen.Invariants
 import RGen.RaceFreedom
+import RGen.ArmGuards
 
 /-!
 # Pareto core theorem set
@@ -17,6 +18,8 @@ namespace RGen
 #check take_put_commit
 #check VWorld.take_take_blocks
 #check VWorld.take_post_commit_equiv
+#check VWorld.set_commute
+#check VWorld.commit_commute
 #check D1_peek_put
 #check D1_put_without_take
 #check D2_take_without_put
@@ -63,3 +66,27 @@ namespace RGen
 #check provenance_is_append_only
 
 end RGen
+
+#check RGen.credentialRevoke_guard_eq
+#check RGen.credentialRenew_guard_eq
+#check RGen.vpValidate_guard_eq
+#check RGen.claimValidate_guard_eq
+#check RGen.kassetApprove_guard_eq
+#check RGen.oracleDecide_guard_eq
+#check RGen.provenanceAnchor_guard_eq
+#check RGen.identityUpdate_guard_eq
+#check RGen.core_independent_arms_commute
+#check RGen.Event.apply_commute_distinct
+#check RGen.identityCreate_guard_eq
+#check RGen.vpComment_guard_eq
+#check RGen.claimComment_guard_eq
+#check RGen.claimWithdraw_guard_eq
+#check RGen.claimExpire_guard_eq
+#check RGen.kassetReject_guard_eq
+#check RGen.kassetOpenDispute_guard_eq
+#check RGen.oracleExecute_guard_eq
+#check RGen.oracleExpire_guard_eq
+#check RGen.oracleClose_guard_eq
+#check RGen.oracleEvidence_guard_eq
+#check RGen.provenanceComment_guard_eq
+#check RGen.credentialAttest_guard_eq

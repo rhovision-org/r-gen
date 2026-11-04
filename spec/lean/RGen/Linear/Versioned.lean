@@ -39,6 +39,22 @@ theorem set_other (w : VWorld α) (c d : CellId) (v : α) (n : Nat) (h : d ≠ c
     (w.set c v n).cell d = w.cell d := by
   simp [set, h]
 
+/-- Writes to distinct cells commute. -/
+theorem set_commute (w : VWorld α) (c d : CellId) (v1 : α) (n1 : Nat)
+    (v2 : α) (n2 : Nat) (h : c ≠ d) :
+    (w.set c v1 n1).set d v2 n2 = (w.set d v2 n2).set c v1 n1 := by
+  cases w with
+  | mk cell =>
+      simp only [set, VWorld.mk.injEq]
+      funext x
+      by_cases hx : x = c
+      · subst hx
+        simp [h]
+      · by_cases hxd : x = d
+        · subst hxd
+          simp [set, hx]
+        · simp [set, hx, hxd]
+
 def remove (w : VWorld α) (c : CellId) : VWorld α :=
   ⟨fun x => if x = c then none else w.cell x⟩
 
@@ -126,6 +142,45 @@ theorem commit_stale {w : VWorld α} {c : CellId} {n m : Nat} {g : α → Bool}
     {f : α → α} {v : α} (h : w.cell c = some ⟨v, m⟩) (hne : m ≠ n) :
     w.commit c n g f = .stale := by
   simp [commit, h, hne]
+
+/-- Sequence a second commit after the first outcome; a stale first commit stays stale. -/
+def commitThen (o : CommitOutcome α) (c : CellId) (expected : Nat)
+    (g : α → Bool) (f : α → α) : CommitOutcome α :=
+  match o with
+  | .stale => .stale
+  | .rejected w => w.commit c expected g f
+  | .accepted w => w.commit c expected g f
+
+/-- Commits on distinct cells reach the same final world. The outcome tag is the second
+commit's tag and therefore depends on order; independence is a statement about the world. -/
+theorem commit_commute {w : VWorld α} {c d : CellId} (hcd : c ≠ d)
+    (nc nd : Nat) (gc gd : α → Bool) (fc fd : α → α) :
+    (commitThen (w.commit c nc gc fc) d nd gd fd).world =
+      (commitThen (w.commit d nd gd fd) c nc gc fc).world := by
+  cases hc : w.cell c with
+  | none =>
+      cases hd : w.cell d with
+      | none => simp [commit, commitThen, hc, hd]
+      | some vd =>
+          by_cases hdn : vd.gen = nd
+          · by_cases hgd : gd vd.val
+            · simp_all [commit, commitThen, CommitOutcome.world, hc, hd, VWorld.set_other, hcd, hcd.symm]
+            · simp_all [commit, commitThen, CommitOutcome.world, hc, hd, VWorld.set_other, hcd, hcd.symm]
+          · simp_all [commit, commitThen, CommitOutcome.world, hc, hd, VWorld.set_other, hcd, hcd.symm]
+  | some vc =>
+      cases hd : w.cell d with
+      | none =>
+          by_cases hcn : vc.gen = nc
+          · by_cases hgc : gc vc.val
+            · simp_all [commit, commitThen, CommitOutcome.world, hc, hd, VWorld.set_other, hcd, hcd.symm]
+            · simp_all [commit, commitThen, CommitOutcome.world, hc, hd, VWorld.set_other, hcd, hcd.symm]
+          · simp_all [commit, commitThen, CommitOutcome.world, hc, hd, VWorld.set_other, hcd, hcd.symm]
+      | some vd =>
+          by_cases hcn : vc.gen = nc <;> by_cases hdn : vd.gen = nd <;>
+            by_cases hgc : gc vc.val <;> by_cases hgd : gd vd.val <;>
+            simp [commit, commitThen, CommitOutcome.world, hc, hd, hcn, hdn, hgc, hgd, VWorld.set_other,
+              hcd, hcd.symm] <;>
+            try rw [set_commute w c d _ _ _ _ hcd]
 
 theorem commit_accepted_preserves_other {w : VWorld α} {c d : CellId} {n : Nat}
     {f : α → α} {v : α} (hcd : c ≠ d) :

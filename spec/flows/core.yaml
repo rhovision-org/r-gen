@@ -43,10 +43,12 @@
 - file: contracts/src/deploy/10_identity.rho
   contract: Identity
   arm: update
-  lean: -
+  lean: RGen.update_profile_requires_subject
   cell: identityState
-  status: owed
-  note: profile patch has no model transition; updateOwner is a different operation (LR-00, LR-08)
+  transition: RGen.updateProfile
+  guard_eq: RGen.identityUpdate_guard_eq
+  authority: RGen.identity_update_arm_authority
+  status: proved-model
 
 - file: contracts/src/deploy/10_identity.rho
   contract: IdentityDirectory
@@ -67,6 +69,9 @@
   arm: create
   lean: RGen.Directory.create_unique
   cell: directoryState
+  transition: RGen.Directory.create
+  guard_eq: RGen.identityCreate_guard_eq
+  authority: RGen.identity_create_arm_authority
   status: proved-model
 
 - file: contracts/src/deploy/11_credentials.rho
@@ -75,6 +80,7 @@
   lean: RGen.CredentialState.attest_twice
   cell: credState
   transition: RGen.credentialAttest
+  guard_eq: RGen.credentialAttest_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
 
@@ -98,6 +104,7 @@
   lean: RGen.CredentialState.renew_requires_issuer
   cell: credState
   transition: RGen.credentialRenew
+  guard_eq: RGen.credentialRenew_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
 
@@ -107,6 +114,7 @@
   lean: RGen.CredentialState.revoke_sets_revoked
   cell: credState
   transition: RGen.credentialRevoke
+  guard_eq: RGen.credentialRevoke_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
   consumedProofs: []
@@ -161,6 +169,7 @@
   lean: RGen.ClaimState.comment_requires_open
   cell: claimState
   transition: RGen.claimComment
+  guard_eq: RGen.claimComment_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
   note: comment appends and preserves status; window guard is modeled
@@ -178,6 +187,7 @@
   lean: RGen.ClaimState.expire_after_deadline
   cell: claimState
   transition: RGen.claimExpire
+  guard_eq: RGen.claimExpire_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
 
@@ -194,6 +204,7 @@
   lean: RGen.ClaimState.validate_once
   cell: claimState
   transition: RGen.claimValidate
+  guard_eq: RGen.claimValidate_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
   consumedProofs: [credentialProof]
@@ -205,6 +216,7 @@
   lean: RGen.ClaimState.withdraw_requires_claimant
   cell: claimState
   transition: RGen.claimWithdraw
+  guard_eq: RGen.claimWithdraw_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
 
@@ -230,6 +242,9 @@
   arm: comment
   lean: RGen.VPState.comment_requires_proposed
   cell: vpState
+  transition: RGen.VPState.comment
+  guard_eq: RGen.vpComment_guard_eq
+  authority: RGen.vp_comment_arm_authority
   status: proved-model
   note: comment appends and preserves status; window guard is modeled
 
@@ -269,6 +284,7 @@
   lean: RGen.VPState.validate_once
   cell: vpState
   transition: RGen.vpValidate
+  guard_eq: RGen.vpValidate_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
   consumedProofs: [credentialProof]
@@ -297,6 +313,7 @@
   lean: RGen.OracleState.close_requires_finished
   cell: caseState
   transition: RGen.oracleClose
+  guard_eq: RGen.oracleClose_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
 
@@ -306,6 +323,7 @@
   lean: RGen.OracleState.decide_once
   cell: caseState
   transition: RGen.oracleDecide
+  guard_eq: RGen.oracleDecide_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
   consumedProofs: [credentialProof]
@@ -317,6 +335,7 @@
   lean: RGen.OracleState.addEvidence_requires_open
   cell: caseState
   transition: RGen.oracleEvidence
+  guard_eq: RGen.oracleEvidence_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
   note: evidence appends only while open; duplicates are refused
@@ -327,6 +346,7 @@
   lean: RGen.OracleState.execute_once
   cell: caseState
   transition: RGen.oracleExecute
+  guard_eq: RGen.oracleExecute_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
 
@@ -336,6 +356,7 @@
   lean: RGen.OracleState.expire_after_deadline
   cell: caseState
   transition: RGen.oracleExpire
+  guard_eq: RGen.oracleExpire_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
 
@@ -360,6 +381,7 @@
   lean: RGen.ProvenanceState.anchors_append_only
   cell: pState
   transition: RGen.provenanceAnchor
+  guard_eq: RGen.provenanceAnchor_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
   consumedProofs: []
@@ -378,6 +400,7 @@
   lean: RGen.ProvenanceState.addComment_requires_writer
   cell: pState
   transition: RGen.provenanceComment
+  guard_eq: RGen.provenanceComment_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
 
@@ -417,6 +440,7 @@
   lean: RGen.KAssetState.approve_requires_credential_proof
   cell: kState
   transition: RGen.kassetApprove
+  guard_eq: RGen.kassetApprove_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
   consumedProofs: [credentialProof, valuePropositionProof]
@@ -453,6 +477,7 @@
   lean: RGen.KAssetState.openDispute_once
   cell: kState
   transition: RGen.kassetOpenDispute
+  guard_eq: RGen.kassetOpenDispute_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
 
@@ -462,6 +487,7 @@
   lean: RGen.KAssetState.reject_requires_credential_proof
   cell: kState
   transition: RGen.kassetReject
+  guard_eq: RGen.kassetReject_guard_eq
   authority: RGen.core_arm_authority
   status: proved-model
   note: rejection requires validated/conditional and a non-claimant, non-validator proof

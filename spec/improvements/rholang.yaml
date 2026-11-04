@@ -91,7 +91,8 @@ items:
   tests:
   - harness/unit_claim.py
   - harness/integration_core.py
-  status: proposed
+  status: fixed
+  note: Phase 2 aligns both mappings; pre-write rejection of unknown verdicts remains a follow-up.
 - id: RR-05
   priority: P1
   title: Bound KAsset.nest count, depth, and per-child work
@@ -158,7 +159,8 @@ items:
   - harness/unit_claim.py
   - harness/unit_value.py
   - harness/unit_oracle.py
-  status: proposed
+  status: partial
+  note: Phase 2 adds claim deadline presence and comment-window ordering; future-ness is still open.
 - id: RR-08
   priority: P1
   title: Make oracle execution retry-safe and outcome-blind

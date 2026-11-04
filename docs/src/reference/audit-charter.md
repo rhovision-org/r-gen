@@ -7,8 +7,9 @@ record is in [`spec/audit/findings.yaml`](https://github.com/rhovision-org/r-gen
 [`spec/improvements/rholang.yaml`](https://github.com/rhovision-org/r-gen/blob/main/spec/improvements/rholang.yaml).
 The checker is `tools/check_audit.py`.
 
-**Status: Phase 1 complete, review pending.** Phase 2 does not start until the review record is
-`approved`.
+**Status: Phase 1 complete. Phase 2 authorized by the owner; independent technical review has not
+been performed.** The review record is `approved` by the owner with that limitation stated. Phase 2
+items remain traceable to accepted findings; an external review is still required for any S1.
 
 ## Scope
 
@@ -38,9 +39,10 @@ The audit is fixed at `527ed95`. Phase 1 changes manifests, tools, and documenta
 | Findings scored P0 / P1 / P2 | 12 / 13 / 2 |
 | Proposed Rholang items | 11 |
 | Proposed Lean items | 9 |
-| Arms with a recorded model/code divergence | 9 |
-| Proved-model arms without guard equivalence | 25 |
-| Read-only/infrastructure arms (no guard obligation) | 31 |
+| Arms with a recorded model/code divergence | 11 |
+| Arms with a proved `guard_eq` | 21 |
+| Proved-model arms still without guard equivalence | 14 |
+| Read-only/infrastructure arms (no guard obligation) | 30 |
 
 The priority counts follow the severity/likelihood rubric below. They are not a claim that twelve
 critical exploits exist; they mean twelve findings cross the rubric's P0 line and need a review

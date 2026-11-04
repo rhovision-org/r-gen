@@ -81,8 +81,9 @@ They are regression evidence, not the proof.
 
 ## Findings that need a proof decision
 
-The twelve P0-scored findings are not all proof defects. They are the items that cross the rubric’s
-P0 line and need an explicit review decision. The proof-side items are:
+The twelve P0-scored findings are not all proof defects. They are the items that crossed the
+rubric’s P0 line at the audit baseline and needed an explicit review decision. The proof-side items
+were:
 
 - RGA-002: proof-cell metadata is inert; no cross-arm proof-reuse theorem.
 - RGA-003: versioned independence is missing; the L1 alias is a plain-Store theorem.
@@ -96,10 +97,29 @@ RGA-022 (provenance creation), RGA-023 (oracle open), RGA-024 (oracle execute re
 list is in the [HAZOP](hazop.md#deviations-that-feed-the-backlog) and the
 [improvement plan](rholang-improvements.md).
 
+## Phase 2 progress
+
+The owner authorized Phase 2 with the independence limitation recorded. Since the audit:
+
+- `ProfileState.updateProfile` and an `IdentityPatch` model replace the wrong `Identity.update`
+  mapping, and `Identity.update`, `IdentityFactory.create`, and `ValueProposition.comment` have Arm
+  values (LR-00, RGA-013, RGA-008).
+- 21 core arms have a `guard_eq` theorem and a manifest entry, including identity, credential,
+  claim, K-Asset approval/rejection, oracle, and provenance write guards (LR-01).
+- `VWorld.set_commute`, `VWorld.commit_commute`, `Event.apply_commute_distinct`, and
+  `core_independent_arms_commute` connect the versioned layer to independence (LR-02, LR-04).
+- `check_lean.py --audit-coverage` requires every Pareto `#check` in `Audit.lean`; 64 Pareto checks
+  and 173 axiom checks pass (LR-07).
+- The model-only finish/execute race row is removed; the matrix is 31 rows (LR-05 partial).
+- Claim and K-Asset verdict mappings now agree for `valid`, `partial`, `invalid`, and unknown
+  verdicts; claim deadline presence and comment-window ordering are checked at creation (RR-04,
+  RR-07 partial).
+
+Still open: `proofCells` trace consumption (LR-03), `runExec` commute, 14 proved-model arms without
+guard equivalence, conformance vectors (LR-06), and the remaining model/code divergences (LR-08).
+
 ## What would change the verdict
 
-The proof-side verdicts become `proved` for the model only when the corresponding LR item closes:
-guard extraction and `guard_eq` (LR-01), versioned algebra (LR-02), proof-cell wiring (LR-03), a
-precise authority statement (LR-04), conformance vectors (LR-06), and divergence resolution (LR-08).
+The proof-side verdicts become `proved` for the model only when the corresponding LR item closes.
 Even then the result is a model result, not a refinement. The [rigor roadmap](rigor-roadmap.md)
 states the ladder and the remaining unprovable boundary.

@@ -69,4 +69,13 @@ theorem core_independent_cells_commute {α : Type} (s : Store α)
     run s [] (ops1 ++ ops2) = run s [] (ops2 ++ ops1) :=
   disjoint_cells_commute_wf s ops1 ops2 hdisj h1 h2
 
+
+/-- Events for arms on distinct cells reach the same final world in either order. This is
+independence of disjoint footprints, not a global race-freedom claim. -/
+theorem core_independent_arms_commute {σ π1 π2 : Type} (a1 : Arm σ π1) (a2 : Arm σ π2)
+    (h : a1.cell ≠ a2.cell) (p1 : π1) (p2 : π2) (n1 n2 : Nat) (w : VWorld σ) :
+    ((a2.event p2 n2).applyThen ((a1.event p1 n1).apply w)).world =
+      ((a1.event p1 n1).applyThen ((a2.event p2 n2).apply w)).world :=
+  Event.apply_commute_distinct h w
+
 end RGen

@@ -1,6 +1,6 @@
 # r-gen — CoEngineers / Ingenesist contracts and proofs
 
-**Devnet-only, no real value. Phase 1 audit recorded; independent review pending.**
+**Devnet-only, no real value. Phase 1 audit recorded; Phase 2 in progress; independent review pending.**
 
 r-gen is the first reasonably complete suite of Rholang contracts, paired with a Lean 4 model,
 for the **CoEngineers and Ingenesist Project** vision set out in Dan Robles' papers:
@@ -74,7 +74,7 @@ cannot be applied to another K-Asset.
 Proved: `RGen.core_races_not_representable` — in every `Run` of the versioned-cell model,
 no two events on one cell share an expected generation; `RGen.core_arm_authority` — every
 arm's decision factors through its consumed cell; the pair matrix in `spec/flows/races.yaml`
-classifies 32 arm pairs (19 exclusive, 12 ordered, 1 independent). See
+classifies 31 arm pairs (19 exclusive, 11 ordered, 1 independent). See
 `docs/src/reference/race-freedom-proof.md`. The behavioural suite
 (`harness/concurrency_core.py`) is regression evidence only, not the proof. The claim is
 precise: **no shared mutable cell across independent entities; one writer per entity** —
@@ -113,7 +113,7 @@ behavioural suites passed. The record is `docs/src/reference/verification.md`. T
 the target.
 
 `make lean-check` builds the Lean 4 model (`spec/lean/`), rejects unproved declarations,
-checks the 131 theorems listed in `RGen/Audit.lean` (only `propext` and `Quot.sound`; no
+checks the 173 theorems listed in `RGen/Audit.lean` (only `propext` and `Quot.sound`; no
 `Classical.choice`), and checks the emitted conformance corpus. `make spec-check` includes
 `check_audit`, which ties every deployed arm, HAZOP row, claim, and improvement to an
 evidence-backed finding. The audit is in `spec/audit`, `spec/hazop`, `spec/proofs`, and

@@ -39,6 +39,17 @@ The HAZOP rows for each item are in the manifest. Representative links:
 - RR-08: `HZ-ORACLE-013`, `HZ-ORACLE-015`.
 - RR-11: `HZ-ID-011`, `HZ-CRED-015`, `HZ-CLAIM-015`, `HZ-KASSET-015`.
 
+## Phase 2 progress
+
+- RR-04 is fixed: `claimStatus` and `kassetStatus` both map `valid` to validated, `partial` to
+  conditional/validated, and `invalid` or unknown to rejected. An unknown verdict no longer produces
+  a validated claim beside a rejected K-Asset. Pre-write rejection remains a follow-up.
+- RR-07 is partial: claim creation now requires a deadline and rejects a comment window after the
+  deadline. Future-ness relative to chain height is still not checked for claim or oracle creation.
+- The other items remain proposed. The devnet suites were not re-run after the contract change in
+  this environment; `parse-check` passes and the change is static. Re-run `make install unit-all`
+  before promotion.
+
 ## Why these orderings
 
 - **State integrity first.** RR-04 and RR-11 prevent a claim and its K-Asset, or a parent and its

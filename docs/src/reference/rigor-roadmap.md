@@ -10,13 +10,13 @@ the current suite is R1. The roadmap targets R2 for the core arms and leaves R3/
 |---|---|---|---|
 | R0 | Prose invariant | Review and tests | Supporting material only |
 | R1 | Theorem over the hand-transcribed model | Lean, axiom audit | 39 Pareto theorems |
-| R2 | Model guard anchored to a decision table and deployed vectors | R1 plus a table generated from the contract and asserted by a suite | Target for the 29 `proved-model` arms |
+| R2 | Model guard anchored to a decision table and deployed vectors | R1 plus a table generated from the contract and asserted by a suite | Target for the 35 `proved-model` arms |
 | R3 | Mechanized extraction or refinement of a Rholang subset | A semantics and a refinement theorem | Not planned |
 | R4 | Full Rholang/node refinement | Mechanized Rholang semantics, COMM, names, phlo | Out of scope |
 
 R2 is not refinement. It says the model's accept/refuse decision matches an explicit table for the
 tested parameter domains, and that the deployed contract agrees with the same table. It does not
-say the table is complete over unbounded inputs. The target set is the 34 `proved-model` arms.
+say the table is complete over unbounded inputs. The target set is the 35 `proved-model` arms.
 
 ## Work items
 
@@ -27,10 +27,27 @@ say the table is complete over unbounded inputs. The target set is the 34 `prove
 | LR-02 | Add `VWorld.set_commute`, `VWorld.commit_commute`, `VWorld.commit_preserves_other`, `take_post_commute`; `runExec_append`, `runExec_commute_distinct`, `runExec_frame` | Ties the versioned execution layer to the independence layer |
 | LR-03 | Give `proofCells` a consumption relation; prove `Arm.proofCells_consumed_before_commit` and `core_no_proof_reuse_across_arms` | Makes the one-shot proof a property of arm runs, not a standalone cell |
 | LR-04 | Add `core_independent_arms_commute`, `core_cross_cell_frame`, `core_shared_cell_serializes`; restate authority as dependence, not permission | States precisely what the concurrency layer proves |
-| LR-05 | Close the pair matrix to the 48 distinct pairs over the six modeled cells, or mark unmodeled pairs with a reason | Removes the “32 rows implies complete” overclaim |
+| LR-05 | Close the pair matrix to the 48 distinct pairs over the six modeled cells, or mark unmodeled pairs with a reason | Removes the “31 rows implies complete” overclaim |
 | LR-06 | Define `proved-conformance` as theorem + emitted vector + deployed-suite assertion; add `tools/check_conformance.py` | Makes the status mean something and gives first candidates (revoke, validate, approve, execute) |
 | LR-07 | Add `check_lean.py --audit-coverage`; require every public theorem in `Audit.lean` | Stops new theorems from escaping the axiom audit |
 | LR-08 | Resolve every divergence in DIV-001…016: align the model or record an abstraction with a soundness argument | Removes model-stricter and effect-omitting gaps |
+
+### Phase 2 progress
+
+| Item | Status | What changed |
+|---|---|---|
+| LR-00 | done | `ProfileState.updateProfile` and `IdentityPatch`; Arm values for identity update, identity create, and VP comment; model-only arms listed in `spec/proofs/rigor.yaml` |
+| LR-01 | partial | 21 `*_guard_eq` theorems and a manifest `guard_eq` field; K-Asset nest, credential prove, VP proveValidated, and 11 other proved-model arms remain |
+| LR-02 | partial | `VWorld.set_commute`, `VWorld.commit_commute`, `Event.apply_commute_distinct`, and `core_independent_arms_commute`; `runExec` commute remains |
+| LR-03 | not started | `proofCells` is still metadata; the trace-consumption relation is pending |
+| LR-04 | partial | Independent arm events commute to the same final world; `core_independent_cells_commute` is still the `Store` alias |
+| LR-05 | partial | The model-only finish/execute row is removed; the matrix is 31 rows against 48 distinct modeled pairs |
+| LR-06 | not started | `proved-conformance` remains 0; the evidence checker is still to be added |
+| LR-07 | done | `check_lean.py --audit-coverage` requires every Pareto `#check` in `Audit.lean`; 64 Pareto checks and 173 axiom checks pass |
+| LR-08 | partial | Identity update is now modeled; the other divergences remain in the ledger |
+
+The guard count is 21 of 35 proved-model arms. The rest are recorded as `unverified` or
+`divergence` in `spec/audit/findings.yaml`; no arm is silently treated as aligned.
 
 ## Guard extraction in practice
 

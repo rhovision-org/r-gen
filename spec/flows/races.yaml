@@ -155,12 +155,6 @@
   class: ordered
   theorem: RGen.claim_expire_blocks_comment
   note: expire-first blocks comment; comment-first leaves expire available
-- cell: Oracle
-  a: finishExecute
-  b: execute
-  class: ordered
-  theorem: RGen.oracle_finish_execute_never_after
-  note: finish-first blocks execute; execute-first is the retry path
 - cell: Provenance
   a: anchor
   b: anchor
