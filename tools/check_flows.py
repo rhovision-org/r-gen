@@ -92,6 +92,7 @@ def main() -> int:
 
     decls = lean_declarations()
     corpus = corpus_decls()
+    deployed = deployed_arms()
     seen: set[tuple[str, str, str]] = set()
 
     for entry in entries:
@@ -107,6 +108,8 @@ def main() -> int:
         if key in seen:
             errors.append(f"duplicate manifest entry: {key}")
         seen.add(key)
+        if key not in deployed:
+            errors.append(f"manifest entry is not deployed: {key}")
         lean = entry.get("lean", "-")
         if status in {"proved-model", "proved-conformance"}:
             if lean == "-":
@@ -119,8 +122,14 @@ def main() -> int:
                 errors.append(f"{key}: proved-conformance without a core.tsv row")
         if status in {"owed", "open"} and not entry.get("note"):
             errors.append(f"{key}: {status} without a note")
+        for field in ("transition", "authority", "classification"):
+            value = entry.get(field)
+            if value and value != "-":
+                short = value.rsplit(".", 1)[-1]
+                if short not in decls:
+                    errors.append(f"{key}: {field} {value} not found")
 
-    for key in sorted(deployed_arms() - seen):
+    for key in sorted(deployed - seen):
         errors.append(f"deployed arm missing from manifest: {key}")
 
     if errors:

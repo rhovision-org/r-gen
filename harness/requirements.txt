@@ -1,2 +1,3 @@
 coincurve>=21
 pycryptodome>=3.20
+PyYAML>=6

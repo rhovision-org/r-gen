@@ -86,5 +86,6 @@ full-text extracts beyond the short page-cited quotations. Never describe NAIC/N
 ## Safety
 
 - Never commit `.devnet/` or private keys.
-- Never deploy to a network with value. The core is unaudited.
+- Never deploy to a network with value. The Phase 1 audit is recorded but not independently
+  reviewed; the core remains unaudited for deployment purposes.
 - Do not use `1/0` to clear a pending flag; use an explicit refusal/re-post path.

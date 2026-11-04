@@ -74,17 +74,20 @@ unprovable without a finiteness hypothesis; the same caution applies.
 share an expected generation. Accepted commits are a subset of events. The proof is
 `runExec_no_same_expected`, via per-cell projection and the `AppliedExpecteds` invariant.
 
-`RGen.core_arm_authority` says every `Arm` decision factors through its consumed cell;
-proof payloads are consumed one-shot values, not ambient reads.
+`RGen.core_arm_authority` says every `Arm` decision factors through its consumed cell. This
+is functional dependence, not permission: who may invoke the arm is a guard concern.
+Proof payloads live in a separate one-shot cell; the arm's `proofCells` metadata is not
+wired to that consumption, so cross-arm proof reuse is not proved (RGA-002).
 `RGen.cross_cell_read_not_authority` is the formal rule that a decision varying with a
 non-consumed cell does not factor through the consumed cell; any authority set must
 contain the other cell. A peek can be a linearization point at that other cell, but then
 it must be authority, not a peek.
 
-The pair matrix `spec/flows/races.yaml` records 32 proved pairs (19 exclusive, 12 ordered, 1 independent)
-and is checked by `tools/check_race_matrix.py`. The model's arm encoding is hand-written;
-`tools/check_arm_guards.py` ties each mutating `.rho` arm to its consumed cell. There is no
-mechanized Rholang refinement.
+The pair matrix `spec/flows/races.yaml` records 32 rows (19 exclusive, 12 ordered, 1
+independent) and is checked by `tools/check_race_matrix.py`. It is not the complete
+cross-product over the six modeled cells; the [proof audit](proof-audit.md) records the
+gap (RGA-007). The model's arm encoding is hand-written; `tools/check_arm_guards.py` ties
+each mutating `.rho` arm to its consumed cell. There is no mechanized Rholang refinement.
 
 ## Linearization points
 
@@ -113,7 +116,8 @@ node supplies the ingredients.
 ## What is not claimed
 
 - No mechanized Rholang semantics and no refinement theorem. The arm-to-model map is
-  hand-transcribed; `proved-conformance` is reserved and unclaimed.
+  hand-transcribed; `proved-conformance` is reserved and unclaimed. The full claim and
+  divergence ledger is in the [proof audit](proof-audit.md).
 - The theorem is over the model's `Run` semantics, not an enumeration of the deployed
   scheduler's interleavings. The behavioural race suite is regression evidence only.
 - No claim that the deployed `nest` pre-pass is authoritative: the child proof is.

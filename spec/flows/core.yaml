@@ -1,7 +1,7 @@
 # Flow manifest: every deployed arm and its Lean declaration.
 # Status vocabulary: proved-model | proved-conformance | owed | open.
 # `proved-model`: a theorem about the Lean model (RGen.*).
-# `proved-conformance`: the theorem plus a spec/vectors/core.tsv row (asserted by suites in Phase 5).
+# `proved-conformance`: the theorem plus a spec/vectors/core.tsv row (asserted by suites; see LR-06).
 # `owed`/`open`: outside the model; `note` says why.
 
 - file: contracts/src/deploy/00_root.rho
@@ -43,9 +43,10 @@
 - file: contracts/src/deploy/10_identity.rho
   contract: Identity
   arm: update
-  lean: RGen.update_owner_requires_owner
+  lean: -
   cell: identityState
-  status: proved-model
+  status: owed
+  note: profile patch has no model transition; updateOwner is a different operation (LR-00, LR-08)
 
 - file: contracts/src/deploy/10_identity.rho
   contract: IdentityDirectory
@@ -153,13 +154,6 @@
   lean: -
   status: owed
   note: monotone issuer read; issuer is immutable
-
-- file: contracts/src/deploy/11_credentials.rho
-  contract: Issuer
-  arm: revoke
-  lean: -
-  status: owed
-  note: removed from core by plan section 3.1; governance extension
 
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
@@ -413,7 +407,7 @@
   arm: applyDecision
   lean: RGen.KAssetState.decision_once
   cell: kState
-  transition: RGen.vpDecision
+  transition: RGen.kassetDecision
   authority: RGen.core_arm_authority
   status: proved-model
 

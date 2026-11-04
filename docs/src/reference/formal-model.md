@@ -93,17 +93,19 @@ of the pre-state.
 
 ## Axiom audit
 
-`tools/check_lean.py --audit` elaborates `RGen/Audit.lean`. On 2026-11-04 the audit
-covered 131 public theorems and reported only `propext` and `Quot.sound`
-(`Classical.choice` is permitted but unused by the audited set).
+`tools/check_lean.py --audit` elaborates `RGen/Audit.lean`. On 2026-11-04 the listed
+131 theorems reported only `propext` and `Quot.sound` (`Classical.choice` is permitted
+but unused). The list is hand-maintained; the [proof audit](proof-audit.md) records that
+gap as RGA-006.
 
 ## Manifest and corpus
 
 `spec/flows/core.yaml` maps every deployed arm to a Lean declaration and one of four
-statuses: `proved-model`, `proved-conformance`, `owed`, `open`. At this checkpoint 35
-arms are `proved-model`, 0 are `proved-conformance`, and 31 are `owed` (read-only arms,
-creation registries, and extensions). `tools/check_flows.py`
-enforces coverage and declaration existence.
+statuses: `proved-model`, `proved-conformance`, `owed`, `open`. At this checkpoint 34
+of the 65 deployed arms are `proved-model`, 0 are `proved-conformance`, and 31 are `owed`
+(read-only arms, creation registries, and extensions). `Identity.update` is `owed` because
+the deployed profile patch has no model transition. `tools/check_flows.py` enforces
+coverage, deployment, and declaration existence.
 
 `spec/vectors/core.tsv` is emitted by `lake exe emit` from `RGen/Emit.lean`.
 `tools/gen_vectors.py --write` refreshes it; `tools/check_core_vectors.py` rejects drift.

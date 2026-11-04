@@ -1,6 +1,6 @@
 # r-gen — CoEngineers / Ingenesist contracts and proofs
 
-**Devnet-only, unaudited, no real value.**
+**Devnet-only, no real value. Phase 1 audit recorded; independent review pending.**
 
 r-gen is the first reasonably complete suite of Rholang contracts, paired with a Lean 4 model,
 for the **CoEngineers and Ingenesist Project** vision set out in Dan Robles' papers:
@@ -113,10 +113,15 @@ behavioural suites passed. The record is `docs/src/reference/verification.md`. T
 the target.
 
 `make lean-check` builds the Lean 4 model (`spec/lean/`), rejects unproved declarations,
-audits 131 public theorems (only `propext` and `Quot.sound`; no `Classical.choice`), and
-checks the emitted conformance corpus. The model and its honest limits are described in
-`docs/src/reference/formal-model.md` and `docs/src/reference/concurrency-and-proofs.md`.
-The deployed contracts use the proof-URI design; the race-freedom theorem is `core_races_not_representable` and the pair matrix is `spec/flows/races.yaml`.
+checks the 131 theorems listed in `RGen/Audit.lean` (only `propext` and `Quot.sound`; no
+`Classical.choice`), and checks the emitted conformance corpus. `make spec-check` includes
+`check_audit`, which ties every deployed arm, HAZOP row, claim, and improvement to an
+evidence-backed finding. The audit is in `spec/audit`, `spec/hazop`, `spec/proofs`, and
+`spec/improvements`; its pages start at `docs/src/reference/audit-charter.md`. The
+model and its honest limits are described in `docs/src/reference/formal-model.md` and
+`docs/src/reference/concurrency-and-proofs.md`. The deployed contracts use the proof-URI
+design; the race-freedom theorem is `core_races_not_representable` and the pair matrix is
+`spec/flows/races.yaml`.
 
 ## Non-goals
 
@@ -140,6 +145,8 @@ docs/src/primitives/        one paper-cited page per primitive
 spec/lean/                  Lean 4 model, Pareto proof set, race-freedom, audit, corpus emitter
 spec/pareto.yaml            Pareto core manifest and docs/theorem boundary
 spec/flows/, spec/vectors/  arm-to-theorem manifest, race matrix, emitted corpus
+spec/audit/, spec/hazop/    findings, arm dispositions, HAZOP worksheet
+spec/proofs/, spec/improvements/  claim/divergence ledger and ranked Rholang backlog
 spec/                       legacy/extension vector material
 tools/                      build, parse, measure, formal, boundary/concurrency/citation checks
 crates/                     rgen-core, rgen-sdk, rgen-cli

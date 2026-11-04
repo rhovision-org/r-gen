@@ -1,0 +1,594 @@
+schema_version: rgen.proofs/v1
+baseline: 527ed95
+claims:
+- id: PRF-001
+  theorem: take_put_commit
+  source: docs/src/reference/concurrency-and-proofs.md
+  claim: A linear consume and re-post is an atomic commit.
+  verdict: proved
+  finding: '-'
+- id: PRF-002
+  theorem: VWorld.take_take_blocks
+  source: docs/src/reference/race-freedom-proof.md
+  claim: A second take without a post blocks.
+  verdict: proved
+  finding: '-'
+- id: PRF-003
+  theorem: VWorld.take_post_commit_equiv
+  source: docs/src/reference/race-freedom-proof.md
+  claim: Consume/guard/re-post equals VWorld.commit.
+  verdict: proved
+  finding: '-'
+- id: PRF-004
+  theorem: D1_peek_put
+  source: docs/src/reference/formal-model.md
+  claim: A peek followed by a put is rejected.
+  verdict: proved
+  finding: '-'
+- id: PRF-005
+  theorem: D1_put_without_take
+  source: docs/src/reference/formal-model.md
+  claim: A put without a take is rejected.
+  verdict: proved
+  finding: '-'
+- id: PRF-006
+  theorem: D2_take_without_put
+  source: docs/src/reference/formal-model.md
+  claim: A take without a put leaves the store not well formed.
+  verdict: proved
+  finding: '-'
+- id: PRF-007
+  theorem: D3_nested_call
+  source: docs/src/reference/formal-model.md
+  claim: A call while the cell is held is rejected.
+  verdict: proved
+  finding: '-'
+- id: PRF-008
+  theorem: run_frame
+  source: docs/src/reference/concurrency-and-proofs.md
+  claim: A run only affects its footprint.
+  verdict: proved-but-narrower
+  finding: RGA-003
+  note: Store model, not VWorld.
+- id: PRF-009
+  theorem: disjoint_cells_commute_wf
+  source: docs/src/reference/concurrency-and-proofs.md
+  claim: Disjoint footprints commute.
+  verdict: proved-but-narrower
+  finding: RGA-003
+  note: Store model, not VWorld.
+- id: PRF-010
+  theorem: runExec_sound
+  source: docs/src/reference/formal-model.md
+  claim: A successful executable run is a valid Run.
+  verdict: proved
+  finding: '-'
+- id: PRF-011
+  theorem: runExec_complete
+  source: docs/src/reference/formal-model.md
+  claim: A valid Run is executable.
+  verdict: proved
+  finding: '-'
+- id: PRF-012
+  theorem: runExec_deterministic
+  source: docs/src/reference/formal-model.md
+  claim: Event application is deterministic.
+  verdict: proved
+  finding: '-'
+- id: PRF-013
+  theorem: runExec_projection
+  source: docs/src/reference/race-freedom-proof.md
+  claim: A run projects to a per-cell run.
+  verdict: proved
+  finding: '-'
+- id: PRF-014
+  theorem: runExec_no_same_expected
+  source: docs/src/reference/race-freedom-proof.md
+  claim: No successful run repeats a same-cell expected generation.
+  verdict: proved
+  finding: '-'
+- id: PRF-015
+  theorem: core_races_not_representable
+  source: docs/src/reference/race-freedom-proof.md
+  claim: The core is race-free.
+  verdict: proved-but-narrower
+  finding: RGA-001
+  note: Per cell, per valid trace; no cross-cell, proof-reuse, guard, or scheduler coverage.
+- id: PRF-016
+  theorem: Arm.decision_factors
+  source: docs/src/reference/race-freedom-proof.md
+  claim: An arm decision factors through its consumed cell.
+  verdict: proved-but-narrower
+  finding: RGA-012
+  note: Data dependence only; no permission or proof-consumption claim.
+- id: PRF-017
+  theorem: core_arm_authority
+  source: docs/src/reference/race-freedom-proof.md
+  claim: Every arm decision is authorized by its consumed cell.
+  verdict: proved-but-narrower
+  finding: RGA-012
+  note: Authority here means functional dependence.
+- id: PRF-018
+  theorem: cross_cell_read_not_authority
+  source: docs/src/reference/formal-model.md
+  claim: A cross-cell read is not authority.
+  verdict: proved
+  finding: '-'
+- id: PRF-019
+  theorem: proof_take_once_versioned
+  source: docs/src/reference/race-freedom-proof.md
+  claim: Proof payloads are consumed once.
+  verdict: proved-but-narrower
+  finding: RGA-002
+  note: Standalone proof cell; not connected to arm consumption.
+- id: PRF-020
+  theorem: C1_prove_requires_active
+  source: docs/src/primitives/credential.md
+  claim: Prove requires an active credential.
+  verdict: proved-but-narrower
+  finding: RGA-004
+  note: Model guard; expiry boundary differs from deployed.
+- id: PRF-021
+  theorem: C2_revoke_blocks_prove
+  source: docs/src/primitives/credential.md
+  claim: Revoke blocks prove.
+  verdict: proved-but-narrower
+  finding: RGA-004
+  note: Model revoke is idempotent; deployed revoke refuses non-active.
+- id: PRF-022
+  theorem: C3_issuer_immutable
+  source: docs/src/primitives/credential.md
+  claim: The issuer is immutable.
+  verdict: proved
+  finding: '-'
+- id: PRF-023
+  theorem: V1_validate_once
+  source: docs/src/primitives/value-proposition.md
+  claim: A value proposition validates at most once.
+  verdict: proved
+  finding: '-'
+- id: PRF-024
+  theorem: V2_dispute_blocks_prove
+  source: docs/src/primitives/value-proposition.md
+  claim: A dispute blocks a validated proof.
+  verdict: proved
+  finding: '-'
+- id: PRF-025
+  theorem: K1_approve_credential
+  source: docs/src/primitives/k-asset.md
+  claim: Approval requires a credential proof.
+  verdict: proved-but-narrower
+  finding: RGA-004
+  note: Model omits the deployed approver-qualification requirement.
+- id: PRF-026
+  theorem: K2_approve_status
+  source: docs/src/primitives/k-asset.md
+  claim: Approval requires validated or conditional status.
+  verdict: proved
+  finding: '-'
+- id: PRF-027
+  theorem: K3_nest_acyclic
+  source: docs/src/primitives/k-asset.md
+  claim: Nesting is acyclic.
+  verdict: proved-but-narrower
+  finding: RGA-030
+  note: Forest with strict order, not unique parentage.
+- id: PRF-028
+  theorem: O1_execute_bound_once
+  source: docs/src/primitives/oracle.md
+  claim: Execution happens once and is subject-bound.
+  verdict: proved-but-narrower
+  finding: RGA-024
+  note: Model does not cover the deployed execute retry window.
+- id: PRF-029
+  theorem: O2_close_finished
+  source: docs/src/primitives/oracle.md
+  claim: Close requires a finished case.
+  verdict: proved
+  finding: '-'
+- id: PRF-030
+  theorem: P1_anchors_append_only
+  source: docs/src/primitives/provenance.md
+  claim: Anchors are append-only.
+  verdict: proved-but-narrower
+  finding: RGA-022
+  note: Factory creation is unauthenticated and unbound.
+- id: PRF-031
+  theorem: L1_disjoint_commute
+  source: docs/src/reference/concurrency-and-proofs.md
+  claim: Independent cells commute.
+  verdict: proved-but-narrower
+  finding: RGA-003
+  note: Plain Store/World only.
+- id: PRF-032
+  theorem: L2_shared_serializes
+  source: docs/src/reference/concurrency-and-proofs.md
+  claim: Shared cells serialize.
+  verdict: proved-but-narrower
+  finding: RGA-003
+  note: Plain Store/World only.
+- id: PRF-033
+  theorem: L3_mayAcquire_acyclic
+  source: docs/src/reference/concurrency-and-proofs.md
+  claim: Acquisition order is acyclic.
+  verdict: proved-but-narrower
+  finding: '-'
+  note: Finite, static cell ranks; no dynamic locks.
+- id: PRF-034
+  theorem: L4_deadlock_free
+  source: docs/src/reference/concurrency-and-proofs.md
+  claim: The core is deadlock-free.
+  verdict: proved-but-narrower
+  finding: '-'
+  note: Lock-order theorem, not scheduler liveness or starvation freedom.
+- id: PRF-035
+  theorem: claim_validation_exactly_one_kasset
+  source: docs/src/primitives/claim.md
+  claim: Claim validation creates exactly one K-Asset.
+  verdict: proved-but-narrower
+  finding: RGA-004
+  note: Model takes a caller-chosen kassetId and omits makeKAsset.
+- id: PRF-036
+  theorem: approval_composes_credential_and_vp_proofs
+  source: docs/src/primitives/k-asset.md
+  claim: Approval composes credential and VP proofs.
+  verdict: proved-but-narrower
+  finding: RGA-002
+  note: Proof cells are not wired to arm consumption.
+- id: PRF-037
+  theorem: nesting_is_a_forest_with_strict_order
+  source: docs/src/primitives/k-asset.md
+  claim: Nesting is a forest with strict order.
+  verdict: proved-but-narrower
+  finding: RGA-030
+  note: Acyclic and ordered; multiple parents are not excluded.
+- id: PRF-038
+  theorem: oracle_execution_exactly_once_and_subject_bound
+  source: docs/src/primitives/oracle.md
+  claim: Oracle execution is exactly once and subject-bound.
+  verdict: proved-but-narrower
+  finding: RGA-024
+  note: Cross-contract retry is outside the model.
+- id: PRF-039
+  theorem: provenance_is_append_only
+  source: docs/src/primitives/provenance.md
+  claim: Provenance is append-only.
+  verdict: proved-but-narrower
+  finding: RGA-022
+  note: Creation authenticity is outside the model.
+divergences:
+- id: DIV-001
+  arm: Credential.revoke
+  model_decl: RGen.CredentialState.revoke
+  deployed: contracts/src/deploy/11_credentials.rho:234
+  direction: model-permissive
+  consequence: Model revoke is idempotent; deployed refuses a non-active credential.
+  finding: RGA-004
+- id: DIV-002
+  arm: Credential.prove
+  model_decl: RGen.CredentialState.activeAt
+  deployed: contracts/src/deploy/11_credentials.rho:181
+  direction: mixed
+  consequence: Model uses a half-open window plus an issuedAt lower bound; deployed checks only height > expiresAt.
+  finding: RGA-004
+- id: DIV-003
+  arm: Credential.renew
+  model_decl: RGen.CredentialState.renew
+  deployed: contracts/src/deploy/11_credentials.rho:257
+  direction: mixed
+  consequence: Model adds issuedAt <= newExpiry; deployed writes evidenceHash and renewals that the model omits.
+  finding: RGA-004
+- id: DIV-004
+  arm: KAsset.approve
+  model_decl: RGen.KAssetState.approve
+  deployed: contracts/src/lib/KAsset.rho:61
+  direction: model-permissive
+  consequence: Model omits the deployed Approver credential and VP-proof qualification checks.
+  finding: RGA-004
+- id: DIV-005
+  arm: KAsset.nest
+  model_decl: RGen.KAssetState.nest
+  deployed: contracts/src/lib/KAsset.rho:330
+  direction: model-permissive
+  consequence: Model admits validated and conditional parents; deployed requires approved.
+  finding: RGA-004
+- id: DIV-006
+  arm: KAsset.nest
+  model_decl: RGen.KAssetState.strictRising
+  deployed: contracts/src/lib/KAsset.rho:306
+  direction: mixed
+  consequence: Model permits equal approvedAt with distinct ids; deployed requires strict approvedAt greater than the previous
+    child.
+  finding: RGA-004
+- id: DIV-007
+  arm: Claim.validate
+  model_decl: RGen.ClaimState.validate
+  deployed: contracts/src/deploy/20_claim.rho:192
+  direction: shape-different
+  consequence: Model takes a caller-chosen kassetId; deployed mints the K-Asset with makeKAsset.
+  finding: RGA-004
+- id: DIV-008
+  arm: Claim.validate
+  model_decl: RGen.ClaimState.validate
+  deployed: contracts/src/deploy/20_claim.rho:262
+  direction: shape-different
+  consequence: Model checks proof.requirement; deployed checks selectionCriteria.
+  finding: RGA-004
+- id: DIV-009
+  arm: Oracle.evidence
+  model_decl: RGen.OracleState.addEvidence
+  deployed: contracts/src/deploy/30_oracle.rho:86
+  direction: model-permissive
+  consequence: Model requires only open status; deployed also requires a party or the adjudicator.
+  finding: RGA-004
+- id: DIV-010
+  arm: ValueProposition.proveValidated
+  model_decl: RGen.VPState.proveValidated
+  deployed: contracts/src/deploy/22_value.rho:183
+  direction: effect-omitting
+  consequence: Model payload is (uri, atHeight); deployed also stores caller and accepts caller-chosen atHeight.
+  finding: RGA-021
+- id: DIV-011
+  arm: Identity.update
+  model_decl: RGen.updateOwner
+  deployed: contracts/src/deploy/10_identity.rho:60
+  direction: shape-different
+  consequence: Model transfers ownership; deployed patches profile hashes and does not change the subject.
+  finding: RGA-013
+- id: DIV-012
+  arm: IdentityFactory.create
+  model_decl: RGen.Directory.create
+  deployed: contracts/src/deploy/10_identity.rho:35
+  direction: effect-omitting
+  consequence: Model proves first-writer-wins only; the deployed create also writes the identity and registers the bundle.
+  finding: RGA-008
+- id: DIV-013
+  arm: Claim.validate
+  model_decl: RGen.ClaimState.validate
+  deployed: contracts/src/deploy/20_claim.rho:48
+  direction: shape-different
+  consequence: Model has validated/expired/rejected; deployed derives claim and K-Asset statuses through two mappings that
+    disagree on unknown verdicts.
+  finding: RGA-020
+- id: DIV-014
+  arm: OracleCase.execute
+  model_decl: RGen.OracleState.execute
+  deployed: contracts/src/deploy/30_oracle.rho:152
+  direction: effect-omitting
+  consequence: Model has no executing state or cross-contract retry window.
+  finding: RGA-024
+- id: DIV-015
+  arm: ProvenanceFactory.create
+  model_decl: RGen.ProvenanceState
+  deployed: contracts/src/deploy/40_provenance.rho:23
+  direction: effect-omitting
+  consequence: Model starts after creation; deployed creation is unauthenticated and chooses the writer list.
+  finding: RGA-022
+- id: DIV-016
+  arm: KAsset.nest
+  model_decl: RGen.KAssetState.nest
+  deployed: contracts/src/lib/KAsset.rho:330
+  direction: shape-different
+  consequence: Deployed uses a persistent peek pre-pass, then a linear consume and re-check; the model is a single atomic
+    step.
+  finding: RGA-004
+  note: The re-check makes the abstraction plausible but unproved.
+assumptions:
+- id: ASM-001
+  assumption: Run is a finite list of events in trace order.
+  effect: No scheduler, fairness, or interleaving enumeration.
+  finding: RGA-001
+- id: ASM-002
+  assumption: Event.apply is deterministic and pure.
+  effect: Rholang COMM semantics are cited, not modelled.
+  finding: RGA-001
+- id: ASM-003
+  assumption: Cell names and proof capabilities are unforgeable.
+  effect: Name unforgeability and single-use COMM are platform assumptions.
+  finding: '-'
+- id: ASM-004
+  assumption: Arm steps are hand-transcribed from contracts.
+  effect: No mechanized extraction or refinement.
+  finding: RGA-004
+- id: ASM-005
+  assumption: Block height comes from rho:block:data.
+  effect: Chain-height authenticity is not proved.
+  finding: RGA-021
+- id: ASM-006
+  assumption: A proof is data plus a one-shot cell.
+  effect: The private Proof capability and URI resolution are not modelled.
+  finding: RGA-002
+- id: ASM-007
+  assumption: Phlo, deploy depth, serialization size, and JSON shape are deployment concerns.
+  effect: No resource or schema proof.
+  finding: RGA-025
+- id: ASM-008
+  assumption: The arm-to-model map is checked by name and cell.
+  effect: No guard equivalence.
+  finding: RGA-004
+- id: ASM-009
+  assumption: Model state records only the fields the invariants need.
+  effect: Effect-omitting divergences are possible.
+  finding: RGA-004
+- id: ASM-010
+  assumption: The six modeled cells cover the core state machine.
+  effect: Registries, factories, and deployment wiring are outside the model.
+  finding: RGA-029
+coverage:
+- id: INV-D1
+  invariant: D1
+  theorem: D1_peek_put
+  status: proved
+  gap: '-'
+- id: INV-D2
+  invariant: D2
+  theorem: D2_take_without_put
+  status: proved
+  gap: '-'
+- id: INV-D3
+  invariant: D3
+  theorem: D3_nested_call
+  status: proved
+  gap: '-'
+- id: INV-C1
+  invariant: C1
+  theorem: C1_prove_requires_active
+  status: partial
+  gap: Guard fidelity; expiry boundary differs.
+- id: INV-C2
+  invariant: C2
+  theorem: C2_revoke_blocks_prove
+  status: partial
+  gap: Guard fidelity; revoke idempotence differs.
+- id: INV-C3
+  invariant: C3
+  theorem: C3_issuer_immutable
+  status: proved
+  gap: '-'
+- id: INV-V1
+  invariant: V1
+  theorem: V1_validate_once
+  status: proved
+  gap: '-'
+- id: INV-V2
+  invariant: V2
+  theorem: V2_dispute_blocks_prove
+  status: proved
+  gap: '-'
+- id: INV-K1
+  invariant: K1
+  theorem: K1_approve_credential
+  status: partial
+  gap: Approver qualification omitted.
+- id: INV-K2
+  invariant: K2
+  theorem: K2_approve_status
+  status: proved
+  gap: '-'
+- id: INV-K3
+  invariant: K3
+  theorem: K3_nest_acyclic
+  status: partial
+  gap: Acyclic/ordered, not unique-parent.
+- id: INV-O1
+  invariant: O1
+  theorem: O1_execute_bound_once
+  status: partial
+  gap: Cross-contract retry window unmodelled.
+- id: INV-O2
+  invariant: O2
+  theorem: O2_close_finished
+  status: proved
+  gap: '-'
+- id: INV-P1
+  invariant: P1
+  theorem: P1_anchors_append_only
+  status: partial
+  gap: Creation authenticity unmodelled.
+- id: INV-L1
+  invariant: L1
+  theorem: L1_disjoint_commute
+  status: partial
+  gap: Plain Store/World only.
+- id: INV-L2
+  invariant: L2
+  theorem: L2_shared_serializes
+  status: partial
+  gap: Plain Store/World only.
+- id: INV-L3
+  invariant: L3
+  theorem: L3_mayAcquire_acyclic
+  status: proved-but-narrower
+  gap: Finite static ranks.
+- id: INV-L4
+  invariant: L4
+  theorem: L4_deadlock_free
+  status: proved-but-narrower
+  gap: No scheduler liveness.
+roadmap:
+- id: LR-00
+  title: Complete the arm instances and remove model-only arms
+  priority: P1
+  files:
+  - spec/lean/RGen/Arms/Instances.lean
+  - spec/flows/core.yaml
+  findings:
+  - RGA-008
+  - RGA-009
+  - RGA-013
+  status: proposed
+- id: LR-01
+  title: Extract guards and prove per-arm guard equality
+  priority: P1
+  files:
+  - spec/lean/RGen/Linear/Lift.lean
+  - spec/lean/RGen/ArmGuards.lean
+  findings:
+  - RGA-004
+  - RGA-012
+  status: proposed
+- id: LR-02
+  title: Versioned VWorld algebra and run commute
+  priority: P1
+  files:
+  - spec/lean/RGen/Linear/Versioned.lean
+  - spec/lean/RGen/Linear/Exec.lean
+  findings:
+  - RGA-003
+  status: proposed
+- id: LR-03
+  title: Wire proofCells to arm consumption and prove no cross-arm reuse
+  priority: P1
+  files:
+  - spec/lean/RGen/Linear/Lift.lean
+  - spec/lean/RGen/RaceFreedom.lean
+  findings:
+  - RGA-002
+  status: proposed
+- id: LR-04
+  title: Cross-cell composition and precise authority statement
+  priority: P1
+  files:
+  - spec/lean/RGen/RaceFreedom.lean
+  - docs/src/reference/race-freedom-proof.md
+  findings:
+  - RGA-001
+  - RGA-012
+  status: proposed
+- id: LR-05
+  title: Close the pair matrix over modeled cells
+  priority: P2
+  files:
+  - spec/flows/races.yaml
+  - tools/check_race_matrix.py
+  findings:
+  - RGA-007
+  status: proposed
+- id: LR-06
+  title: Define and populate proved-conformance
+  priority: P1
+  files:
+  - spec/vectors/core.tsv
+  - tools/check_conformance.py
+  findings:
+  - RGA-005
+  status: proposed
+- id: LR-07
+  title: Automate audit coverage for every public theorem
+  priority: P2
+  files:
+  - spec/lean/RGen/Audit.lean
+  - tools/check_lean.py
+  findings:
+  - RGA-006
+  status: proposed
+- id: LR-08
+  title: Resolve or justify every model-code divergence
+  priority: P1
+  files:
+  - spec/lean/RGen/Model
+  - spec/lean/RGen/Arms
+  findings:
+  - RGA-004
+  - RGA-013
+  status: proposed

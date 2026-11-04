@@ -1,0 +1,1234 @@
+schema_version: rgen.audit/v1
+audit_id: rgen-core-2026-11
+baseline: 527ed95
+review:
+  status: pending
+  date: 2026-11-04
+  reviewers: []
+  independent_sample: not yet performed
+  note: Phase 1 record; Phase 2 may not start until status is approved.
+findings:
+- id: RGA-001
+  title: The headline race theorem is narrower than the public wording
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: proof-claim
+  evidence:
+  - spec/lean/RGen/RaceFreedom.lean:45
+  - spec/lean/RGen/Linear/Exec.lean:63
+  - docs/src/reference/race-freedom-proof.md:8
+  claim: The core is race-free.
+  verdict: proved-but-narrower
+  arms: []
+  actions:
+  - LR-04
+  disposition: open
+  note: 'The theorem is per cell and per valid Run trace: no two same-cell events share an expected generation. It does not
+    cover cross-cell races, proof reuse across arms, deployed guards, or scheduler/interleaving semantics.'
+- id: RGA-002
+  title: Proof-cell metadata is inert and proof reuse across arms is unproved
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: proof-coverage
+  evidence:
+  - spec/lean/RGen/Linear/Lift.lean:16
+  - spec/lean/RGen/Linear/Lift.lean:23
+  - spec/lean/RGen/RaceFreedom.lean:57
+  claim: Proof payloads are consumed and cannot be reused.
+  verdict: proved-but-narrower
+  arms: []
+  actions:
+  - LR-03
+  disposition: open
+  note: Arm.proofCells is never read by Arm.decision or Arm.event. The one-shot theorem is about a standalone proof cell,
+    not about an arm consuming the proof cells it declares.
+- id: RGA-003
+  title: Versioned independence is missing; the L1 alias is a plain-Store theorem
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: proof-coverage
+  evidence:
+  - spec/lean/RGen/RaceFreedom.lean:65
+  - spec/lean/RGen/Linear/Cell.lean:729
+  - spec/lean/RGen/Linear/Cell.lean:916
+  - spec/lean/RGen/Linear/Versioned.lean:105
+  claim: Independent cells commute in the versioned execution model.
+  verdict: unproved
+  arms: []
+  actions:
+  - LR-02
+  disposition: open
+  note: disjoint_cells_commute and commit_commute exist on Store/World. VWorld has no set_commute, commit_commute, or runExec
+    commute theorem, so the concurrency layer used by the headline theorem is not tied to the independence layer.
+- id: RGA-004
+  title: No guard equivalence; several model guards differ from the deployed guards
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: model-fidelity
+  evidence:
+  - spec/lean/RGen/Model/Credential.lean:79
+  - spec/lean/RGen/Model/KAsset.lean:67
+  - spec/lean/RGen/Model/KAsset.lean:131
+  - spec/lean/RGen/Model/Oracle.lean:79
+  - contracts/src/deploy/11_credentials.rho:243
+  - contracts/src/lib/KAsset.rho:67
+  - contracts/src/lib/KAsset.rho:335
+  - contracts/src/deploy/30_oracle.rho:96
+  - tools/check_arm_guards.py:109
+  claim: The model guards are the deployed guards.
+  verdict: unproved
+  arms:
+  - Credential.revoke
+  - Credential.renew
+  - Claim.validate
+  - KAsset.approve
+  - KAsset.nest
+  - Oracle.evidence
+  actions:
+  - LR-01
+  - LR-08
+  disposition: open
+  note: Divergences include credential revoke idempotence, expiry boundaries, K-Asset approver qualification, nest status
+    admission and tie handling, claim K-Asset minting, oracle evidence party gating, and the dropped VP proof caller field.
+    No guard_eq entry exists.
+- id: RGA-005
+  title: proved-conformance is zero; vectors are emitted but not asserted end-to-end
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: conformance
+  evidence:
+  - spec/flows/core.yaml:2
+  - spec/vectors/core.tsv:1
+  - docs/src/reference/formal-model.md:108
+  claim: Core arms are proved against their deployed behaviour.
+  verdict: unproved
+  arms: []
+  actions:
+  - LR-06
+  disposition: open
+  note: The status vocabulary exists and the Lean emitter produces 21 rows, but no arm satisfies the full theorem + vector
+    + deployed-suite evidence definition.
+- id: RGA-006
+  title: The axiom audit is a hand-maintained list
+  severity: S3
+  likelihood: C
+  risk: 4
+  priority: P1
+  category: gate
+  evidence:
+  - spec/lean/RGen/Audit.lean:15
+  - tools/check_lean.py:62
+  claim: Every public theorem is axiom-clean.
+  verdict: proved-but-narrower
+  arms: []
+  actions:
+  - LR-07
+  disposition: open
+  note: check_lean --audit only checks the theorems listed in Audit.lean. A new public theorem is not audited unless someone
+    remembers to add it.
+- id: RGA-007
+  title: The pair matrix covers 32 rows, not the 48 distinct pairs over modeled cells
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: proof-coverage
+  evidence:
+  - spec/flows/races.yaml:1
+  - tools/check_race_matrix.py:1
+  claim: The arm-pair matrix is complete.
+  verdict: proved-but-narrower
+  arms: []
+  actions:
+  - LR-05
+  disposition: open
+  note: Coverage is 32 rows over six modeled cells; the distinct cross-product is 48 pairs. The provenance anchor/comment
+    pair is missing and several cross-primitive pairs are unproved.
+- id: RGA-008
+  title: Three deployed mutating arms have no Arm value; three model-only arms remain in the matrix
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: mapping
+  evidence:
+  - spec/lean/RGen/Arms/Instances.lean:30
+  - spec/flows/core.yaml:44
+  - spec/flows/core.yaml:230
+  - spec/flows/races.yaml:158
+  claim: Every deployed mutating arm has a model transition.
+  verdict: proved-but-narrower
+  arms:
+  - Identity.update
+  - IdentityFactory.create
+  - ValueProposition.comment
+  - Claim.reject
+  - Oracle.finishExecute
+  - Oracle.rollbackExecute
+  actions:
+  - LR-00
+  disposition: open
+  note: Identity.update, IdentityFactory.create, and VP.comment are deployed without Arm values. claimReject, oracleFinish,
+    and oracleRollback are model-only; the finish/execute pair is in the race matrix but not in the deployed oracle.
+- id: RGA-009
+  title: Flow manifest contains a phantom arm and a wrong KAsset transition
+  severity: S3
+  likelihood: A
+  risk: 8
+  priority: P1
+  category: mapping
+  evidence:
+  - spec/flows/core.yaml:406
+  - spec/flows/core.yaml:410
+  - contracts/src/deploy/11_credentials.rho:45
+  claim: The manifest maps every deployed arm to the matching model declaration.
+  verdict: 'false'
+  arms:
+  - Issuer.revoke
+  - Apply.applyDecision
+  actions:
+  - LR-00
+  disposition: fixed
+  note: Issuer.revoke is not deployed. KAsset Apply.applyDecision declared RGen.vpDecision instead of RGen.kassetDecision.
+    Phase 1 removes the phantom and corrects the transition.
+- id: RGA-010
+  title: Documentation cites a theorem that does not exist
+  severity: S4
+  likelihood: C
+  risk: 2
+  priority: P2
+  category: documentation
+  evidence:
+  - docs/src/reference/race-freedom-proof.md:30
+  claim: VWorld.commit_gen_strict is a theorem.
+  verdict: 'false'
+  arms: []
+  actions: []
+  disposition: fixed
+  note: The reference is removed in Phase 1; the generation step is covered by Event.apply.
+- id: RGA-011
+  title: Devnet and behavioural suites run only on schedule or manual dispatch
+  severity: S3
+  likelihood: A
+  risk: 8
+  priority: P1
+  category: gate
+  evidence:
+  - .github/workflows/ci.yml:70
+  claim: The unit and race suites gate every change.
+  verdict: proved-but-narrower
+  arms: []
+  actions:
+  - accept-risk
+  disposition: accept-risk
+  note: Static, docs, Lean, Rust, and parse gates run on every push; devnet suites are nightly because they need a node. Phase
+    2 adds targeted negative tests to the nightly job.
+- id: RGA-012
+  title: core_arm_authority proves data dependence, not permission
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: proof-claim
+  evidence:
+  - spec/lean/RGen/Linear/Lift.lean:31
+  - spec/lean/RGen/RaceFreedom.lean:29
+  - docs/src/reference/race-freedom-proof.md:33
+  claim: Every arm decision is authorized by its consumed cell.
+  verdict: proved-but-narrower
+  arms: []
+  actions:
+  - LR-04
+  disposition: open
+  note: The theorem says the decision function depends only on the cell value. Who may invoke the arm and which proof must
+    be consumed are guard concerns, not consequences of this theorem.
+- id: RGA-013
+  title: Identity.update is mapped to a different operation in the model
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: model-fidelity
+  evidence:
+  - contracts/src/deploy/10_identity.rho:60
+  - spec/lean/RGen/Model/Identity.lean:68
+  - spec/flows/core.yaml:44
+  claim: Identity.update is modeled by updateOwner.
+  verdict: 'false'
+  arms:
+  - Identity.update
+  actions:
+  - LR-00
+  - LR-08
+  disposition: open
+  note: Deployed update patches displayNameHash/orgHash/contactHash and never changes the subject. The model updateOwner transfers
+    ownership, a transition the deployed Identity does not expose.
+- id: RGA-020
+  title: Claim and K-Asset verdict mappings disagree for unknown verdicts
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: state-machine
+  evidence:
+  - contracts/src/deploy/20_claim.rho:48
+  - contracts/src/deploy/20_claim.rho:55
+  - contracts/src/deploy/20_claim.rho:192
+  claim: A validation verdict yields a consistent Claim and K-Asset status.
+  verdict: 'false'
+  arms:
+  - Claim.validate
+  actions:
+  - RR-04
+  disposition: open
+  note: claimStatus maps every verdict except "invalid" to "validated"; kassetStatus maps only "valid" and "partial" and sends
+    everything else to "rejected". An unknown verdict therefore records a validated claim with a rejected K-Asset. A qualified
+    validator supplies the verdict record.
+- id: RGA-021
+  title: ValueProposition.proveValidated accepts a caller-chosen height
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: time
+  evidence:
+  - contracts/src/deploy/22_value.rho:183
+  - contracts/src/lib/Proof.rho:54
+  - contracts/src/lib/KAsset.rho:43
+  claim: A validated proof is bound to the chain height at issuance.
+  verdict: 'false'
+  arms:
+  - ValueProposition.proveValidated
+  actions:
+  - RR-03
+  disposition: open
+  note: The arm stores the @atHeight argument verbatim. Current core consumers pass the chain height, so the immediate path
+    checks out, but the proof API permits arbitrary-height proofs for any future consumer that trusts the payload.
+- id: RGA-022
+  title: Provenance creation is unauthenticated, unbound to an asset, and permits empty writers
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: authority
+  evidence:
+  - contracts/src/deploy/40_provenance.rho:23
+  - contracts/src/deploy/40_provenance.rho:49
+  claim: Provenance records are bound to an asset and have at least one writer.
+  verdict: 'false'
+  arms:
+  - ProvenanceFactory.create
+  actions:
+  - RR-02
+  disposition: open
+  note: Anyone can create a record for any assetRef string and choose the writer list. Empty writers creates a record nobody
+    can anchor or comment on. Provenance is advisory in the core, so this is a records-integrity and impersonation hazard,
+    not a direct authority bypass.
+- id: RGA-023
+  title: OracleFactory.open is public and trusts caller-supplied parties and adjudicator reference
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: authority
+  evidence:
+  - contracts/src/deploy/30_oracle.rho:27
+  - contracts/src/deploy/30_oracle.rho:57
+  - contracts/src/deploy/30_oracle.rho:120
+  claim: A dispute case is opened by the affected subject for the stored adjudicator.
+  verdict: 'false'
+  arms:
+  - OracleFactory.open
+  actions:
+  - RR-01
+  disposition: open
+  note: openCaseCheck verifies that the named adjudicator credential exists and its subject matches the caller-supplied case
+    requirement. It does not bind the opener to subjectRef or verify the parties. decide and execute remain bound to the stored
+    adjudicator and the real private Apply, so a forged case cannot apply a decision to another cell; the hazard is griefing
+    and false records.
+- id: RGA-024
+  title: Oracle execution spans two contracts without an atomic application receipt
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: liveness
+  evidence:
+  - contracts/src/deploy/30_oracle.rho:152
+  - contracts/src/lib/KAsset.rho:438
+  claim: Execution applies the decision exactly once and records the outcome.
+  verdict: proved-but-narrower
+  arms:
+  - OracleCase.execute
+  - Apply.applyDecision
+  actions:
+  - RR-08
+  disposition: open
+  note: execute sets "executing", calls the subject Apply, then sets "executed" or reverts to "decided". Apply refuses a second
+    application by status and case id, so a retry does not normally double-apply, but a failure between the two state writes
+    can leave the case unable to record the successful application. The model's execute_once does not cover this cross-contract
+    retry window.
+- id: RGA-025
+  title: KAsset.nest performs unbounded recursive resolve/prove/take work
+  severity: S3
+  likelihood: A
+  risk: 8
+  priority: P1
+  category: resource
+  evidence:
+  - contracts/src/lib/KAsset.rho:260
+  - contracts/src/lib/KAsset.rho:279
+  - contracts/src/lib/KAsset.rho:330
+  claim: Nest has a bounded cost.
+  verdict: unproved
+  arms:
+  - KAsset.nest
+  actions:
+  - RR-05
+  disposition: open
+  note: childRefs is caller-supplied and each child is resolved, proved, taken, and checked. There is no count or depth cap;
+    the parent childRefs list grows with every nest. The result is a phlo/liveness ceiling and unbounded state growth, not
+    an authority bypass.
+- id: RGA-026
+  title: Claim, VP, and oracle creation accept unvalidated deadlines and orderings
+  severity: S3
+  likelihood: A
+  risk: 8
+  priority: P1
+  category: time
+  evidence:
+  - contracts/src/deploy/20_claim.rho:30
+  - contracts/src/deploy/22_value.rho:23
+  - contracts/src/deploy/30_oracle.rho:57
+  claim: Creation rejects impossible or already-expired schedules.
+  verdict: 'false'
+  arms:
+  - ClaimFactory.create
+  - ValuePropositionFactory.propose
+  - OracleFactory.open
+  actions:
+  - RR-07
+  disposition: open
+  note: claimReqOk and vpReqOk check presence of strings, not deadline future-ness, comment-window ordering, quantity type,
+    or beneficiary shape. A claim can be born expired or with a comment window after its deadline.
+- id: RGA-027
+  title: Credential.check accepts a caller-nominated subject and must not be used as authority
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: authority
+  evidence:
+  - contracts/src/deploy/11_credentials.rho:139
+  - tools/check_concurrency.py:30
+  claim: A credential check is an authorization decision.
+  verdict: proved-but-narrower
+  arms:
+  - Credential.check
+  actions:
+  - RR-06
+  disposition: open
+  note: The advisory arm compares the caller argument to the stored subject. It is not signature-derived and no core commit
+    may use it; the static gate forbids X!("check") as a commit authority. The hazard is a future caller treating the advisory
+    result as a signature.
+- id: RGA-028
+  title: Identity is not a prerequisite for claim or comment participation
+  severity: S4
+  likelihood: A
+  risk: 4
+  priority: P1
+  category: design
+  evidence:
+  - contracts/src/deploy/20_claim.rho:120
+  - harness/unit_claim.py:31
+  claim: Participants must have an identity record.
+  verdict: 'false'
+  arms:
+  - Claim.comment
+  - Claim.validate
+  actions:
+  - RR-09
+  disposition: open
+  note: Claim and comment paths authenticate a REV address but do not require an Identity record. This may be intentional
+    (permissionless participation); it is currently undocumented and untested as a policy.
+- id: RGA-029
+  title: Root, directory, and factory registries grow without a cap and serialize creates
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: resource
+  evidence:
+  - contracts/src/deploy/00_root.rho:39
+  - contracts/src/deploy/10_identity.rho:40
+  - contracts/src/deploy/11_credentials.rho:111
+  - contracts/components.json:8
+  claim: Registry growth and create serialization are bounded or measured.
+  verdict: unproved
+  arms:
+  - GenRoot.register
+  - IdentityFactory.create
+  - CredentialFactory.issue
+  actions:
+  - RR-10
+  disposition: open
+  note: Registries are append-only maps and directoryState/factoryState are documented serialization points. Every identity
+    or credential create consumes the same root cell. No cap, sharding, or load metric exists.
+- id: RGA-031
+  title: IdentityFactory.create writes the identity and directory without a recovery record
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: atomicity
+  evidence:
+  - contracts/src/deploy/10_identity.rho:40
+  - contracts/src/deploy/10_identity.rho:81
+  - contracts/src/deploy/10_identity.rho:86
+  claim: Create either publishes a complete identity and directory entry or nothing.
+  verdict: unproved
+  arms:
+  - IdentityFactory.create
+  actions:
+  - RR-11
+  disposition: open
+  note: The arm consumes directoryState, writes identityState, registers the Identity bundle, then writes directoryState.
+    A failure between those writes can leave an identity cell that the directory does not reference, or a directory entry
+    whose bundle was not registered. The model proves first-writer-wins only.
+- id: RGA-032
+  title: Claim validation mints a K-Asset before the claim state write is complete
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: atomicity
+  evidence:
+  - contracts/src/deploy/20_claim.rho:192
+  - contracts/src/deploy/20_claim.rho:200
+  - contracts/src/deploy/20_claim.rho:227
+  claim: Validation records the claim transition and the K-Asset atomically.
+  verdict: unproved
+  arms:
+  - Claim.validate
+  actions:
+  - RR-11
+  disposition: open
+  note: finalizeValidation creates the K-Asset, then writes claimState with the validation and K-Asset references. The model's
+    "exactly one K-Asset" theorem assumes the mint and the claim update are one step; the deployed arm has a cross-cell window.
+- id: RGA-033
+  title: KAsset.nest consumes child proofs before the parent commit is known to succeed
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: atomicity
+  evidence:
+  - contracts/src/lib/KAsset.rho:279
+  - contracts/src/lib/KAsset.rho:343
+  - contracts/src/lib/KAsset.rho:356
+  claim: A failed nest leaves the child proofs and the parent state consistent.
+  verdict: unproved
+  arms:
+  - KAsset.nest
+  actions:
+  - RR-11
+  disposition: open
+  note: nestProofs resolves and takes each child approval proof before the parent writes childRefs. If the parent write or
+    acknowledgement fails, the child proofs are used while the parent is unchanged. The two-phase peek/recheck narrows the
+    state race but not the proof-consumption window.
+- id: RGA-030
+  title: K-Asset nesting is a forest, not a tree; a child may have multiple parents
+  severity: S4
+  likelihood: B
+  risk: 3
+  priority: P2
+  category: design
+  evidence:
+  - contracts/src/lib/KAsset.rho:1
+  - contracts/src/lib/KAsset.rho:330
+  claim: Nesting is a forest with a unique parent per child.
+  verdict: proved-but-narrower
+  arms:
+  - KAsset.nest
+  actions:
+  - accept-risk
+  disposition: accept-risk
+  note: The contract refuses same-parent duplicates and cycles but allows a child approved by a different parent to be nested
+    again. The model theorem is about acyclicity and strict order, not unique parentage. Documentation should say "forest"
+    precisely.
+arms:
+- file: contracts/src/deploy/00_root.rho
+  contract: GenRoot
+  arm: get
+  node: root-install
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/00_root.rho
+  contract: GenRoot
+  arm: keys
+  node: root-install
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/00_root.rho
+  contract: GenRoot
+  arm: register
+  node: root-install
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/00_root.rho
+  contract: GenRoot
+  arm: resolve
+  node: root-install
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/10_identity.rho
+  contract: Identity
+  arm: get
+  node: identity
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/10_identity.rho
+  contract: Identity
+  arm: update
+  node: identity
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences:
+  - DIV-011
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/10_identity.rho
+  contract: IdentityDirectory
+  arm: count
+  node: identity
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/10_identity.rho
+  contract: IdentityDirectory
+  arm: lookup
+  node: identity
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/10_identity.rho
+  contract: IdentityFactory
+  arm: create
+  node: identity
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.Directory.create_unique
+  divergences:
+  - DIV-012
+  guard_fidelity: divergence
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Credential
+  arm: attest
+  node: issuer-credential-proof
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.CredentialState.attest_twice
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Credential
+  arm: check
+  node: issuer-credential-proof
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Credential
+  arm: get
+  node: issuer-credential-proof
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Credential
+  arm: renew
+  node: issuer-credential-proof
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.CredentialState.renew_requires_issuer
+  divergences:
+  - DIV-003
+  guard_fidelity: divergence
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Credential
+  arm: revoke
+  node: issuer-credential-proof
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.CredentialState.revoke_sets_revoked
+  divergences:
+  - DIV-001
+  guard_fidelity: divergence
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/11_credentials.rho
+  contract: CredentialFactory
+  arm: count
+  node: issuer-credential-proof
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/11_credentials.rho
+  contract: CredentialFactory
+  arm: issue
+  node: issuer-credential-proof
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/11_credentials.rho
+  contract: CredentialFactory
+  arm: verify
+  node: issuer-credential-proof
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Issuer
+  arm: authorize
+  node: issuer-credential-proof
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Issuer
+  arm: covers
+  node: issuer-credential-proof
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Issuer
+  arm: get
+  node: issuer-credential-proof
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/20_claim.rho
+  contract: Claim
+  arm: comment
+  node: claim-validation
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.ClaimState.comment_requires_open
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/20_claim.rho
+  contract: Claim
+  arm: comments
+  node: claim-validation
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/20_claim.rho
+  contract: Claim
+  arm: expire
+  node: claim-validation
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.ClaimState.expire_after_deadline
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/20_claim.rho
+  contract: Claim
+  arm: get
+  node: claim-validation
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/20_claim.rho
+  contract: Claim
+  arm: validate
+  node: claim-validation
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.ClaimState.validate_once
+  divergences:
+  - DIV-007
+  - DIV-008
+  - DIV-013
+  guard_fidelity: divergence
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/20_claim.rho
+  contract: Claim
+  arm: withdraw
+  node: claim-validation
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.ClaimState.withdraw_requires_claimant
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/20_claim.rho
+  contract: ClaimFactory
+  arm: create
+  node: claim-validation
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/22_value.rho
+  contract: Apply
+  arm: applyDecision
+  node: kasset-nesting
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.VPState.decision_once
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: comment
+  node: value-proposition
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.VPState.comment_requires_proposed
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: comments
+  node: value-proposition
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: get
+  node: value-proposition
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: openDispute
+  node: value-proposition
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.VPState.openDispute_requires_status
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: revocation
+  node: value-proposition
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: validate
+  node: value-proposition
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.VPState.validate_once
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: withdraw
+  node: value-proposition
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.VPState.withdraw_requires_proposer
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/22_value.rho
+  contract: ValuePropositionFactory
+  arm: propose
+  node: value-proposition
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleCase
+  arm: close
+  node: oracle
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.OracleState.close_requires_finished
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleCase
+  arm: decide
+  node: oracle
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.OracleState.decide_once
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleCase
+  arm: evidence
+  node: oracle
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.OracleState.addEvidence_requires_open
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleCase
+  arm: execute
+  node: oracle
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.OracleState.execute_once
+  divergences:
+  - DIV-014
+  guard_fidelity: divergence
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleCase
+  arm: expire
+  node: oracle
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.OracleState.expire_after_deadline
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleCase
+  arm: get
+  node: oracle
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleFactory
+  arm: open
+  node: oracle
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/40_provenance.rho
+  contract: Provenance
+  arm: anchor
+  node: provenance
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.ProvenanceState.anchors_append_only
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/40_provenance.rho
+  contract: Provenance
+  arm: anchors
+  node: provenance
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/40_provenance.rho
+  contract: Provenance
+  arm: comment
+  node: provenance
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.ProvenanceState.addComment_requires_writer
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/40_provenance.rho
+  contract: Provenance
+  arm: get
+  node: provenance
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/40_provenance.rho
+  contract: Provenance
+  arm: verify
+  node: provenance
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.ProvenanceState.verify_monotone
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/40_provenance.rho
+  contract: ProvenanceFactory
+  arm: create
+  node: provenance
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences:
+  - DIV-015
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/lib/KAsset.rho
+  contract: Apply
+  arm: applyDecision
+  node: kasset-nesting
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.KAssetState.decision_once
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: approve
+  node: kasset-nesting
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.KAssetState.approve_requires_credential_proof
+  divergences:
+  - DIV-004
+  guard_fidelity: divergence
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: children
+  node: kasset-nesting
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: get
+  node: kasset-nesting
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: nest
+  node: kasset-nesting
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.KAssetState.nest_acyclic
+  divergences:
+  - DIV-005
+  - DIV-006
+  - DIV-016
+  guard_fidelity: divergence
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: openDispute
+  node: kasset-nesting
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.KAssetState.openDispute_once
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: reject
+  node: kasset-nesting
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.KAssetState.reject_requires_credential_proof
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: revocation
+  node: kasset-nesting
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Credential
+  arm: prove
+  node: issuer-credential-proof
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.CredentialState.prove_requires_active
+  divergences:
+  - DIV-002
+  guard_fidelity: divergence
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/22_value.rho
+  contract: ValueProposition
+  arm: proveValidated
+  node: value-proposition
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.VPState.proveValidated_requires_validated
+  divergences:
+  - DIV-010
+  guard_fidelity: divergence
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: proveApproved
+  node: kasset-nesting
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.KAssetState.proveApproved_requires_approved
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/11_credentials.rho
+  contract: Proof
+  arm: take
+  node: issuer-credential-proof
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.ProofState.take_take
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/22_value.rho
+  contract: Proof
+  arm: take
+  node: value-proposition
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.ProofState.take_take
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/lib/KAsset.rho
+  contract: Proof
+  arm: take
+  node: kasset-nesting
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.ProofState.take_take
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/20_claim.rho
+  contract: ClaimFactory
+  arm: verify
+  node: claim-validation
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.Registry.verify_monotone
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004
+- file: contracts/src/deploy/22_value.rho
+  contract: ValuePropositionFactory
+  arm: verify
+  node: value-proposition
+  disposition: model-reviewed
+  flow_status: proved-model
+  lean: RGen.Registry.verify_monotone
+  divergences: []
+  guard_fidelity: unverified
+  guard_fidelity_finding: RGA-004

@@ -1,0 +1,3418 @@
+schema_version: rgen.hazop/v1
+baseline: 527ed95
+guide_words:
+- No/Not
+- More
+- Less
+- As well as
+- Part of
+- Reverse
+- Other than
+- Late
+- Early
+- Before
+- After
+- Duplicate/Replay
+- Stale
+- Substitute/confused-deputy
+- Partial commit
+nodes:
+- id: root-install
+  abbr: ROOT
+  title: Root registry and install gate
+  intent: Only the installer registers component URIs; keys are unique; versions are positive; resolved URIs point at the
+    installed component.
+  invariants:
+  - L1
+  - L2
+  parameters:
+  - installer
+  - key
+  - uri
+  - version
+  - kind
+  - term-order
+  na:
+    Late: install has no deadline or height parameter
+    Early: install has no deadline or height parameter
+- id: identity
+  abbr: ID
+  title: Identity and directory
+  intent: One address maps to one identity; only the owner may update it; the directory is first-writer-wins and monotone.
+  invariants:
+  - L1
+  - L2
+  parameters:
+  - address
+  - owner
+  - patch
+  - entry
+  na:
+    Late: identity create/update have no deadline
+    Early: identity create/update have no deadline
+    Before: create and update are not an ordered pair with a shared guard
+    After: create and update are not an ordered pair with a shared guard
+- id: issuer-credential-proof
+  abbr: CRED
+  title: Issuer, credential, and one-shot proof
+  intent: Only the issuer issues within its scope; the subject cannot self-issue; a proof is subject-bound, scope-valid, and
+    one-shot; revoke and renew are issuer-controlled.
+  invariants:
+  - C1
+  - C2
+  - C3
+  - L3
+  parameters:
+  - issuer
+  - subject
+  - scope
+  - status
+  - issuedAt
+  - expiresAt
+  - proof-use
+  na: {}
+- id: claim-validation
+  abbr: CLAIM
+  title: Claim, validation, and K-Asset creation
+  intent: A claim transitions once from open to validated, withdrawn, or expired; only a qualified non-claimant validator
+    validates; validation creates exactly one K-Asset whose status agrees with the verdict.
+  invariants:
+  - C1
+  - C2
+  - C3
+  parameters:
+  - status
+  - validator
+  - deadline
+  - verdict
+  - kasset-id
+  na: {}
+- id: kasset-nesting
+  abbr: KASSET
+  title: K-Asset lifecycle and nesting
+  intent: Approval requires a qualified non-conflicted approver and both proofs; approved assets can be disputed once; applyDecision
+    is bound to the open dispute; nesting is acyclic and strictly ordered.
+  invariants:
+  - K1
+  - K2
+  - K3
+  parameters:
+  - status
+  - approver
+  - approvedAt
+  - childRefs
+  - proof
+  - scope
+  na: {}
+- id: value-proposition
+  abbr: VP
+  title: Value proposition and validated proof
+  intent: A value proposition validates once by a qualified non-proposer; a validated proof is caller-bound and height-bound;
+    a dispute blocks further proofs.
+  invariants:
+  - V1
+  - V2
+  parameters:
+  - status
+  - proposer
+  - caller
+  - atHeight
+  - deadline
+  na: {}
+- id: oracle
+  abbr: ORACLE
+  title: Oracle case and execution
+  intent: Only the stored adjudicator decides with a credential; execution is exactly once, subject-bound, and applies the
+    stored decision; evidence is party-gated while open.
+  invariants:
+  - O1
+  - O2
+  parameters:
+  - adjudicator
+  - subjectRef
+  - decision
+  - execute
+  - evidence
+  - deadline
+  na: {}
+- id: provenance
+  abbr: PROV
+  title: Provenance records
+  intent: Only listed writers anchor or comment; anchors are non-empty, unique, and append-only; a record is created for a
+    real asset with at least one writer.
+  invariants:
+  - P1
+  parameters:
+  - assetRef
+  - writers
+  - hash
+  - comment
+  na:
+    Late: anchors have no deadline; they are append-only
+    Early: anchors have no deadline; they are append-only
+- id: registries-factories
+  abbr: REG
+  title: Creation registries and factories
+  intent: Creation writes an append-only registry entry that verify can resolve; keys are unique; state and registry stay
+    consistent.
+  invariants:
+  - L1
+  - L2
+  parameters:
+  - key
+  - entry
+  - counter
+  - directoryState
+  - factoryState
+  na:
+    Late: registry writes have no deadline
+    Early: registry writes have no deadline
+- id: deployment-phlo
+  abbr: DEPLOY
+  title: Deployment, wiring, and resources
+  intent: Terms install in dependency order with resolved URIs; private capabilities stay private; deploy cost is bounded
+    and manifest-consistent.
+  invariants:
+  - L1
+  - L4
+  parameters:
+  - term-order
+  - uri-binding
+  - private-apply
+  - phlo
+  - install-auth
+  na: {}
+coverage:
+- node: root-install
+  guide_word: No/Not
+  status: covered
+  refs:
+  - HZ-ROOT-001
+  reason: ''
+- node: root-install
+  guide_word: More
+  status: covered
+  refs:
+  - HZ-ROOT-002
+  reason: ''
+- node: root-install
+  guide_word: Less
+  status: covered
+  refs:
+  - HZ-ROOT-003
+  reason: ''
+- node: root-install
+  guide_word: As well as
+  status: covered
+  refs:
+  - HZ-ROOT-004
+  reason: ''
+- node: root-install
+  guide_word: Part of
+  status: covered
+  refs:
+  - HZ-ROOT-005
+  reason: ''
+- node: root-install
+  guide_word: Reverse
+  status: covered
+  refs:
+  - HZ-ROOT-006
+  reason: ''
+- node: root-install
+  guide_word: Other than
+  status: covered
+  refs:
+  - HZ-ROOT-007
+  reason: ''
+- node: root-install
+  guide_word: Late
+  status: na
+  refs: []
+  reason: install has no deadline or height parameter
+- node: root-install
+  guide_word: Early
+  status: na
+  refs: []
+  reason: install has no deadline or height parameter
+- node: root-install
+  guide_word: Before
+  status: covered
+  refs:
+  - HZ-ROOT-008
+  reason: ''
+- node: root-install
+  guide_word: After
+  status: covered
+  refs:
+  - HZ-ROOT-009
+  reason: ''
+- node: root-install
+  guide_word: Duplicate/Replay
+  status: covered
+  refs:
+  - HZ-ROOT-010
+  reason: ''
+- node: root-install
+  guide_word: Stale
+  status: covered
+  refs:
+  - HZ-ROOT-011
+  reason: ''
+- node: root-install
+  guide_word: Substitute/confused-deputy
+  status: covered
+  refs:
+  - HZ-ROOT-012
+  reason: ''
+- node: root-install
+  guide_word: Partial commit
+  status: covered
+  refs:
+  - HZ-ROOT-013
+  reason: ''
+- node: identity
+  guide_word: No/Not
+  status: covered
+  refs:
+  - HZ-ID-001
+  - HZ-ID-012
+  reason: ''
+- node: identity
+  guide_word: More
+  status: covered
+  refs:
+  - HZ-ID-002
+  reason: ''
+- node: identity
+  guide_word: Less
+  status: covered
+  refs:
+  - HZ-ID-003
+  reason: ''
+- node: identity
+  guide_word: As well as
+  status: covered
+  refs:
+  - HZ-ID-004
+  reason: ''
+- node: identity
+  guide_word: Part of
+  status: covered
+  refs:
+  - HZ-ID-005
+  reason: ''
+- node: identity
+  guide_word: Reverse
+  status: covered
+  refs:
+  - HZ-ID-006
+  reason: ''
+- node: identity
+  guide_word: Other than
+  status: covered
+  refs:
+  - HZ-ID-007
+  reason: ''
+- node: identity
+  guide_word: Late
+  status: na
+  refs: []
+  reason: identity create/update have no deadline
+- node: identity
+  guide_word: Early
+  status: na
+  refs: []
+  reason: identity create/update have no deadline
+- node: identity
+  guide_word: Before
+  status: na
+  refs: []
+  reason: create and update are not an ordered pair with a shared guard
+- node: identity
+  guide_word: After
+  status: na
+  refs: []
+  reason: create and update are not an ordered pair with a shared guard
+- node: identity
+  guide_word: Duplicate/Replay
+  status: covered
+  refs:
+  - HZ-ID-008
+  reason: ''
+- node: identity
+  guide_word: Stale
+  status: covered
+  refs:
+  - HZ-ID-009
+  reason: ''
+- node: identity
+  guide_word: Substitute/confused-deputy
+  status: covered
+  refs:
+  - HZ-ID-010
+  reason: ''
+- node: identity
+  guide_word: Partial commit
+  status: covered
+  refs:
+  - HZ-ID-011
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: No/Not
+  status: covered
+  refs:
+  - HZ-CRED-001
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: More
+  status: covered
+  refs:
+  - HZ-CRED-002
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: Less
+  status: covered
+  refs:
+  - HZ-CRED-003
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: As well as
+  status: covered
+  refs:
+  - HZ-CRED-004
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: Part of
+  status: covered
+  refs:
+  - HZ-CRED-005
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: Reverse
+  status: covered
+  refs:
+  - HZ-CRED-006
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: Other than
+  status: covered
+  refs:
+  - HZ-CRED-007
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: Late
+  status: covered
+  refs:
+  - HZ-CRED-008
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: Early
+  status: covered
+  refs:
+  - HZ-CRED-009
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: Before
+  status: covered
+  refs:
+  - HZ-CRED-010
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: After
+  status: covered
+  refs:
+  - HZ-CRED-011
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: Duplicate/Replay
+  status: covered
+  refs:
+  - HZ-CRED-012
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: Stale
+  status: covered
+  refs:
+  - HZ-CRED-013
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: Substitute/confused-deputy
+  status: covered
+  refs:
+  - HZ-CRED-014
+  - HZ-CRED-016
+  reason: ''
+- node: issuer-credential-proof
+  guide_word: Partial commit
+  status: covered
+  refs:
+  - HZ-CRED-015
+  reason: ''
+- node: claim-validation
+  guide_word: No/Not
+  status: covered
+  refs:
+  - HZ-CLAIM-001
+  reason: ''
+- node: claim-validation
+  guide_word: More
+  status: covered
+  refs:
+  - HZ-CLAIM-002
+  reason: ''
+- node: claim-validation
+  guide_word: Less
+  status: covered
+  refs:
+  - HZ-CLAIM-003
+  reason: ''
+- node: claim-validation
+  guide_word: As well as
+  status: covered
+  refs:
+  - HZ-CLAIM-004
+  reason: ''
+- node: claim-validation
+  guide_word: Part of
+  status: covered
+  refs:
+  - HZ-CLAIM-005
+  reason: ''
+- node: claim-validation
+  guide_word: Reverse
+  status: covered
+  refs:
+  - HZ-CLAIM-006
+  reason: ''
+- node: claim-validation
+  guide_word: Other than
+  status: covered
+  refs:
+  - HZ-CLAIM-007
+  - HZ-CLAIM-016
+  reason: ''
+- node: claim-validation
+  guide_word: Late
+  status: covered
+  refs:
+  - HZ-CLAIM-008
+  reason: ''
+- node: claim-validation
+  guide_word: Early
+  status: covered
+  refs:
+  - HZ-CLAIM-009
+  reason: ''
+- node: claim-validation
+  guide_word: Before
+  status: covered
+  refs:
+  - HZ-CLAIM-010
+  reason: ''
+- node: claim-validation
+  guide_word: After
+  status: covered
+  refs:
+  - HZ-CLAIM-011
+  reason: ''
+- node: claim-validation
+  guide_word: Duplicate/Replay
+  status: covered
+  refs:
+  - HZ-CLAIM-012
+  reason: ''
+- node: claim-validation
+  guide_word: Stale
+  status: covered
+  refs:
+  - HZ-CLAIM-013
+  reason: ''
+- node: claim-validation
+  guide_word: Substitute/confused-deputy
+  status: covered
+  refs:
+  - HZ-CLAIM-014
+  reason: ''
+- node: claim-validation
+  guide_word: Partial commit
+  status: covered
+  refs:
+  - HZ-CLAIM-015
+  reason: ''
+- node: kasset-nesting
+  guide_word: No/Not
+  status: covered
+  refs:
+  - HZ-KASSET-001
+  reason: ''
+- node: kasset-nesting
+  guide_word: More
+  status: covered
+  refs:
+  - HZ-KASSET-002
+  - HZ-KASSET-016
+  reason: ''
+- node: kasset-nesting
+  guide_word: Less
+  status: covered
+  refs:
+  - HZ-KASSET-003
+  reason: ''
+- node: kasset-nesting
+  guide_word: As well as
+  status: covered
+  refs:
+  - HZ-KASSET-004
+  reason: ''
+- node: kasset-nesting
+  guide_word: Part of
+  status: covered
+  refs:
+  - HZ-KASSET-005
+  reason: ''
+- node: kasset-nesting
+  guide_word: Reverse
+  status: covered
+  refs:
+  - HZ-KASSET-006
+  reason: ''
+- node: kasset-nesting
+  guide_word: Other than
+  status: covered
+  refs:
+  - HZ-KASSET-007
+  reason: ''
+- node: kasset-nesting
+  guide_word: Late
+  status: covered
+  refs:
+  - HZ-KASSET-008
+  reason: ''
+- node: kasset-nesting
+  guide_word: Early
+  status: covered
+  refs:
+  - HZ-KASSET-009
+  reason: ''
+- node: kasset-nesting
+  guide_word: Before
+  status: covered
+  refs:
+  - HZ-KASSET-010
+  reason: ''
+- node: kasset-nesting
+  guide_word: After
+  status: covered
+  refs:
+  - HZ-KASSET-011
+  reason: ''
+- node: kasset-nesting
+  guide_word: Duplicate/Replay
+  status: covered
+  refs:
+  - HZ-KASSET-012
+  reason: ''
+- node: kasset-nesting
+  guide_word: Stale
+  status: covered
+  refs:
+  - HZ-KASSET-013
+  reason: ''
+- node: kasset-nesting
+  guide_word: Substitute/confused-deputy
+  status: covered
+  refs:
+  - HZ-KASSET-014
+  reason: ''
+- node: kasset-nesting
+  guide_word: Partial commit
+  status: covered
+  refs:
+  - HZ-KASSET-015
+  reason: ''
+- node: value-proposition
+  guide_word: No/Not
+  status: covered
+  refs:
+  - HZ-VP-001
+  reason: ''
+- node: value-proposition
+  guide_word: More
+  status: covered
+  refs:
+  - HZ-VP-002
+  reason: ''
+- node: value-proposition
+  guide_word: Less
+  status: covered
+  refs:
+  - HZ-VP-003
+  reason: ''
+- node: value-proposition
+  guide_word: As well as
+  status: covered
+  refs:
+  - HZ-VP-004
+  reason: ''
+- node: value-proposition
+  guide_word: Part of
+  status: covered
+  refs:
+  - HZ-VP-005
+  reason: ''
+- node: value-proposition
+  guide_word: Reverse
+  status: covered
+  refs:
+  - HZ-VP-006
+  reason: ''
+- node: value-proposition
+  guide_word: Other than
+  status: covered
+  refs:
+  - HZ-VP-007
+  - HZ-VP-016
+  reason: ''
+- node: value-proposition
+  guide_word: Late
+  status: covered
+  refs:
+  - HZ-VP-008
+  reason: ''
+- node: value-proposition
+  guide_word: Early
+  status: covered
+  refs:
+  - HZ-VP-009
+  reason: ''
+- node: value-proposition
+  guide_word: Before
+  status: covered
+  refs:
+  - HZ-VP-010
+  reason: ''
+- node: value-proposition
+  guide_word: After
+  status: covered
+  refs:
+  - HZ-VP-011
+  reason: ''
+- node: value-proposition
+  guide_word: Duplicate/Replay
+  status: covered
+  refs:
+  - HZ-VP-012
+  reason: ''
+- node: value-proposition
+  guide_word: Stale
+  status: covered
+  refs:
+  - HZ-VP-013
+  reason: ''
+- node: value-proposition
+  guide_word: Substitute/confused-deputy
+  status: covered
+  refs:
+  - HZ-VP-014
+  reason: ''
+- node: value-proposition
+  guide_word: Partial commit
+  status: covered
+  refs:
+  - HZ-VP-015
+  reason: ''
+- node: oracle
+  guide_word: No/Not
+  status: covered
+  refs:
+  - HZ-ORACLE-001
+  reason: ''
+- node: oracle
+  guide_word: More
+  status: covered
+  refs:
+  - HZ-ORACLE-002
+  reason: ''
+- node: oracle
+  guide_word: Less
+  status: covered
+  refs:
+  - HZ-ORACLE-003
+  reason: ''
+- node: oracle
+  guide_word: As well as
+  status: covered
+  refs:
+  - HZ-ORACLE-004
+  reason: ''
+- node: oracle
+  guide_word: Part of
+  status: covered
+  refs:
+  - HZ-ORACLE-005
+  reason: ''
+- node: oracle
+  guide_word: Reverse
+  status: covered
+  refs:
+  - HZ-ORACLE-006
+  reason: ''
+- node: oracle
+  guide_word: Other than
+  status: covered
+  refs:
+  - HZ-ORACLE-007
+  - HZ-ORACLE-016
+  reason: ''
+- node: oracle
+  guide_word: Late
+  status: covered
+  refs:
+  - HZ-ORACLE-008
+  reason: ''
+- node: oracle
+  guide_word: Early
+  status: covered
+  refs:
+  - HZ-ORACLE-009
+  reason: ''
+- node: oracle
+  guide_word: Before
+  status: covered
+  refs:
+  - HZ-ORACLE-010
+  reason: ''
+- node: oracle
+  guide_word: After
+  status: covered
+  refs:
+  - HZ-ORACLE-011
+  reason: ''
+- node: oracle
+  guide_word: Duplicate/Replay
+  status: covered
+  refs:
+  - HZ-ORACLE-012
+  reason: ''
+- node: oracle
+  guide_word: Stale
+  status: covered
+  refs:
+  - HZ-ORACLE-013
+  reason: ''
+- node: oracle
+  guide_word: Substitute/confused-deputy
+  status: covered
+  refs:
+  - HZ-ORACLE-014
+  reason: ''
+- node: oracle
+  guide_word: Partial commit
+  status: covered
+  refs:
+  - HZ-ORACLE-015
+  reason: ''
+- node: provenance
+  guide_word: No/Not
+  status: covered
+  refs:
+  - HZ-PROV-001
+  reason: ''
+- node: provenance
+  guide_word: More
+  status: covered
+  refs:
+  - HZ-PROV-002
+  reason: ''
+- node: provenance
+  guide_word: Less
+  status: covered
+  refs:
+  - HZ-PROV-003
+  reason: ''
+- node: provenance
+  guide_word: As well as
+  status: covered
+  refs:
+  - HZ-PROV-004
+  reason: ''
+- node: provenance
+  guide_word: Part of
+  status: covered
+  refs:
+  - HZ-PROV-005
+  reason: ''
+- node: provenance
+  guide_word: Reverse
+  status: covered
+  refs:
+  - HZ-PROV-006
+  reason: ''
+- node: provenance
+  guide_word: Other than
+  status: covered
+  refs:
+  - HZ-PROV-007
+  reason: ''
+- node: provenance
+  guide_word: Late
+  status: na
+  refs: []
+  reason: anchors have no deadline; they are append-only
+- node: provenance
+  guide_word: Early
+  status: na
+  refs: []
+  reason: anchors have no deadline; they are append-only
+- node: provenance
+  guide_word: Before
+  status: covered
+  refs:
+  - HZ-PROV-008
+  reason: ''
+- node: provenance
+  guide_word: After
+  status: covered
+  refs:
+  - HZ-PROV-009
+  reason: ''
+- node: provenance
+  guide_word: Duplicate/Replay
+  status: covered
+  refs:
+  - HZ-PROV-010
+  reason: ''
+- node: provenance
+  guide_word: Stale
+  status: covered
+  refs:
+  - HZ-PROV-011
+  reason: ''
+- node: provenance
+  guide_word: Substitute/confused-deputy
+  status: covered
+  refs:
+  - HZ-PROV-012
+  reason: ''
+- node: provenance
+  guide_word: Partial commit
+  status: covered
+  refs:
+  - HZ-PROV-013
+  reason: ''
+- node: registries-factories
+  guide_word: No/Not
+  status: covered
+  refs:
+  - HZ-REG-001
+  reason: ''
+- node: registries-factories
+  guide_word: More
+  status: covered
+  refs:
+  - HZ-REG-002
+  reason: ''
+- node: registries-factories
+  guide_word: Less
+  status: covered
+  refs:
+  - HZ-REG-003
+  reason: ''
+- node: registries-factories
+  guide_word: As well as
+  status: covered
+  refs:
+  - HZ-REG-004
+  reason: ''
+- node: registries-factories
+  guide_word: Part of
+  status: covered
+  refs:
+  - HZ-REG-005
+  reason: ''
+- node: registries-factories
+  guide_word: Reverse
+  status: covered
+  refs:
+  - HZ-REG-006
+  reason: ''
+- node: registries-factories
+  guide_word: Other than
+  status: covered
+  refs:
+  - HZ-REG-007
+  reason: ''
+- node: registries-factories
+  guide_word: Late
+  status: na
+  refs: []
+  reason: registry writes have no deadline
+- node: registries-factories
+  guide_word: Early
+  status: na
+  refs: []
+  reason: registry writes have no deadline
+- node: registries-factories
+  guide_word: Before
+  status: covered
+  refs:
+  - HZ-REG-008
+  reason: ''
+- node: registries-factories
+  guide_word: After
+  status: covered
+  refs:
+  - HZ-REG-009
+  reason: ''
+- node: registries-factories
+  guide_word: Duplicate/Replay
+  status: covered
+  refs:
+  - HZ-REG-010
+  reason: ''
+- node: registries-factories
+  guide_word: Stale
+  status: covered
+  refs:
+  - HZ-REG-011
+  reason: ''
+- node: registries-factories
+  guide_word: Substitute/confused-deputy
+  status: covered
+  refs:
+  - HZ-REG-012
+  reason: ''
+- node: registries-factories
+  guide_word: Partial commit
+  status: covered
+  refs:
+  - HZ-REG-013
+  reason: ''
+- node: deployment-phlo
+  guide_word: No/Not
+  status: covered
+  refs:
+  - HZ-DEPLOY-001
+  reason: ''
+- node: deployment-phlo
+  guide_word: More
+  status: covered
+  refs:
+  - HZ-DEPLOY-002
+  reason: ''
+- node: deployment-phlo
+  guide_word: Less
+  status: covered
+  refs:
+  - HZ-DEPLOY-003
+  reason: ''
+- node: deployment-phlo
+  guide_word: As well as
+  status: covered
+  refs:
+  - HZ-DEPLOY-004
+  reason: ''
+- node: deployment-phlo
+  guide_word: Part of
+  status: covered
+  refs:
+  - HZ-DEPLOY-005
+  reason: ''
+- node: deployment-phlo
+  guide_word: Reverse
+  status: covered
+  refs:
+  - HZ-DEPLOY-006
+  reason: ''
+- node: deployment-phlo
+  guide_word: Other than
+  status: covered
+  refs:
+  - HZ-DEPLOY-007
+  reason: ''
+- node: deployment-phlo
+  guide_word: Late
+  status: covered
+  refs:
+  - HZ-DEPLOY-008
+  reason: ''
+- node: deployment-phlo
+  guide_word: Early
+  status: covered
+  refs:
+  - HZ-DEPLOY-009
+  reason: ''
+- node: deployment-phlo
+  guide_word: Before
+  status: covered
+  refs:
+  - HZ-DEPLOY-010
+  reason: ''
+- node: deployment-phlo
+  guide_word: After
+  status: covered
+  refs:
+  - HZ-DEPLOY-011
+  reason: ''
+- node: deployment-phlo
+  guide_word: Duplicate/Replay
+  status: covered
+  refs:
+  - HZ-DEPLOY-012
+  reason: ''
+- node: deployment-phlo
+  guide_word: Stale
+  status: covered
+  refs:
+  - HZ-DEPLOY-013
+  reason: ''
+- node: deployment-phlo
+  guide_word: Substitute/confused-deputy
+  status: covered
+  refs:
+  - HZ-DEPLOY-014
+  reason: ''
+- node: deployment-phlo
+  guide_word: Partial commit
+  status: covered
+  refs:
+  - HZ-DEPLOY-015
+  reason: ''
+rows:
+- id: HZ-ROOT-001
+  node: root-install
+  guide_word: No/Not
+  parameter: installer
+  deviation: Register is invoked without the installer capability.
+  cause: Any address can call GenRoot.register; the arm compares the derived authSubject address to the stored installer.
+  consequence: If the comparison were removed or misbound, anyone could replace component URIs.
+  safeguard: authSubject plus installer equality on every register path.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ROOT-002
+  node: root-install
+  guide_word: More
+  parameter: key
+  deviation: More registry keys than the deployment intends.
+  cause: There is no key allowlist or cap; rootState accepts every new key.
+  consequence: Unbounded root state and ambiguous component discovery.
+  safeguard: Duplicate-key refusal only.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-10
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-ROOT-003
+  node: root-install
+  guide_word: Less
+  parameter: key
+  deviation: An empty or truncated key is registered.
+  cause: There is no non-empty or format check on @key.
+  consequence: Lookup and duplicate detection become ambiguous.
+  safeguard: Duplicate-key refusal only.
+  safeguard_status: partial
+  severity: S3
+  likelihood: A
+  risk: 8
+  action: RR-10
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-ROOT-004
+  node: root-install
+  guide_word: As well as
+  parameter: kind
+  deviation: An extra or mislabelled kind is stored with the entry.
+  cause: '@kind is stored but not validated against the component catalogue.'
+  consequence: A consumer can resolve a bundle of the wrong kind.
+  safeguard: Consumer-side URI and shape checks only.
+  safeguard_status: none
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-10
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-ROOT-005
+  node: root-install
+  guide_word: Part of
+  parameter: uri
+  deviation: A partial or malformed URI is registered.
+  cause: There is no URI syntax check at registration.
+  consequence: resolve fails after install and the failure is delayed to the consumer.
+  safeguard: Placeholder resolution and parse checks at install time.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-10
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-ROOT-006
+  node: root-install
+  guide_word: Reverse
+  parameter: version
+  deviation: A new key is registered with a lower version than an earlier component.
+  cause: There is no monotonicity rule across keys; duplicate keys are refused only.
+  consequence: Consumers cannot use version to order deployments.
+  safeguard: Per-entry version > 0 only.
+  safeguard_status: partial
+  severity: S3
+  likelihood: C
+  risk: 4
+  action: accept-risk
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-ROOT-007
+  node: root-install
+  guide_word: Other than
+  parameter: key
+  deviation: A key from another namespace or component family is substituted.
+  cause: Keys are free-form strings with no namespace schema.
+  consequence: Lookup returns a different component than the consumer intended.
+  safeguard: Installer review of the key list.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-10
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-ROOT-008
+  node: root-install
+  guide_word: Before
+  parameter: term-order
+  deviation: A term is deployed before root.
+  cause: The harness could be invoked out of order outside the Makefile.
+  consequence: Placeholder resolution fails and the install aborts.
+  safeguard: install.py ORDER, dry-run, and parse-check.
+  safeguard_status: holds
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ROOT-009
+  node: root-install
+  guide_word: After
+  parameter: term-order
+  deviation: The root is installed after its consumers.
+  cause: A manual deploy can ignore the dependency order.
+  consequence: Factory URIs are unresolved when the consumer is installed.
+  safeguard: Dependency order and captured placeholder URIs.
+  safeguard_status: holds
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ROOT-010
+  node: root-install
+  guide_word: Duplicate/Replay
+  parameter: key
+  deviation: The same key is registered twice.
+  cause: A replayed deploy tries to overwrite an entry.
+  consequence: The second registration would change the mapping used by consumers.
+  safeguard: Duplicate-key refusal; the old entry is kept.
+  safeguard_status: holds
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ROOT-011
+  node: root-install
+  guide_word: Stale
+  parameter: uri
+  deviation: resolve returns a URI that no longer names the intended component.
+  cause: A term can be redeployed under a new URI while the old key remains.
+  consequence: Consumers continue to call an obsolete component.
+  safeguard: Duplicate-key refusal prevents overwrite, but there is no retirement record.
+  safeguard_status: partial
+  severity: S3
+  likelihood: C
+  risk: 4
+  action: accept-risk
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-ROOT-012
+  node: root-install
+  guide_word: Substitute/confused-deputy
+  parameter: installer
+  deviation: A caller substitutes another address for the installer.
+  cause: The register arm accepts an identity capability, not a caller-nominated string.
+  consequence: An unauthorized caller could register a component.
+  safeguard: authSubject derives the REV address from the signature.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ROOT-013
+  node: root-install
+  guide_word: Partial commit
+  parameter: key
+  deviation: rootState is written but the acknowledgement is lost.
+  cause: The caller retries after a deploy or communication failure.
+  consequence: A retry could double-register or observe an unclear result.
+  safeguard: Linear consume and re-post on every path; duplicate refusal makes retry safe.
+  safeguard_status: holds
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ID-001
+  node: identity
+  guide_word: No/Not
+  parameter: owner
+  deviation: Identity.update is called without the owner capability.
+  cause: Any address can call update; the arm compares authSubject to the stored subject.
+  consequence: If the comparison were removed, any caller could patch the profile.
+  safeguard: authSubject plus subject equality.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ID-002
+  node: identity
+  guide_word: More
+  parameter: owner
+  deviation: The profile update path is assumed to transfer ownership or add owners.
+  cause: The model has updateOwner, but the deployed Identity.update only patches profile hashes.
+  consequence: A proof about owner transfer is mapped to an arm that never performs it.
+  safeguard: None; the mapping is wrong.
+  safeguard_status: none
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: LR-00
+  finding: RGA-013
+  negative: false
+  disposition: open
+- id: HZ-ID-003
+  node: identity
+  guide_word: Less
+  parameter: owner
+  deviation: The owner field is missing or emptied.
+  cause: The deployed identity has a fixed subject and no owner field; the model can set an arbitrary new owner.
+  consequence: A model proof can claim a transfer that the contract cannot express.
+  safeguard: The subject is fixed at create.
+  safeguard_status: none
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: LR-08
+  finding: RGA-013
+  negative: false
+  disposition: open
+- id: HZ-ID-004
+  node: identity
+  guide_word: As well as
+  parameter: patch
+  deviation: The patch contains fields outside displayNameHash, orgHash, and contactHash.
+  cause: The arm copies only the three known fields; extra fields are ignored.
+  consequence: A caller may believe an unsupported field was updated.
+  safeguard: Explicit field selection in the update arm.
+  safeguard_status: holds
+  severity: S4
+  likelihood: B
+  risk: 3
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ID-005
+  node: identity
+  guide_word: Part of
+  parameter: patch
+  deviation: A partial patch omits one of the three hashes.
+  cause: The arm writes the missing field as Nil, erasing the old value.
+  consequence: Profile data is silently lost on a partial update.
+  safeguard: None; there is no merge or presence check.
+  safeguard_status: none
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: LR-08
+  finding: RGA-013
+  negative: false
+  disposition: open
+- id: HZ-ID-006
+  node: identity
+  guide_word: Reverse
+  parameter: patch
+  deviation: A profile update is reversed.
+  cause: There is no revision history or undo arm.
+  consequence: A mistaken update cannot be rolled back; the owner must repatch.
+  safeguard: None; this is an append-only version counter, not a history.
+  safeguard_status: none
+  severity: S4
+  likelihood: B
+  risk: 3
+  action: accept-risk
+  finding: RGA-008
+  negative: false
+  disposition: open
+- id: HZ-ID-007
+  node: identity
+  guide_word: Other than
+  parameter: address
+  deviation: Create is attempted for an address other than the signer.
+  cause: authOwner derives the address; the profile cannot nominate another address.
+  consequence: An identity could be created for a victim address.
+  safeguard: authOwner and first-writer-wins.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ID-008
+  node: identity
+  guide_word: Duplicate/Replay
+  parameter: entry
+  deviation: Create is replayed for an address that already has an identity.
+  cause: Two creates race on directoryState.
+  consequence: Two identity cells could be published for one address.
+  safeguard: First-writer-wins on byAddress; the second create refuses.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ID-009
+  node: identity
+  guide_word: Stale
+  parameter: entry
+  deviation: The directory points at an identity whose URI has changed.
+  cause: The update arm does not change the URI; only create writes the directory.
+  consequence: A stale directory entry would resolve to a retired identity.
+  safeguard: The URI is written once at create.
+  safeguard_status: holds
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ID-010
+  node: identity
+  guide_word: Substitute/confused-deputy
+  parameter: address
+  deviation: A caller substitutes another signer's address in the profile.
+  cause: The profile fields are hashes, not addresses; the subject is derived from the signature.
+  consequence: A profile could be misattributed to another address.
+  safeguard: authOwner derives the subject.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ID-011
+  node: identity
+  guide_word: Partial commit
+  parameter: entry
+  deviation: Create writes identityState, registers the bundle, then writes directoryState.
+  cause: The writes are separate cells and there is no recovery record.
+  consequence: A failure between writes can leave an orphan identity or a directory entry without a bundle.
+  safeguard: None; the model proves first-writer-wins only.
+  safeguard_status: none
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-11
+  finding: RGA-031
+  negative: false
+  disposition: open
+- id: HZ-CRED-001
+  node: issuer-credential-proof
+  guide_word: No/Not
+  parameter: issuer
+  deviation: Issue is attempted without the issuer capability.
+  cause: CredentialFactory.issue calls Issuer.authorize and checks the returned subject.
+  consequence: An unauthorized issuer could mint a credential.
+  safeguard: Issuer.authorize, subject equality, and the self-issue refusal.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CRED-002
+  node: issuer-credential-proof
+  guide_word: More
+  parameter: issuer
+  deviation: More issuers or issuer scopes than intended.
+  cause: The issuer is immutable and there is no issuer registry.
+  consequence: A compromised issuer key cannot be replaced or revoked.
+  safeguard: Issuer immutability; Issuer.revoke was removed from the core.
+  safeguard_status: partial
+  severity: S2
+  likelihood: C
+  risk: 6
+  action: accept-risk
+  finding: RGA-004
+  negative: false
+  disposition: open
+- id: HZ-CRED-003
+  node: issuer-credential-proof
+  guide_word: Less
+  parameter: issuer
+  deviation: The issuer scope is missing or narrower than the credential requests.
+  cause: Issuer.covers checks the issuer list and maxLevel.
+  consequence: A credential could be issued outside the issuer's scope.
+  safeguard: issuerCovers and scopeMatches.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CRED-004
+  node: issuer-credential-proof
+  guide_word: As well as
+  parameter: subject
+  deviation: A credential is issued to a subject other than the proof holder.
+  cause: The subject is stored; prove checks the caller against it.
+  consequence: A credential could be used by a non-subject.
+  safeguard: authSubject plus subject equality in prove.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CRED-005
+  node: issuer-credential-proof
+  guide_word: Part of
+  parameter: scope
+  deviation: A scope field is wildcarded or partially matched.
+  cause: scopeMatches treats '*' and 'global' as wildcards and compares numeric levels.
+  consequence: A credential could match a requirement broader than intended.
+  safeguard: Explicit wildcard rules; model does not prove the string comparison.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: LR-01
+  finding: RGA-004
+  negative: false
+  disposition: open
+- id: HZ-CRED-006
+  node: issuer-credential-proof
+  guide_word: Reverse
+  parameter: status
+  deviation: Revoke is followed by prove.
+  cause: Revoke sets status revoked; prove checks active status.
+  consequence: A revoked credential could still issue proofs.
+  safeguard: Status guard in prove; model revoke blocks prove.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CRED-007
+  node: issuer-credential-proof
+  guide_word: Other than
+  parameter: status
+  deviation: An unknown status string is stored or supplied.
+  cause: The contract compares status to 'active'; anything else is treated as not active.
+  consequence: An unknown status fails closed for prove and renew.
+  safeguard: Explicit active-status comparison.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CRED-008
+  node: issuer-credential-proof
+  guide_word: Late
+  parameter: expiresAt
+  deviation: Prove is attempted after expiry.
+  cause: Prove checks height > expiresAt.
+  consequence: An expired credential could still prove.
+  safeguard: Strict expiry guard.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CRED-009
+  node: issuer-credential-proof
+  guide_word: Early
+  parameter: issuedAt
+  deviation: Prove is attempted before issuedAt.
+  cause: The deployed prove has no issuedAt lower bound; the model adds one.
+  consequence: A credential can be used earlier than the model permits, so the model is stricter here.
+  safeguard: Deployed expiry guard only; no deployed issuedAt check.
+  safeguard_status: none
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: LR-08
+  finding: RGA-004
+  negative: false
+  disposition: open
+- id: HZ-CRED-010
+  node: issuer-credential-proof
+  guide_word: Before
+  parameter: proof-use
+  deviation: A proof is taken before the credential is proven.
+  cause: The proof URI is only issued by prove.
+  consequence: A caller could fabricate a proof URI.
+  safeguard: Registry resolution and private Proof capability.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CRED-011
+  node: issuer-credential-proof
+  guide_word: After
+  parameter: proof-use
+  deviation: A proof is taken after the credential is revoked.
+  cause: The proof is a snapshot; revoke does not retroactively invalidate it.
+  consequence: A relying party could accept a proof issued before revoke.
+  safeguard: Documented non-retroactivity; consumers must check status if freshness matters.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CRED-012
+  node: issuer-credential-proof
+  guide_word: Duplicate/Replay
+  parameter: proof-use
+  deviation: The same proof is taken twice.
+  cause: A replayed take or a copied proof URI.
+  consequence: The payload could be used for two authorizations.
+  safeguard: One-shot used flag in Proof.take; proof_take_once_versioned.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CRED-013
+  node: issuer-credential-proof
+  guide_word: Stale
+  parameter: proof-use
+  deviation: A proof issued at an old height is presented as current.
+  cause: The proof payload carries atHeight; consumers compare it to the height they expect.
+  consequence: A consumer that trusts the payload's height could accept a stale proof.
+  safeguard: checkCredentialProof compares atHeight to the caller-supplied expected height.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: LR-01
+  finding: RGA-004
+  negative: false
+  disposition: open
+- id: HZ-CRED-014
+  node: issuer-credential-proof
+  guide_word: Substitute/confused-deputy
+  parameter: subject
+  deviation: A proof for one credential URI is presented for another.
+  cause: checkCredentialProof compares credentialUri and subject.
+  consequence: A proof could authorize the wrong credential.
+  safeguard: URI and subject binding in the proof check.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CRED-015
+  node: issuer-credential-proof
+  guide_word: Partial commit
+  parameter: proof-use
+  deviation: Prove consumes credState, creates proofState, and re-posts the credential.
+  cause: The proof cell and the credential state are separate writes.
+  consequence: A failure can leave an unreachable proof or a consumed credential.
+  safeguard: Proof.take one-shot; no recovery record for the prove window.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-11
+  finding: RGA-002
+  negative: false
+  disposition: open
+- id: HZ-CLAIM-001
+  node: claim-validation
+  guide_word: No/Not
+  parameter: validator
+  deviation: Validate is called without a credential proof.
+  cause: Claim.validate resolves the credential and calls proveAndCheck.
+  consequence: An unqualified validator could validate a claim.
+  safeguard: CredentialFactory.verify plus proveAndCheck.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CLAIM-002
+  node: claim-validation
+  guide_word: More
+  parameter: validator
+  deviation: A claim is validated more than once.
+  cause: Two validate calls race on claimState.
+  consequence: Two K-Assets or two competing verdicts could be recorded.
+  safeguard: Status guard and linear consume; model validate_once.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CLAIM-003
+  node: claim-validation
+  guide_word: Less
+  parameter: validator
+  deviation: The validator's credential scope is insufficient for the claim.
+  cause: proveAndCheck uses the claim's selectionCriteria.
+  consequence: An under-qualified validator could validate.
+  safeguard: scopeMatches and issuerCovers through the credential proof.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CLAIM-004
+  node: claim-validation
+  guide_word: As well as
+  parameter: verdict
+  deviation: The validation record contains extra fields or an unexpected verdict shape.
+  cause: finalizeValidation reads verdict, quality, and credentialUri; it does not schema-check the record.
+  consequence: An unexpected record can reach the status mappings.
+  safeguard: None beyond the credential proof.
+  safeguard_status: none
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-04
+  finding: RGA-020
+  negative: false
+  disposition: open
+- id: HZ-CLAIM-005
+  node: claim-validation
+  guide_word: Part of
+  parameter: verdict
+  deviation: The validation record omits verdict or quality.
+  cause: The contract reads missing fields as Nil.
+  consequence: claimStatus treats Nil as validated; kassetStatus treats Nil as rejected.
+  safeguard: None; the two mappings disagree.
+  safeguard_status: none
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-04
+  finding: RGA-020
+  negative: false
+  disposition: open
+- id: HZ-CLAIM-006
+  node: claim-validation
+  guide_word: Reverse
+  parameter: status
+  deviation: An expired or withdrawn claim is validated.
+  cause: The status guard accepts only open.
+  consequence: A terminal claim could return to validated.
+  safeguard: Status equality on open.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CLAIM-007
+  node: claim-validation
+  guide_word: Other than
+  parameter: verdict
+  deviation: A verdict outside valid/partial/invalid is supplied.
+  cause: claimStatus maps every non-invalid verdict to validated; kassetStatus maps it to rejected.
+  consequence: The claim is recorded validated while its K-Asset is rejected.
+  safeguard: None; the mappings disagree.
+  safeguard_status: none
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-04
+  finding: RGA-020
+  negative: false
+  disposition: open
+- id: HZ-CLAIM-008
+  node: claim-validation
+  guide_word: Late
+  parameter: deadline
+  deviation: Validate is called after deadlineHeight.
+  cause: The arm checks height > deadlineHeight and moves the claim to expired.
+  consequence: A late validation could still create a K-Asset.
+  safeguard: Late validation writes expired and returns without making a K-Asset.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CLAIM-009
+  node: claim-validation
+  guide_word: Early
+  parameter: deadline
+  deviation: Validate is called before the claim deadline.
+  cause: This is the intended window.
+  consequence: No hazard; the arm proceeds to credential checks.
+  safeguard: Deadline guard permits the open window.
+  safeguard_status: holds
+  severity: S4
+  likelihood: A
+  risk: 4
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CLAIM-010
+  node: claim-validation
+  guide_word: Before
+  parameter: status
+  deviation: Comment is attempted before the claim exists or is open.
+  cause: Comment consumes claimState and checks status open.
+  consequence: A comment could attach to a non-open claim.
+  safeguard: Status guard in Claim.comment.
+  safeguard_status: holds
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CLAIM-011
+  node: claim-validation
+  guide_word: After
+  parameter: deadline
+  deviation: Comment is attempted after commentUntilHeight.
+  cause: The arm checks now > commentUntilHeight.
+  consequence: Late comments could be appended.
+  safeguard: Comment-window guard.
+  safeguard_status: holds
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CLAIM-012
+  node: claim-validation
+  guide_word: Duplicate/Replay
+  parameter: validator
+  deviation: A validate deploy is replayed.
+  cause: The claim is already validated or the K-Asset already exists.
+  consequence: A second K-Asset or a duplicate validation could be recorded.
+  safeguard: Status guard and validate_once; the cross-cell window is the residual risk.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-11
+  finding: RGA-032
+  negative: false
+  disposition: open
+- id: HZ-CLAIM-013
+  node: claim-validation
+  guide_word: Stale
+  parameter: kasset-id
+  deviation: A stale claim snapshot is used to validate.
+  cause: The arm consumes claimState and works from that value.
+  consequence: A concurrent transition could be overwritten.
+  safeguard: Linear consume; no stale value is accepted.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-CLAIM-014
+  node: claim-validation
+  guide_word: Substitute/confused-deputy
+  parameter: kasset-id
+  deviation: A caller substitutes a K-Asset id or claim reference.
+  cause: The model takes a caller-chosen kassetId; the deployed contract mints it.
+  consequence: A model proof could cover a mint that the deployed arm does not perform.
+  safeguard: makeKAsset is called internally; the K-Asset id is derived from its URI.
+  safeguard_status: none
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: LR-08
+  finding: RGA-004
+  negative: false
+  disposition: open
+- id: HZ-CLAIM-015
+  node: claim-validation
+  guide_word: Partial commit
+  parameter: kasset-id
+  deviation: The K-Asset is created before claimState records the validation.
+  cause: finalizeValidation calls makeKAsset, then writes the claim.
+  consequence: A failure can leave a K-Asset with no claim reference, or allow a retry to mint another.
+  safeguard: None; no validation receipt.
+  safeguard_status: none
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-11
+  finding: RGA-032
+  negative: false
+  disposition: open
+- id: HZ-KASSET-001
+  node: kasset-nesting
+  guide_word: No/Not
+  parameter: approver
+  deviation: Approve is called without a credential or VP proof.
+  cause: Approve calls CredentialFactory.verify, proveAndCheck, and checkApprovalVp.
+  consequence: An unqualified approver could approve.
+  safeguard: Credential and VP proof checks.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-KASSET-002
+  node: kasset-nesting
+  guide_word: More
+  parameter: approver
+  deviation: More approvers or approvals than the state machine allows.
+  cause: The status guard accepts validated/conditional only.
+  consequence: A second approval could overwrite the first.
+  safeguard: Status transition to approved.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-KASSET-003
+  node: kasset-nesting
+  guide_word: Less
+  parameter: approver
+  deviation: The approver lacks the required level or role.
+  cause: Deployed approve requires an Approver credential with minLevel 1; the model only checks subject fields.
+  consequence: A model proof can admit an under-qualified approver.
+  safeguard: Deployed proveAndCheck; the model omits it.
+  safeguard_status: none
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: LR-01
+  finding: RGA-004
+  negative: false
+  disposition: open
+- id: HZ-KASSET-004
+  node: kasset-nesting
+  guide_word: As well as
+  parameter: approvedAt
+  deviation: An approval carries an extra or inconsistent approvedAt.
+  cause: commitApproval sets approvedAt from the chain height.
+  consequence: A caller could influence the ordering field.
+  safeguard: commitApproval uses the supplied height, not the approval payload.
+  safeguard_status: holds
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-KASSET-005
+  node: kasset-nesting
+  guide_word: Part of
+  parameter: proof
+  deviation: A proof payload is missing subject, URI, or height.
+  cause: checkCredentialProof compares all three.
+  consequence: A partial proof could be accepted.
+  safeguard: Proof field comparisons.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-KASSET-006
+  node: kasset-nesting
+  guide_word: Reverse
+  parameter: status
+  deviation: Reject is followed by approve.
+  cause: Reject sets status rejected; approve accepts validated/conditional only.
+  consequence: A rejected asset could later be approved.
+  safeguard: Status guard.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-KASSET-007
+  node: kasset-nesting
+  guide_word: Other than
+  parameter: status
+  deviation: An unknown K-Asset status is supplied.
+  cause: The guards compare to known status strings.
+  consequence: Unknown statuses fail closed.
+  safeguard: Explicit status comparisons.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-KASSET-008
+  node: kasset-nesting
+  guide_word: Late
+  parameter: approvedAt
+  deviation: A child is nested after the parent is no longer approved.
+  cause: Nest rechecks parent status after the pre-pass.
+  consequence: A disputed or rejected parent could accept a child.
+  safeguard: Two-phase peek/consume with parent status recheck.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-KASSET-009
+  node: kasset-nesting
+  guide_word: Early
+  parameter: approvedAt
+  deviation: A parent is nested before the child is approved.
+  cause: Child proofs require status approved.
+  consequence: An unapproved child could enter the forest.
+  safeguard: Child proveApproved and nestProofs checks.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-KASSET-010
+  node: kasset-nesting
+  guide_word: Before
+  parameter: approvedAt
+  deviation: A child with approvedAt equal to or earlier than the previous child is nested.
+  cause: The deployed check requires strict greater-than; the model permits equal times with distinct ids.
+  consequence: The model can admit an order the contract refuses.
+  safeguard: Strict approvedAt comparison in deployed nestProofs.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: LR-01
+  finding: RGA-004
+  negative: false
+  disposition: open
+- id: HZ-KASSET-011
+  node: kasset-nesting
+  guide_word: After
+  parameter: approvedAt
+  deviation: A child is nested after the parent's child list has changed.
+  cause: The pre-pass checks a snapshot, then the arm consumes and rechecks.
+  consequence: A concurrent nest could miss a duplicate.
+  safeguard: Recheck under the linear consume.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-KASSET-012
+  node: kasset-nesting
+  guide_word: Duplicate/Replay
+  parameter: childRefs
+  deviation: The same child is nested twice under one parent.
+  cause: A replay or duplicate childRefs entry.
+  consequence: The child list could contain duplicates.
+  safeguard: nestCheck duplicate refusal; model nest same-child exclusivity.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-KASSET-013
+  node: kasset-nesting
+  guide_word: Stale
+  parameter: proof
+  deviation: A stale child approval proof is presented.
+  cause: The child proof is taken once; a stale proof with a valid id could be presented after dispute.
+  consequence: A disputed child could still be nested.
+  safeguard: proveApproved requires approved status; proof is one-shot.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-KASSET-014
+  node: kasset-nesting
+  guide_word: Substitute/confused-deputy
+  parameter: proof
+  deviation: A proof for another child is substituted.
+  cause: nestProofs compares the proof data id and uri to the child reference.
+  consequence: A different child could be attached.
+  safeguard: Id and URI comparison.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-KASSET-015
+  node: kasset-nesting
+  guide_word: Partial commit
+  parameter: childRefs
+  deviation: Child proofs are consumed before the parent childRefs write is acknowledged.
+  cause: nestProofs takes each proof, then the parent writes childRefs.
+  consequence: A failure can consume child proofs while the parent remains unchanged.
+  safeguard: Two-phase recheck prevents a state race; no proof-consumption receipt.
+  safeguard_status: none
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-11
+  finding: RGA-033
+  negative: false
+  disposition: open
+- id: HZ-VP-001
+  node: value-proposition
+  guide_word: No/Not
+  parameter: proposer
+  deviation: Validate is called without a credential proof.
+  cause: The arm resolves the credential and calls proveAndCheck.
+  consequence: An unqualified validator could validate the proposition.
+  safeguard: Credential verify plus proof check.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-VP-002
+  node: value-proposition
+  guide_word: More
+  parameter: proposer
+  deviation: A proposition is validated more than once.
+  cause: Two validate calls race on vpState.
+  consequence: Two validations or two conflicting snapshots could be recorded.
+  safeguard: Status guard and validate_once.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-VP-003
+  node: value-proposition
+  guide_word: Less
+  parameter: proposer
+  deviation: The validator's scope is insufficient.
+  cause: proveAndCheck uses the VP requirement.
+  consequence: An under-qualified validator could validate.
+  safeguard: scopeMatches and issuerCovers.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-VP-004
+  node: value-proposition
+  guide_word: As well as
+  parameter: caller
+  deviation: The proof payload carries a caller that differs from the proof holder.
+  cause: proveValidated stores the authSubject address as caller.
+  consequence: A proof could be attributed to another caller.
+  safeguard: checkValidatedProof compares caller.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-VP-005
+  node: value-proposition
+  guide_word: Part of
+  parameter: atHeight
+  deviation: The proof payload carries an arbitrary atHeight.
+  cause: proveValidated stores the caller-supplied @atHeight verbatim.
+  consequence: A consumer that trusts the payload can accept a future or historical proof.
+  safeguard: Current KAsset consumers compare the payload height to the chain height.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-03
+  finding: RGA-021
+  negative: false
+  disposition: open
+- id: HZ-VP-006
+  node: value-proposition
+  guide_word: Reverse
+  parameter: status
+  deviation: Withdraw is followed by validate.
+  cause: Withdraw sets status withdrawn; validate requires proposed.
+  consequence: A withdrawn proposition could be validated.
+  safeguard: Status guard.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-VP-007
+  node: value-proposition
+  guide_word: Other than
+  parameter: status
+  deviation: An unknown VP status is supplied.
+  cause: The guards compare known status strings.
+  consequence: Unknown statuses fail closed.
+  safeguard: Explicit status comparisons.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-VP-008
+  node: value-proposition
+  guide_word: Late
+  parameter: deadline
+  deviation: Comment is attempted after the VP deadline.
+  cause: The arm checks now > deadlineHeight.
+  consequence: A late comment could be appended.
+  safeguard: Comment-window guard.
+  safeguard_status: holds
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-VP-009
+  node: value-proposition
+  guide_word: Early
+  parameter: deadline
+  deviation: Validate is attempted before the deadline.
+  cause: This is the intended window.
+  consequence: No hazard; the arm proceeds to proof checks.
+  safeguard: Deadline guard permits the open window.
+  safeguard_status: holds
+  severity: S4
+  likelihood: A
+  risk: 4
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-VP-010
+  node: value-proposition
+  guide_word: Before
+  parameter: status
+  deviation: proveValidated is called before the VP is validated.
+  cause: The arm checks status == validated.
+  consequence: A proposed VP could issue a validated proof.
+  safeguard: Status guard.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-VP-011
+  node: value-proposition
+  guide_word: After
+  parameter: status
+  deviation: A dispute is opened after proveValidated.
+  cause: The proof is a snapshot; dispute sets status disputed.
+  consequence: A pre-dispute proof could be used after the dispute.
+  safeguard: Non-retroactive proof; consumers should check current status.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-VP-012
+  node: value-proposition
+  guide_word: Duplicate/Replay
+  parameter: proposer
+  deviation: A proof is replayed or taken twice.
+  cause: A copied proof URI or a second take.
+  consequence: The same validated proof could authorize two approvals.
+  safeguard: One-shot Proof.take.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-VP-013
+  node: value-proposition
+  guide_word: Stale
+  parameter: atHeight
+  deviation: A proof issued at an old height is presented as current.
+  cause: The payload carries atHeight; the consumer compares it to the expected height.
+  consequence: A consumer that trusts the payload could accept a stale proof.
+  safeguard: checkValidatedProof height comparison.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-03
+  finding: RGA-021
+  negative: false
+  disposition: open
+- id: HZ-VP-014
+  node: value-proposition
+  guide_word: Substitute/confused-deputy
+  parameter: caller
+  deviation: A proof for one caller is presented by another.
+  cause: checkValidatedProof compares the caller field.
+  consequence: A proof could be used by a non-caller.
+  safeguard: Caller binding.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-VP-015
+  node: value-proposition
+  guide_word: Partial commit
+  parameter: caller
+  deviation: proofState is created before vpState is re-posted.
+  cause: proveValidated creates the proof, registers it, then re-posts vpState.
+  consequence: A failure can leave an issued proof with no acknowledged VP state.
+  safeguard: Proof is one-shot; no recovery record.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-11
+  finding: RGA-021
+  negative: false
+  disposition: open
+- id: HZ-ORACLE-001
+  node: oracle
+  guide_word: No/Not
+  parameter: adjudicator
+  deviation: Decide is called without the adjudicator capability.
+  cause: Decide compares authSubject to the stored adjudicator.
+  consequence: A non-adjudicator could decide.
+  safeguard: authSubject plus adjudicator equality.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ORACLE-002
+  node: oracle
+  guide_word: More
+  parameter: adjudicator
+  deviation: Decide is called more than once.
+  cause: Two decide calls race on caseState.
+  consequence: A second decision could overwrite the first.
+  safeguard: Status guard open and decide_once.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ORACLE-003
+  node: oracle
+  guide_word: Less
+  parameter: adjudicator
+  deviation: The adjudicator credential is missing or under-scoped.
+  cause: Decide calls proveAndCheck on the stored adjudicator credential.
+  consequence: An unqualified adjudicator could decide.
+  safeguard: Stored credential proof; model omits the requirement shape.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: LR-01
+  finding: RGA-004
+  negative: false
+  disposition: open
+- id: HZ-ORACLE-004
+  node: oracle
+  guide_word: As well as
+  parameter: subjectRef
+  deviation: A case is opened with extra or caller-supplied parties.
+  cause: OracleFactory.open is public and accepts @caseReq and parties from the caller.
+  consequence: Bogus cases and false party lists can be created.
+  safeguard: openCaseCheck verifies the adjudicator credential and subject match only.
+  safeguard_status: none
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-01
+  finding: RGA-023
+  negative: false
+  disposition: open
+- id: HZ-ORACLE-005
+  node: oracle
+  guide_word: Part of
+  parameter: subjectRef
+  deviation: A case is opened with a partial or substituted subjectRef.
+  cause: subjectRef is stored as supplied and not resolved.
+  consequence: A case can name a subject that never agreed to it.
+  safeguard: execute is bound to the stored private Apply capability.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-01
+  finding: RGA-023
+  negative: false
+  disposition: open
+- id: HZ-ORACLE-006
+  node: oracle
+  guide_word: Reverse
+  parameter: execute
+  deviation: Execute is called before decide.
+  cause: Execute requires status decided.
+  consequence: An undecided case could apply a decision.
+  safeguard: Status guard.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ORACLE-007
+  node: oracle
+  guide_word: Other than
+  parameter: decision
+  deviation: An unknown outcome is supplied to decide.
+  cause: Decide matches uphold/revoke/partial and refuses everything else.
+  consequence: An unknown outcome could be stored.
+  safeguard: Outcome match in decide.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ORACLE-008
+  node: oracle
+  guide_word: Late
+  parameter: execute
+  deviation: Execute is called after the case expired.
+  cause: Expire sets status expired; execute requires decided.
+  consequence: An expired case could still apply.
+  safeguard: Status guard.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ORACLE-009
+  node: oracle
+  guide_word: Early
+  parameter: execute
+  deviation: Execute is called before the decision is final.
+  cause: Execute requires decided.
+  consequence: A partial decision could be applied.
+  safeguard: Status guard.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ORACLE-010
+  node: oracle
+  guide_word: Before
+  parameter: evidence
+  deviation: Evidence is submitted before the case is open.
+  cause: Evidence requires status open.
+  consequence: Evidence could be attached to a non-open case.
+  safeguard: Status guard and party/adjudicator check.
+  safeguard_status: holds
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ORACLE-011
+  node: oracle
+  guide_word: After
+  parameter: evidence
+  deviation: Evidence is submitted after decide.
+  cause: Evidence requires status open.
+  consequence: Post-decision evidence could influence the record.
+  safeguard: Status guard.
+  safeguard_status: holds
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ORACLE-012
+  node: oracle
+  guide_word: Duplicate/Replay
+  parameter: execute
+  deviation: Execute is replayed.
+  cause: A second execute after the first.
+  consequence: The decision could be applied twice.
+  safeguard: Status executed returns 'already executed'; Apply also refuses by case id and status.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ORACLE-013
+  node: oracle
+  guide_word: Stale
+  parameter: decision
+  deviation: A stale decision or case snapshot is executed.
+  cause: Execute reads caseState and passes the stored decision.
+  consequence: An old decision could be applied to a changed subject.
+  safeguard: Case id check in Apply and status guard in execute.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-08
+  finding: RGA-024
+  negative: false
+  disposition: open
+- id: HZ-ORACLE-014
+  node: oracle
+  guide_word: Substitute/confused-deputy
+  parameter: subjectRef
+  deviation: A case is opened with another subject's Apply capability.
+  cause: The caller supplies subjectApply to the public factory.
+  consequence: A case could target a cell the opener does not control.
+  safeguard: The real Apply capability is private to the subject factory; a forged capability cannot resolve.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-ORACLE-015
+  node: oracle
+  guide_word: Partial commit
+  parameter: execute
+  deviation: Execute writes executing, calls Apply, then writes executed or decided.
+  cause: The two writes and the cross-contract call are not one atomic step.
+  consequence: A failure can leave the case unable to record a successful application, or a retry with an ambiguous receipt.
+  safeguard: Apply refuses a second application by status and case id; no execution receipt.
+  safeguard_status: none
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-08
+  finding: RGA-024
+  negative: false
+  disposition: open
+- id: HZ-PROV-001
+  node: provenance
+  guide_word: No/Not
+  parameter: writers
+  deviation: Anchor or comment is called by a non-writer.
+  cause: Both arms check the writer list.
+  consequence: A non-writer could append to the record.
+  safeguard: listHas writer check.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-PROV-002
+  node: provenance
+  guide_word: More
+  parameter: writers
+  deviation: More writers than the asset owner intended.
+  cause: The writer list is chosen by the creator and never updated.
+  consequence: A writer can append indefinitely.
+  safeguard: Writer list is fixed at create; no add/remove arm.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-02
+  finding: RGA-022
+  negative: false
+  disposition: open
+- id: HZ-PROV-003
+  node: provenance
+  guide_word: Less
+  parameter: writers
+  deviation: The writer list is empty.
+  cause: Create accepts any list, including [].
+  consequence: Nobody can anchor or comment; the record is dead.
+  safeguard: None.
+  safeguard_status: none
+  severity: S3
+  likelihood: A
+  risk: 8
+  action: RR-02
+  finding: RGA-022
+  negative: false
+  disposition: open
+- id: HZ-PROV-004
+  node: provenance
+  guide_word: As well as
+  parameter: comment
+  deviation: A comment carries extra fields.
+  cause: The comment arm appends the supplied record with the derived author and height.
+  consequence: Unexpected data can be stored in the comment list.
+  safeguard: No schema check beyond writer and status.
+  safeguard_status: partial
+  severity: S4
+  likelihood: B
+  risk: 3
+  action: accept-risk
+  finding: RGA-022
+  negative: false
+  disposition: open
+- id: HZ-PROV-005
+  node: provenance
+  guide_word: Part of
+  parameter: hash
+  deviation: The anchoring document has an empty or partial hash.
+  cause: The arm checks Nil or empty string only.
+  consequence: A weak anchor can be recorded as if it were a content hash.
+  safeguard: Non-empty hash check; no hash-length or algorithm check.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-02
+  finding: RGA-022
+  negative: false
+  disposition: open
+- id: HZ-PROV-006
+  node: provenance
+  guide_word: Reverse
+  parameter: hash
+  deviation: An anchor is removed or reordered.
+  cause: There is no delete or reorder arm.
+  consequence: Anchors cannot be retracted; the history is append-only.
+  safeguard: Append-only list.
+  safeguard_status: holds
+  severity: S4
+  likelihood: B
+  risk: 3
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-PROV-007
+  node: provenance
+  guide_word: Other than
+  parameter: hash
+  deviation: A hash from another document or asset is substituted.
+  cause: The hash is compared only for duplicates within the record.
+  consequence: A wrong document can be anchored to the asset.
+  safeguard: None; provenance is advisory and does not verify content.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-02
+  finding: RGA-022
+  negative: false
+  disposition: open
+- id: HZ-PROV-008
+  node: provenance
+  guide_word: Before
+  parameter: comment
+  deviation: A comment is submitted before the record exists.
+  cause: The capability is only reachable from the created record.
+  consequence: A comment could be attached to an unknown record.
+  safeguard: Capability resolution.
+  safeguard_status: holds
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-PROV-009
+  node: provenance
+  guide_word: After
+  parameter: comment
+  deviation: A comment is submitted after the record is no longer current.
+  cause: There is no status or deadline on a provenance record.
+  consequence: Late comments are indistinguishable from early ones.
+  safeguard: Heights are recorded; no deadline policy.
+  safeguard_status: partial
+  severity: S4
+  likelihood: B
+  risk: 3
+  action: accept-risk
+  finding: RGA-022
+  negative: false
+  disposition: open
+- id: HZ-PROV-010
+  node: provenance
+  guide_word: Duplicate/Replay
+  parameter: hash
+  deviation: The same anchor hash is appended twice.
+  cause: A replay or duplicate document.
+  consequence: Duplicate anchors could inflate the record.
+  safeguard: listHasId duplicate refusal.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-PROV-011
+  node: provenance
+  guide_word: Stale
+  parameter: assetRef
+  deviation: A record's assetRef no longer names the intended asset.
+  cause: assetRef is a free string stored at create; no registry binding.
+  consequence: Provenance can be attributed to the wrong asset.
+  safeguard: None; creation is unbound.
+  safeguard_status: none
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-02
+  finding: RGA-022
+  negative: false
+  disposition: open
+- id: HZ-PROV-012
+  node: provenance
+  guide_word: Substitute/confused-deputy
+  parameter: assetRef
+  deviation: A creator opens a provenance record for another party's asset.
+  cause: Create is unauthenticated and accepts any assetRef.
+  consequence: False provenance can be published under a real asset identifier.
+  safeguard: None; provenance is advisory.
+  safeguard_status: none
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-02
+  finding: RGA-022
+  negative: false
+  disposition: open
+- id: HZ-PROV-013
+  node: provenance
+  guide_word: Partial commit
+  parameter: hash
+  deviation: The anchor list is appended and the acknowledgement is lost.
+  cause: The arm consumes pState, appends, and re-posts.
+  consequence: A retry could append twice or leave an unclear result.
+  safeguard: Duplicate-hash refusal makes retry safe.
+  safeguard_status: holds
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-REG-001
+  node: registries-factories
+  guide_word: No/Not
+  parameter: key
+  deviation: A creation record is written without a registry key.
+  cause: The create arms set the registry entry from the emitted URI.
+  consequence: verify cannot resolve the created object.
+  safeguard: URI emission and registry set in the same deploy closure.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-10
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-REG-002
+  node: registries-factories
+  guide_word: More
+  parameter: key
+  deviation: More registry entries than the deployment can serve.
+  cause: There is no cap or sharding.
+  consequence: Unbounded state and longer create serialization.
+  safeguard: None; documented serialization point only.
+  safeguard_status: none
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-10
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-REG-003
+  node: registries-factories
+  guide_word: Less
+  parameter: key
+  deviation: An empty or truncated registry key is written.
+  cause: The key is uri.toString() with no format check.
+  consequence: verify can collide or fail to resolve.
+  safeguard: URI emission; no key schema.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-10
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-REG-004
+  node: registries-factories
+  guide_word: As well as
+  parameter: entry
+  deviation: The registry entry carries extra fields.
+  cause: The create arms set a fixed small record plus caller-supplied fields.
+  consequence: Unexpected data can be read by verify consumers.
+  safeguard: No schema check on the registry record.
+  safeguard_status: partial
+  severity: S4
+  likelihood: B
+  risk: 3
+  action: RR-10
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-REG-005
+  node: registries-factories
+  guide_word: Part of
+  parameter: entry
+  deviation: The registry record omits subject, claimant, or URI.
+  cause: The record is assembled from caller fields and the emitted URI.
+  consequence: verify returns an incomplete record to a consumer.
+  safeguard: No field-presence check in verify.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-10
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-REG-006
+  node: registries-factories
+  guide_word: Reverse
+  parameter: entry
+  deviation: A registry entry is deleted or rolled back.
+  cause: There is no delete arm.
+  consequence: History cannot be retracted; a bad entry is permanent.
+  safeguard: Append-only registry.
+  safeguard_status: holds
+  severity: S4
+  likelihood: B
+  risk: 3
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-REG-007
+  node: registries-factories
+  guide_word: Other than
+  parameter: counter
+  deviation: The version counter is inconsistent with the registry entry.
+  cause: Each create sets version 1 and increments on updates; the registry has no version field.
+  consequence: A consumer cannot use the registry to detect a stale object.
+  safeguard: Object version is separate from registry presence.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: LR-06
+  finding: RGA-005
+  negative: false
+  disposition: open
+- id: HZ-REG-008
+  node: registries-factories
+  guide_word: Before
+  parameter: directoryState
+  deviation: The registry entry is written before the object state is complete.
+  cause: Create writes the state cell, registers the bundle, then writes the registry.
+  consequence: A verify call can observe a record whose object is not ready.
+  safeguard: The registry write is last in the create closure.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-11
+  finding: RGA-031
+  negative: false
+  disposition: open
+- id: HZ-REG-009
+  node: registries-factories
+  guide_word: After
+  parameter: factoryState
+  deviation: The creation acknowledgement arrives before the registry write is visible.
+  cause: The caller retries or reads immediately.
+  consequence: A consumer can see a successful create before verify resolves it.
+  safeguard: The registry write precedes the return in the source.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-11
+  finding: RGA-031
+  negative: false
+  disposition: open
+- id: HZ-REG-010
+  node: registries-factories
+  guide_word: Duplicate/Replay
+  parameter: key
+  deviation: A registry key is overwritten.
+  cause: The registry uses a map set keyed by URI; a duplicate URI would overwrite.
+  consequence: A create could replace another record's entry.
+  safeguard: URIs are unforgeable and emitted per deploy; no explicit duplicate refusal.
+  safeguard_status: partial
+  severity: S2
+  likelihood: C
+  risk: 6
+  action: RR-10
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-REG-011
+  node: registries-factories
+  guide_word: Stale
+  parameter: entry
+  deviation: verify returns a stale registry record.
+  cause: The registry is append-only; records are not updated.
+  consequence: A consumer can read an old record after the object changed.
+  safeguard: Registry record is a snapshot; consumers must read the object for current state.
+  safeguard_status: holds
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-REG-012
+  node: registries-factories
+  guide_word: Substitute/confused-deputy
+  parameter: key
+  deviation: A caller substitutes another object's URI in verify.
+  cause: verify keys on the caller-supplied URI string.
+  consequence: A consumer can be pointed at another record.
+  safeguard: The record's URI is compared by the consuming arm where it matters.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-10
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-REG-013
+  node: registries-factories
+  guide_word: Partial commit
+  parameter: directoryState
+  deviation: The object state and the registry entry are written in separate steps.
+  cause: There is no atomic multi-cell write or recovery record.
+  consequence: A failure can leave an object without a registry entry, or an entry without an object.
+  safeguard: None; create is not recovery-safe.
+  safeguard_status: none
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-11
+  finding: RGA-031
+  negative: false
+  disposition: open
+- id: HZ-DEPLOY-001
+  node: deployment-phlo
+  guide_word: No/Not
+  parameter: install-auth
+  deviation: A term is installed without the installer capability.
+  cause: GenRoot.register is the only root write and checks the installer.
+  consequence: An unauthorized term could claim a component key.
+  safeguard: Installer check in GenRoot.register.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-DEPLOY-002
+  node: deployment-phlo
+  guide_word: More
+  parameter: phlo
+  deviation: A deploy or nested arm consumes more phlo than budgeted.
+  cause: Nest recurses over caller-supplied childRefs; lists grow with each append.
+  consequence: The deploy aborts after partial work or an arm becomes unusable at scale.
+  safeguard: No cap or cost model; devnet phlo limit 8,000,000.
+  safeguard_status: none
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-05
+  finding: RGA-025
+  negative: false
+  disposition: open
+- id: HZ-DEPLOY-003
+  node: deployment-phlo
+  guide_word: Less
+  parameter: phlo
+  deviation: A deploy is underfunded.
+  cause: The caller chooses phlo; the arm may not reach its state write.
+  consequence: The create or transition fails without a state change.
+  safeguard: Deploy failure is visible to the caller; no retry protocol.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: accept-risk
+  finding: RGA-025
+  negative: false
+  disposition: open
+- id: HZ-DEPLOY-004
+  node: deployment-phlo
+  guide_word: As well as
+  parameter: term-order
+  deviation: An extra term is deployed outside the manifest.
+  cause: install.py deploys only contracts/build/deploy; a manual deploy can add terms.
+  consequence: An unmanifested component can claim root keys or capabilities.
+  safeguard: Build and parse checks cover the manifest set only.
+  safeguard_status: partial
+  severity: S2
+  likelihood: C
+  risk: 6
+  action: accept-risk
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-DEPLOY-005
+  node: deployment-phlo
+  guide_word: Part of
+  parameter: uri-binding
+  deviation: A placeholder or factory URI is missing from the install.
+  cause: A term references an unset placeholder.
+  consequence: The term deploys with an unresolved or wrong URI.
+  safeguard: install.py ORDER, dry-run, and placeholder checks.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-DEPLOY-006
+  node: deployment-phlo
+  guide_word: Reverse
+  parameter: term-order
+  deviation: A deployment is rolled back.
+  cause: There is no uninstall or rollback protocol.
+  consequence: Old URIs remain registered and new terms may coexist.
+  safeguard: None; deployments are forward-only.
+  safeguard_status: none
+  severity: S3
+  likelihood: C
+  risk: 4
+  action: accept-risk
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-DEPLOY-007
+  node: deployment-phlo
+  guide_word: Other than
+  parameter: uri-binding
+  deviation: A wrong factory URI is substituted during install.
+  cause: Placeholders are captured from deploy results; a manual substitution can point elsewhere.
+  consequence: A consumer resolves the wrong factory.
+  safeguard: Captured URIs from the deploy response; no independent registry check.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: accept-risk
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-DEPLOY-008
+  node: deployment-phlo
+  guide_word: Late
+  parameter: term-order
+  deviation: A term is installed after its consumers are already live.
+  cause: Manual deploy ordering.
+  consequence: Consumers fail until the term is installed.
+  safeguard: Dependency order in install.py.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-DEPLOY-009
+  node: deployment-phlo
+  guide_word: Early
+  parameter: term-order
+  deviation: A term is installed before its dependencies.
+  cause: Manual deploy ordering.
+  consequence: Placeholder resolution fails.
+  safeguard: Dependency order and parse checks.
+  safeguard_status: holds
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-DEPLOY-010
+  node: deployment-phlo
+  guide_word: Before
+  parameter: private-apply
+  deviation: A private Apply capability is exposed before the subject factory exists.
+  cause: The capability is created inside the subject deploy closure.
+  consequence: A caller could apply a decision to the subject.
+  safeguard: Apply is never bundled; only the subject factory receives it.
+  safeguard_status: holds
+  severity: S1
+  likelihood: B
+  risk: 12
+  action: none
+  finding: '-'
+  negative: true
+  disposition: no-finding
+- id: HZ-DEPLOY-011
+  node: deployment-phlo
+  guide_word: After
+  parameter: private-apply
+  deviation: A private Apply capability is retained after the subject is closed.
+  cause: The capability is passed to the oracle case at open.
+  consequence: A stale case could apply after the subject's intended lifecycle.
+  safeguard: Apply checks status and case id.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-08
+  finding: RGA-024
+  negative: false
+  disposition: open
+- id: HZ-DEPLOY-012
+  node: deployment-phlo
+  guide_word: Duplicate/Replay
+  parameter: term-order
+  deviation: The same term is deployed twice.
+  cause: A replayed install creates new URIs and registry entries.
+  consequence: Two component instances can coexist under different URIs.
+  safeguard: Duplicate key refusal at root; no deploy idempotency.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: accept-risk
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-DEPLOY-013
+  node: deployment-phlo
+  guide_word: Stale
+  parameter: uri-binding
+  deviation: The deployment manifest is stale relative to the chain.
+  cause: deployments/devnet.json is written by the harness and not read back.
+  consequence: A consumer or operator uses an old URI.
+  safeguard: No chain-to-manifest reconciliation.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: accept-risk
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-DEPLOY-014
+  node: deployment-phlo
+  guide_word: Substitute/confused-deputy
+  parameter: uri-binding
+  deviation: A caller substitutes a factory URI for a component URI.
+  cause: Consumers resolve by URI; kind is not checked at resolve.
+  consequence: A component bundle of the wrong kind could be used.
+  safeguard: Consumer-side shape checks only.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: RR-10
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-DEPLOY-015
+  node: deployment-phlo
+  guide_word: Partial commit
+  parameter: term-order
+  deviation: A multi-term install fails after some terms are live.
+  cause: install.py deploys terms sequentially with no transaction.
+  consequence: The deployment is partially applied and must be reconciled by hand.
+  safeguard: Manifest and preflight checks; no rollback.
+  safeguard_status: none
+  severity: S2
+  likelihood: B
+  risk: 9
+  action: accept-risk
+  finding: RGA-029
+  negative: false
+  disposition: open
+- id: HZ-CRED-016
+  node: issuer-credential-proof
+  guide_word: Substitute/confused-deputy
+  parameter: subject
+  deviation: Credential.check is called with a caller-nominated subject.
+  cause: The advisory arm accepts @caller and compares it to the stored subject.
+  consequence: A future caller could treat the advisory result as signature-derived authority.
+  safeguard: Static rule forbids X!("check") as a commit authority; no core caller exists.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-06
+  finding: RGA-027
+  negative: false
+  disposition: open
+- id: HZ-CLAIM-016
+  node: claim-validation
+  guide_word: Other than
+  parameter: deadline
+  deviation: A claim is created with a past deadline or a comment window after the deadline.
+  cause: claimReqOk checks string presence only.
+  consequence: The claim is born expired or unusable, and later arms fail in surprising ways.
+  safeguard: None; creation has no schedule validation.
+  safeguard_status: none
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-07
+  finding: RGA-026
+  negative: false
+  disposition: open
+- id: HZ-VP-016
+  node: value-proposition
+  guide_word: Other than
+  parameter: deadline
+  deviation: A value proposition is created with a past deadline or an impossible schedule.
+  cause: vpReqOk checks string presence only.
+  consequence: The proposition is born expired or unusable.
+  safeguard: None; creation has no schedule validation.
+  safeguard_status: none
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-07
+  finding: RGA-026
+  negative: false
+  disposition: open
+- id: HZ-ORACLE-016
+  node: oracle
+  guide_word: Other than
+  parameter: deadline
+  deviation: A case is opened with a past or unorderable deadline.
+  cause: OracleFactory.open stores the caller-supplied deadline without validation.
+  consequence: The case can expire immediately or have an inconsistent window.
+  safeguard: None; open has no schedule validation.
+  safeguard_status: none
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-07
+  finding: RGA-026
+  negative: false
+  disposition: open
+- id: HZ-ID-012
+  node: identity
+  guide_word: No/Not
+  parameter: entry
+  deviation: Claim or comment participation occurs without an identity record.
+  cause: Claim validation and comment authenticate a REV address but do not resolve an Identity.
+  consequence: Participation is permissionless and can be Sybil-amplified.
+  safeguard: None; this may be intentional but is undocumented.
+  safeguard_status: none
+  severity: S4
+  likelihood: A
+  risk: 4
+  action: RR-09
+  finding: RGA-028
+  negative: false
+  disposition: open
+- id: HZ-KASSET-016
+  node: kasset-nesting
+  guide_word: More
+  parameter: childRefs
+  deviation: A nest call supplies more children than the deploy or parent state can absorb.
+  cause: childRefs is caller-supplied and each child performs resolve/prove/take work.
+  consequence: The deploy exhausts phlo after consuming proofs, and the parent list grows without a cap.
+  safeguard: No count, depth, or cost cap.
+  safeguard_status: none
+  severity: S3
+  likelihood: B
+  risk: 6
+  action: RR-05
+  finding: RGA-025
+  negative: false
+  disposition: open

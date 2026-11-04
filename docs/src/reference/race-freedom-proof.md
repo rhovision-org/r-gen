@@ -27,15 +27,17 @@ The executable fold and the proof semantics are tied by `runExec_sound` and
 `RGen.VWorld.take_take_blocks`: after a take, a second take on the same cell fails without
 a post. `RGen.VWorld.take_post_commit_equiv`: the deployed
 `for (@s <- cell) { ...; cell!(s') }` pattern equals the atomic `VWorld.commit` step.
-`RGen.VWorld.commit_gen_strict` / `Event.apply` advance the generation on both acceptance
-and refusal, matching a consume/re-post on every path.
+`RGen.VWorld.commit` and `RGen.Event.apply` advance the generation on both acceptance and
+refusal, matching a consume/re-post on every path.
 
 ## Decision authority
 
 `RGen.Arm.decision_factors` and `RGen.core_arm_authority`: every arm built with `Arm`
 reaches its decision through its consumed cell and nothing else. `Arm.decision` reads only
-`w.cell a.cell`; proof payloads are explicit arguments from a consumed one-shot proof, not
-ambient reads.
+`w.cell a.cell`. This is functional dependence, not permission: the theorem does not say
+who may invoke the arm. `Arm.proofCells` is metadata and is not read by the decision; the
+one-shot proof cell is proved separately. The [proof audit](proof-audit.md) records both
+gaps (RGA-002, RGA-012).
 
 `RGen.cross_cell_read_not_authority`: if a decision varies with a cell `d` while every
 other cell is held equal, it does not factor through the consumed cell `c`, and every
@@ -75,12 +77,18 @@ Representative theorems:
 
 ## Guard reconciliation
 
-The model was reconciled with the deployed arms before these proofs: VP withdraw is
-proposed-only; VP openDispute accepts proposed/validated with no prior dispute; K-Asset
+The model was partially reconciled with the deployed arms before these proofs: VP withdraw
+is proposed-only; VP openDispute accepts proposed/validated with no prior dispute; K-Asset
 approve rejects the validator; K-Asset openDispute parties are claimant/validator; nest
 checks existing children, scope, and `child.approvedAt < parent.approvedAt`; claim
 validation expires late; claim comment has its window; credential renew is issuer-only and
 active-only; provenance has a writer list; oracle execute has a rollback/retry path.
+
+The audit found residual divergences that this list does not close: credential revoke
+idempotence, expiry boundaries, the missing approver-qualification requirement, nest status
+admission and tie handling, caller-chosen claim K-Asset ids, oracle evidence gating, and the
+`Identity.update` mapping. The direction of each is in the [proof audit](proof-audit.md)
+and `spec/proofs/rigor.yaml`.
 
 `tools/check_arm_guards.py` ties each mutating `.rho` arm to its manifest `cell` and checks
 that any declared `transition`/`authority`/`guard_eq` names exist. This is a coarse

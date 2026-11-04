@@ -1,0 +1,263 @@
+schema_version: rgen.improvements/v1
+baseline: 527ed95
+items:
+- id: RR-01
+  priority: P1
+  title: Bind oracle case opening to the subject and verify parties
+  files:
+  - path: contracts/src/deploy/30_oracle.rho
+    function: OracleFactory.open
+    lines: 57-80
+  - path: contracts/src/deploy/30_oracle.rho
+    function: openCaseCheck
+    lines: 27-53
+  finding: RGA-023
+  hazop:
+  - HZ-ORACLE-004
+  - HZ-ORACLE-005
+  action: Require a subject capability or an authenticated subjectRef, and validate the party list against the subject record.
+    Keep decide and execute bound to the stored adjudicator and the real private Apply. A public, unauthenticated open may
+    remain only as an explicitly labelled advisory case.
+  compatibility: Breaking for unauthenticated openers. Reads of old cases are unchanged.
+  tests:
+  - harness/unit_oracle.py
+  status: proposed
+- id: RR-02
+  priority: P1
+  title: Authenticate and bind provenance creation; reject empty writers
+  files:
+  - path: contracts/src/deploy/40_provenance.rho
+    function: ProvenanceFactory.create
+    lines: 23-32
+  finding: RGA-022
+  hazop:
+  - HZ-PROV-002
+  - HZ-PROV-003
+  - HZ-PROV-005
+  - HZ-PROV-007
+  - HZ-PROV-011
+  - HZ-PROV-012
+  action: Require a creator capability and a non-empty writer list. If an asset registry is available, bind assetRef to it;
+    otherwise document provenance as advisory and include the creator in the writer set. Reject empty writers so a record
+    cannot be born unusable.
+  compatibility: Breaking for anonymous creation and empty writer lists. Old records remain readable.
+  tests:
+  - harness/unit_provenance.py
+  status: proposed
+- id: RR-03
+  priority: P1
+  title: Bind validated proofs to the chain height
+  files:
+  - path: contracts/src/deploy/22_value.rho
+    function: ValueProposition.proveValidated
+    lines: 183-215
+  - path: contracts/src/lib/Proof.rho
+    function: checkValidatedProof
+    lines: 54-71
+  finding: RGA-021
+  hazop:
+  - HZ-VP-005
+  - HZ-VP-013
+  action: Replace the caller-supplied @atHeight with nowHeight, or verify equality with nowHeight before issuing the proof.
+    Keep the caller field in the payload. If a historical proof is needed, add an explicit bounded validFrom/validUntil rather
+    than trusting an arbitrary height.
+  compatibility: Breaking for callers that pass a future or historical height.
+  tests:
+  - harness/unit_value.py
+  - harness/unit_kasset.py
+  status: proposed
+- id: RR-04
+  priority: P1
+  title: Make Claim and K-Asset verdict mappings total and aligned
+  files:
+  - path: contracts/src/deploy/20_claim.rho
+    function: claimStatus
+    lines: 48-53
+  - path: contracts/src/deploy/20_claim.rho
+    function: kassetStatus
+    lines: 55-61
+  - path: contracts/src/deploy/20_claim.rho
+    function: finalizeValidation
+    lines: 192-246
+  finding: RGA-020
+  hazop:
+  - HZ-CLAIM-004
+  - HZ-CLAIM-005
+  - HZ-CLAIM-007
+  action: Accept exactly valid, partial, and invalid. Map valid -> validated/validated, partial -> validated/conditional,
+    invalid -> rejected/rejected, and reject every other verdict before any state write. State the claim/K-Asset status relation
+    in the docs and the model.
+  compatibility: Breaking for unknown verdicts, which currently produce inconsistent state.
+  tests:
+  - harness/unit_claim.py
+  - harness/integration_core.py
+  status: proposed
+- id: RR-05
+  priority: P1
+  title: Bound KAsset.nest count, depth, and per-child work
+  files:
+  - path: contracts/src/lib/KAsset.rho
+    function: nestCheck
+    lines: 260-277
+  - path: contracts/src/lib/KAsset.rho
+    function: nestProofs
+    lines: 279-328
+  - path: contracts/src/lib/KAsset.rho
+    function: KAsset.nest
+    lines: 330-368
+  finding: RGA-025
+  hazop:
+  - HZ-DEPLOY-002
+  - HZ-KASSET-016
+  action: Reject childRefs lists above a documented cap and reject a child batch whose resolve/prove/take work would exceed
+    the deploy's phlo budget. Record the cap and the expected cost in the arm reference. Do not change the forest order rules.
+  compatibility: Breaking only for oversized batches; normal nesting is unchanged.
+  tests:
+  - harness/unit_kasset.py
+  status: proposed
+- id: RR-06
+  priority: P2
+  title: Make Credential.check explicitly advisory or authenticate it
+  files:
+  - path: contracts/src/deploy/11_credentials.rho
+    function: Credential.check
+    lines: 139-167
+  finding: RGA-027
+  hazop:
+  - HZ-CRED-016
+  action: Prefer renaming the arm or documenting it as advisory. If it is kept callable by third parties, derive the caller
+    from authSubject rather than accepting @caller, while keeping the existing static rule that no commit may use check as
+    authority.
+  compatibility: Additive for authenticated checks; breaking for callers that rely on a nominated caller string.
+  tests:
+  - harness/unit_credentials.py
+  status: proposed
+- id: RR-07
+  priority: P1
+  title: Validate deadlines and orderings at creation
+  files:
+  - path: contracts/src/deploy/20_claim.rho
+    function: claimReqOk
+    lines: 30-46
+  - path: contracts/src/deploy/22_value.rho
+    function: vpReqOk
+    lines: 23-37
+  - path: contracts/src/deploy/30_oracle.rho
+    function: OracleFactory.open
+    lines: 57-80
+  finding: RGA-026
+  hazop:
+  - HZ-CLAIM-016
+  - HZ-VP-016
+  - HZ-ORACLE-016
+  action: At creation, require deadlineHeight in the future (or an explicit zero-means-none rule), comment window not after
+    the deadline, non-negative quantities, and a well-formed party list. Document the exact boundary semantics (strict greater-than
+    on expiry).
+  compatibility: Breaking for impossible or already-expired schedules.
+  tests:
+  - harness/unit_claim.py
+  - harness/unit_value.py
+  - harness/unit_oracle.py
+  status: proposed
+- id: RR-08
+  priority: P1
+  title: Make oracle execution retry-safe and outcome-blind
+  files:
+  - path: contracts/src/deploy/30_oracle.rho
+    function: OracleCase.execute
+    lines: 152-197
+  - path: contracts/src/lib/KAsset.rho
+    function: Apply.applyDecision
+    lines: 438-470
+  finding: RGA-024
+  hazop:
+  - HZ-ORACLE-013
+  - HZ-ORACLE-015
+  - HZ-DEPLOY-011
+  action: Keep the permissionless crank only if it cannot choose outcome, payee, or amount. Add an application receipt or
+    idempotency key so a retry after a partial cross-contract failure can distinguish "already applied" from "apply failed",
+    and make the case state transition consistent with that receipt.
+  compatibility: Additive to the case record; breaking if a receipt field is required for old cases.
+  tests:
+  - harness/unit_oracle.py
+  - harness/concurrency_core.py
+  status: proposed
+- id: RR-09
+  priority: P2
+  title: Decide and document whether identity is required for participation
+  files:
+  - path: contracts/src/deploy/20_claim.rho
+    function: Claim.comment
+    lines: 120-145
+  - path: contracts/src/deploy/20_claim.rho
+    function: Claim.validate
+    lines: 248-287
+  finding: RGA-028
+  hazop:
+  - HZ-ID-012
+  action: Either enforce identity resolution for claim and comment participation, or document permissionless participation
+    as intentional and add a regression test that an unregistered REV address can comment but cannot validate without a credential.
+  compatibility: Breaking only if identity enforcement is chosen.
+  tests:
+  - harness/unit_claim.py
+  status: proposed
+- id: RR-11
+  priority: P1
+  title: Make cross-cell factory, validation, and nesting steps recovery-safe
+  files:
+  - path: contracts/src/deploy/10_identity.rho
+    function: IdentityFactory.create
+    lines: 35-97
+  - path: contracts/src/deploy/20_claim.rho
+    function: finalizeValidation
+    lines: 192-246
+  - path: contracts/src/lib/KAsset.rho
+    function: KAsset.nest
+    lines: 330-368
+  finding: RGA-031
+  hazop:
+  - HZ-ID-011
+  - HZ-CRED-015
+  - HZ-CLAIM-012
+  - HZ-CLAIM-015
+  - HZ-KASSET-015
+  - HZ-VP-015
+  action: 'Add a recovery record or idempotent completion step for each multi-cell transition: an identity claim that can
+    be completed on retry, a validation receipt that prevents a second K-Asset, and a nest receipt that lets a failed parent
+    write re-post or clearly mark consumed child proofs. Where atomicity cannot be recovered, document the failure window
+    and add a negative test.'
+  compatibility: Additive record fields; breaking only if old in-flight records must be migrated.
+  tests:
+  - harness/unit_identity.py
+  - harness/unit_claim.py
+  - harness/unit_kasset.py
+  - harness/concurrency_core.py
+  status: proposed
+- id: RR-10
+  priority: P2
+  title: Cap or measure registry growth and create serialization
+  files:
+  - path: contracts/src/deploy/00_root.rho
+    function: GenRoot.register
+    lines: 39-63
+  - path: contracts/src/deploy/10_identity.rho
+    function: IdentityFactory.create
+    lines: 35-97
+  - path: contracts/src/deploy/11_credentials.rho
+    function: CredentialFactory.issue
+    lines: 101-130
+  finding: RGA-029
+  hazop:
+  - HZ-ROOT-002
+  - HZ-ROOT-003
+  - HZ-ROOT-004
+  - HZ-ROOT-005
+  - HZ-ROOT-007
+  - HZ-REG-001
+  action: Add a documented cap or sharding plan for directoryState/factoryState, and emit or document a metric for create
+    serialization. No behaviour change for normal sizes; the goal is to make the throughput ceiling explicit rather than implicit.
+  compatibility: No normal-size change; a cap would be breaking at the cap.
+  tests:
+  - harness/unit_identity.py
+  - harness/unit_credentials.py
+  status: proposed
