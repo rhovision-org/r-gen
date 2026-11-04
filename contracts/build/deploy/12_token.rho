@@ -1,0 +1,595 @@
+// TokenBook: the KAT ERTP kit, per-owner purses, mint-once, transfer and reputation.
+// Placeholders: __ROOT_URI__.
+new
+  TokenBook, tokenState,
+  rl(`rho:registry:lookup`),
+  rs(`rho:registry:insertArbitrary`),
+  deployerId(`rho:rchain:deployerId`),
+  deployId(`rho:rchain:deployId`),
+  rootCh, c, ack, ertpCh, kitCh,
+  adminGuard, resolveComponent, nowHeight,
+  authOwner, authSubject, authPubKey, authIsOwner,
+  mintQuality, mintAmounts, reputationBps,
+  earnedValue, grossValue, historyValue, subFloor,
+  ensurePurse, cancelPending
+in {
+contract resolveComponent(@key, ret) = {
+  new rCh, Root, kCh in {
+    rl!(`__ROOT_URI__`, *rCh) |
+    for (Root <- rCh) {
+      Root!("resolve", key, 1, *kCh) |
+      for (@r <- kCh) {
+        match r {
+          (true, uri, _) => {
+            new cCh in {
+              rl!(uri, *cCh) |
+              for (C <- cCh) { ret!((true, *C)) }
+            }
+          }
+          _ => { ret!((false, "unavailable", key)) }
+        }
+      }
+    }
+  }
+} |
+// Deployer identity helpers. r-cash owns accounts; RGen uses the REV address as ownerId.
+
+contract authOwner(dId, ret) = {
+  new dops(`rho:rchain:deployerId:ops`), rev(`rho:rev:address`), pkCh, addrCh in {
+    dops!("pubKeyBytes", *dId, *pkCh) |
+    for (@pk <- pkCh) {
+      rev!("fromPublicKey", pk, *addrCh) |
+      for (@addr <- addrCh) { ret!((true, addr, pk)) }
+    }
+  }
+} |
+
+contract authSubject(dId, ret) = {
+  new c in {
+    authOwner!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, addr, _) => { ret!((true, addr)) }
+        _ => { ret!((false, "no identity")) }
+      }
+    }
+  }
+} |
+
+contract authPubKey(dId, ret) = {
+  new c in {
+    authOwner!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, _, pk) => { ret!((true, pk)) }
+        _ => { ret!((false, "no identity")) }
+      }
+    }
+  }
+} |
+
+contract authIsOwner(dId, @ownerId, ret) = {
+  new c in {
+    authSubject!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, addr) => {
+          if (addr == ownerId) { ret!((true, Nil)) }
+          else { ret!((false, "not owner")) }
+        }
+        _ => { ret!((false, "not owner")) }
+      }
+    }
+  }
+} |
+// Block height helper for contracts that need an event height without resolving the Clock.
+
+contract nowHeight(ret) = {
+  new bd(`rho:block:data`), ch in {
+    bd!(*ch) |
+    for (@h, @sender, @timestamp <- ch) { ret!(h) }
+  }
+} |
+// Integer-only KAT mint arithmetic. Amounts are 8-decimal base units.
+// quality has four dimensions, each 1..5, so the sum is 4..20.
+
+contract mintQuality(@quality, @verdict, ret) = {
+  match quality.get("completeness") + quality.get("correctness")
+        + quality.get("traceability") + quality.get("fitness") {
+    sum => {
+      if (sum < 4 || sum > 20) {
+        ret!((false, "quality"))
+      } else {
+        match sum * 100 / 20 {
+          pct => {
+            if (verdict == "partial") {
+              ret!((true, pct * 5000 / 10000))
+            } else {
+              ret!((true, pct))
+            }
+          }
+        }
+      }
+    }
+  }
+} |
+
+contract mintAmounts(@unitMint, @qualityPct, @repBps, ret) = {
+  if (unitMint < 1 || qualityPct < 0 || qualityPct > 100 || repBps < 10000 || repBps > 15000) {
+    ret!((false, "mint bounds"))
+  } else {
+    match unitMint * qualityPct / 100 {
+      total => {
+        match total * 5000 / 10000 {
+          claimant => {
+            match total - claimant {
+              validatorBase => {
+                match validatorBase * repBps / 10000 {
+                  validator => { ret!((true, claimant, validator, total)) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+} |
+
+contract reputationBps(@earned, ret) = {
+  match earned {
+    e => {
+      if (e < 10000000000) { ret!(10000) }
+      else {
+        if (e < 100000000000) { ret!(11000) }
+        else {
+          if (e < 1000000000000) { ret!(12500) }
+          else { ret!(15000) }
+        }
+      }
+    }
+  }
+} |
+
+  contract earnedValue(@s, @owner, ret) = {
+    match s.get("earned").get(owner) {
+      Nil => { ret!(0) }
+      e => { ret!(e) }
+    }
+  } |
+
+  contract grossValue(@s, @owner, ret) = {
+    match s.get("gross").get(owner) {
+      Nil => { ret!(0) }
+      e => { ret!(e) }
+    }
+  } |
+
+  contract historyValue(@s, @owner, ret) = {
+    match s.get("history").get(owner) {
+      Nil => { ret!([]) }
+      h => { ret!(h) }
+    }
+  } |
+
+  contract subFloor(@a, @b, ret) = {
+    match a - b {
+      n => { if (n < 0) { ret!(0) } else { ret!(n) } }
+    }
+  } |
+
+  rl!(`rho:rchain:ertp`, *ertpCh) |
+  for (@(_, ERTP) <- ertpCh) {
+    @ERTP!("makeIssuerKit", *kitCh) |
+    for (@(brand, mint, issuer) <- kitCh) {
+
+      contract ensurePurse(@owner, ret) = {
+        for (@s <<- tokenState) {
+          match s.get("purses").get(owner) {
+            Nil => {
+              new pCh in {
+                @issuer!("makeEmptyPurse", *pCh) |
+                for (@r <- pCh) {
+                  match r {
+                    (true, purse) => {
+                      for (@s2 <- tokenState) {
+                        match s2.get("purses").get(owner) {
+                          Nil => {
+                            tokenState!(s2.set("purses",
+                              s2.get("purses").set(owner, purse))) |
+                            ret!((true, purse))
+                          }
+                          p => { tokenState!(s2) | ret!((true, p)) }
+                        }
+                      }
+                    }
+                    _ => { ret!(r) }
+                  }
+                }
+              }
+            }
+            p => { ret!((true, p)) }
+          }
+        }
+      } |
+
+      contract cancelPending(@kassetId, ret) = {
+        for (@s <- tokenState) {
+          tokenState!(s.set("pending", s.get("pending").set(kassetId, Nil))) |
+          ret!(Nil)
+        }
+      } |
+
+      contract TokenBook(@"brand", ret) = {
+        for (@s <<- tokenState) { ret!((true, s.get("brand"))) }
+      } |
+
+      contract TokenBook(@"supply", ret) = {
+        for (@s <<- tokenState) { ret!((true, s.get("totalSupply"))) }
+      } |
+
+      contract TokenBook(@"balance", @owner, ret) = {
+        new pCh in {
+          ensurePurse!(owner, *pCh) |
+          for (@r <- pCh) {
+            match r {
+              (true, purse) => { @purse!("getCurrentAmount", *ret) }
+              _ => { ret!(r) }
+            }
+          }
+        }
+      } |
+
+      contract TokenBook(@"reputation", @owner, ret) = {
+        for (@s <<- tokenState) {
+          new eCh, gCh in {
+            earnedValue!(s, owner, *eCh) |
+            grossValue!(s, owner, *gCh) |
+            for (@earned <- eCh; @gross <- gCh) {
+              new wCh in {
+                reputationBps!(earned, *wCh) |
+                for (@w <- wCh) {
+                  ret!((true, {"subject": owner, "earned": earned,
+                                "gross": gross, "weightBps": w}))
+                }
+              }
+            }
+          }
+        }
+      } |
+
+      contract TokenBook(@"newPurse", ret) = {
+        new pCh in {
+          @issuer!("makeEmptyPurse", *pCh) |
+          for (@r <- pCh) { ret!(r) }
+        }
+      } |
+
+      contract TokenBook(@"deposit", dId, payment, ret) = {
+        new aCh in {
+          authSubject!(*dId, *aCh) |
+          for (@(true, owner) <- aCh) {
+            new pCh in {
+              ensurePurse!(owner, *pCh) |
+              for (@r <- pCh) {
+                match r {
+                  (true, purse) => {
+                    new dCh in {
+                      @purse!("deposit", *payment, *dCh) |
+                      for (@d <- dCh) { ret!(d) }
+                    }
+                  }
+                  _ => { ret!(r) }
+                }
+              }
+            }
+          }
+        }
+      } |
+
+      contract TokenBook(@"withdraw", dId, @amount, ret) = {
+        new aCh in {
+          authSubject!(*dId, *aCh) |
+          for (@(true, owner) <- aCh) {
+            new pCh in {
+              ensurePurse!(owner, *pCh) |
+              for (@r <- pCh) {
+                match r {
+                  (true, purse) => {
+                    new wCh in {
+                      @purse!("withdraw", (brand, amount), *wCh) |
+                      for (@w <- wCh) { ret!(w) }
+                    }
+                  }
+                  _ => { ret!(r) }
+                }
+              }
+            }
+          }
+        }
+      } |
+
+      contract TokenBook(@"transfer", dId, @to, @amount, @memo, ret) = {
+        new aCh, hCh in {
+          authSubject!(*dId, *aCh) |
+          nowHeight!(*hCh) |
+          for (@(true, from) <- aCh; @height <- hCh) {
+            if (amount < 1) {
+              ret!((false, "amount"))
+            } else {
+              if (from == to) {
+                ret!((false, "self"))
+              } else {
+                new fCh, tCh in {
+                  ensurePurse!(from, *fCh) |
+                  ensurePurse!(to, *tCh) |
+                  for (@fr <- fCh; @tr <- tCh) {
+                    match (fr, tr) {
+                      ((true, fromPurse), (true, toPurse)) => {
+                        new wdCh in {
+                          @fromPurse!("withdraw", (brand, amount), *wdCh) |
+                          for (@w <- wdCh) {
+                            match w {
+                              (true, payment) => {
+                                new depCh in {
+                                  @toPurse!("deposit", payment, *depCh) |
+                                  for (@d <- depCh) {
+                                    match d {
+                                      (true, _) => {
+                                        for (@s <- tokenState) {
+                                          new hfCh, htCh, entry in {
+                                            historyValue!(s, from, *hfCh) |
+                                            historyValue!(s, to, *htCh) |
+                                            entry!({"from": from, "to": to,
+                                                    "amount": amount, "memo": memo,
+                                                    "at": height}) |
+                                            for (@hf <- hfCh; @ht <- htCh; @e <- entry) {
+                                              tokenState!(s.set("history",
+                                                s.get("history").set(from, hf ++ [e])
+                                                .set(to, ht ++ [e]))) |
+                                              ret!((true, amount))
+                                            }
+                                          }
+                                        }
+                                      }
+                                      _ => { 1 / 0 }
+                                    }
+                                  }
+                                }
+                              }
+                              _ => { ret!(w) }
+                            }
+                          }
+                        }
+                      }
+                      _ => { ret!((false, "purse")) }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      } |
+
+      contract TokenBook(@"mintForKAsset", @kassetId, ret) = {
+        for (@s <<- tokenState) {
+          match (s.get("minted").get(kassetId), s.get("pending").get(kassetId)) {
+            (Nil, Nil) => {
+              new rCh in {
+                resolveComponent!("component:kasset-book", *rCh) |
+                for (@r <- rCh) {
+                  match r {
+                    (true, KB) => {
+                      new authCh in {
+                        @KB!("mintAuthorization", kassetId, *authCh) |
+                        for (@a <- authCh) {
+                          match a {
+                            (true, auth) => {
+                              for (@s2 <- tokenState) {
+                                match (s2.get("minted").get(kassetId),
+                                       s2.get("pending").get(kassetId)) {
+                                  (Nil, Nil) => {
+                                    tokenState!(s2.set("pending",
+                                      s2.get("pending").set(kassetId, true))) |
+                                    new cCh, vCh in {
+                                      ensurePurse!(auth.get("claimant"), *cCh) |
+                                      ensurePurse!(auth.get("validator"), *vCh) |
+                                      for (@cr <- cCh; @vr <- vCh) {
+                                        match (cr, vr) {
+                                          ((true, cPurse), (true, vPurse)) => {
+                                            new mc, mv in {
+                                              @mint!("mintPayment",
+                                                (brand, auth.get("claimantAmount")), *mc) |
+                                              @mint!("mintPayment",
+                                                (brand, auth.get("validatorAmount")), *mv) |
+                                              for (@mr <- mc; @vr2 <- mv) {
+                                                match (mr, vr2) {
+                                                  ((true, cPay), (true, vPay)) => {
+                                                    new dc, dv in {
+                                                      @cPurse!("deposit", cPay, *dc) |
+                                                      @vPurse!("deposit", vPay, *dv) |
+                                                      for (@dcr <- dc; @dvr <- dv) {
+                                                        match (dcr, dvr) {
+                                                          ((true, _), (true, _)) => {
+                                                            for (@s3 <- tokenState) {
+                                                              match s3.get("minted").get(kassetId) {
+                                                                Nil => {
+                                                                  new ec, ev, gc, gv in {
+                                                                    earnedValue!(s3, auth.get("claimant"), *ec) |
+                                                                    earnedValue!(s3, auth.get("validator"), *ev) |
+                                                                    grossValue!(s3, auth.get("claimant"), *gc) |
+                                                                    grossValue!(s3, auth.get("validator"), *gv) |
+                                                                    for (@ce <- ec; @ve <- ev; @gce <- gc; @gve <- gv) {
+                                                                      tokenState!(s3.set("minted",
+                                                                        s3.get("minted").set(kassetId, true))
+                                                                        .set("pending",
+                                                                          s3.get("pending").set(kassetId, Nil))
+                                                                        .set("totalSupply",
+                                                                          s3.get("totalSupply")
+                                                                          + auth.get("claimantAmount")
+                                                                          + auth.get("validatorAmount"))
+                                                                        .set("earned",
+                                                                          s3.get("earned")
+                                                                          .set(auth.get("claimant"),
+                                                                            ce + auth.get("claimantAmount"))
+                                                                          .set(auth.get("validator"),
+                                                                            ve + auth.get("validatorAmount")))
+                                                                        .set("gross",
+                                                                          s3.get("gross")
+                                                                          .set(auth.get("claimant"),
+                                                                            gce + auth.get("claimantAmount"))
+                                                                          .set(auth.get("validator"),
+                                                                            gve + auth.get("validatorAmount")))
+                                                                        .set("mintRecords",
+                                                                          s3.get("mintRecords").set(kassetId, {
+                                                                            "claimant": auth.get("claimant"),
+                                                                            "validator": auth.get("validator"),
+                                                                            "claimantAmount": auth.get("claimantAmount"),
+                                                                            "validatorAmount": auth.get("validatorAmount")}))) |
+                                                                      ret!((true, {
+                                                                        "claimantAmount": auth.get("claimantAmount"),
+                                                                        "validatorAmount": auth.get("validatorAmount")}))
+                                                                    }
+                                                                  }
+                                                                }
+                                                                _ => {
+                                                                  tokenState!(s3) |
+                                                                  ret!((false, "already minted"))
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                          _ => { 1 / 0 }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                  _ => {
+                                                    new cp in {
+                                                      cancelPending!(kassetId, *cp) |
+                                                      for (@_ <- cp) { ret!((false, "mint")) }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                          _ => {
+                                            new cp in {
+                                              cancelPending!(kassetId, *cp) |
+                                              for (@_ <- cp) { ret!((false, "purse")) }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                  _ => { tokenState!(s2) | ret!((false, "already minted")) }
+                                }
+                              }
+                            }
+                            _ => { ret!(a) }
+                          }
+                        }
+                      }
+                    }
+                    _ => { ret!((false, "unavailable", "component:kasset-book")) }
+                  }
+                }
+              }
+            }
+            _ => { ret!((false, "already minted")) }
+          }
+        }
+      } |
+
+      contract TokenBook(@"revokeEarned", @kassetId, ret) = {
+        for (@s <<- tokenState) {
+          match s.get("slashed").get(kassetId) {
+            Nil => {
+              new rCh in {
+                resolveComponent!("component:kasset-book", *rCh) |
+                for (@r <- rCh) {
+                  match r {
+                    (true, KB) => {
+                      new revCh in {
+                        @KB!("revocation", kassetId, *revCh) |
+                        for (@a <- revCh) {
+                          match a {
+                            (true, rev) => {
+                              for (@s2 <- tokenState) {
+                                match s2.get("slashed").get(kassetId) {
+                                  Nil => {
+                                    match s2.get("mintRecords").get(kassetId) {
+                                      Nil => { tokenState!(s2) | ret!((false, "no mint record")) }
+                                      rec => {
+                                        new ec, ev, nc, nv in {
+                                          earnedValue!(s2, rec.get("claimant"), *ec) |
+                                          earnedValue!(s2, rec.get("validator"), *ev) |
+                                          subFloor!(*ec, rec.get("claimantAmount"), *nc) |
+                                          subFloor!(*ev, rec.get("validatorAmount"), *nv) |
+                                          for (@ce <- nc; @ve <- nv) {
+                                            tokenState!(s2.set("slashed",
+                                              s2.get("slashed").set(kassetId, true))
+                                              .set("earned",
+                                                s2.get("earned").set(rec.get("claimant"), ce)
+                                                .set(rec.get("validator"), ve))) |
+                                            ret!((true, Nil))
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                  _ => { tokenState!(s2) | ret!((false, "already slashed")) }
+                                }
+                              }
+                            }
+                            _ => { ret!(a) }
+                          }
+                        }
+                      }
+                    }
+                    _ => { ret!((false, "unavailable", "component:kasset-book")) }
+                  }
+                }
+              }
+            }
+            _ => { ret!((false, "already slashed")) }
+          }
+        }
+      } |
+
+      contract TokenBook(@"history", @owner, ret) = {
+        for (@s <<- tokenState) {
+          new hCh in {
+            historyValue!(s, owner, *hCh) |
+            for (@h <- hCh) { ret!((true, h)) }
+          }
+        }
+      } |
+
+      tokenState!({
+        "brand": brand,
+        "purses": {},
+        "earned": {},
+        "gross": {},
+        "minted": {},
+        "pending": {},
+        "mintRecords": {},
+        "slashed": {},
+        "history": {},
+        "totalSupply": 0
+      }) |
+
+      rl!(`__ROOT_URI__`, *rootCh) |
+      for (Root <- rootCh) {
+        rs!(bundle+{*TokenBook}, *c) |
+        for (@uri <- c) {
+          Root!("register", "component:token", uri, 1, "token", *deployerId, *ack) |
+          for (@r <- ack) { deployId!([uri]) }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+// Block height helper for contracts that need an event height without resolving the Clock.
+
+contract nowHeight(ret) = {
+  new bd(`rho:block:data`), ch in {
+    bd!(*ch) |
+    for (@h, @sender, @timestamp <- ch) { ret!(h) }
+  }
+} |

@@ -1,0 +1,53 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 4 * * *"
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: make venv PY=.venv/bin/python
+      - run: make build-check measure-check check-arch check-captures check-placeholders check-money check-suites check-flows check-vectors PY=.venv/bin/python
+
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - run: cargo test -p rgen-core -p rgen-sdk
+
+  parse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: rchain-community/rchain-rust
+          ref: e2d073dcd02f1e560ccb84749937138a1e184b0b
+          path: rnode-rust
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: make venv PY=.venv/bin/python
+      - run: make build PY=.venv/bin/python
+      - run: RCHAIN_RUST_DIR=$PWD/rnode-rust tools/parse_check.sh contracts/build/deploy/*.rho
+
+  devnet:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: make venv PY=.venv/bin/python
+      - run: make devnet-up keys install unit-all PY=.venv/bin/python

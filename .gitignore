@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.devnet/
+deployments/*.json
+!deployments/.gitkeep
+.pytest_cache/
+.DS_Store
+
+# mdBook build output
+/docs/book/
+/contracts/metrics-current.json
+
+# Rust client build output
+/target/

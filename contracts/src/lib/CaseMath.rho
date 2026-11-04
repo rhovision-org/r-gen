@@ -1,0 +1,74 @@
+// Weighted vote tally for an oracle panel. Weights and threshold are basis points.
+
+contract caseTallyApprove(@panel, @votes, @i, @acc, ret) = {
+  if (i >= panel.length()) {
+    ret!(acc)
+  } else {
+    match panel.nth(i) {
+      member => {
+        match votes.get(member.get("subject")) {
+          Nil => { caseTallyApprove!(panel, votes, i + 1, acc, *ret) }
+          v => {
+            if (v.get("decision") == "approve") {
+              caseTallyApprove!(panel, votes, i + 1, acc + member.get("weightBps"), *ret)
+            } else {
+              caseTallyApprove!(panel, votes, i + 1, acc, *ret)
+            }
+          }
+        }
+      }
+    }
+  }
+} |
+
+contract caseTallyReject(@panel, @votes, @i, @acc, ret) = {
+  if (i >= panel.length()) {
+    ret!(acc)
+  } else {
+    match panel.nth(i) {
+      member => {
+        match votes.get(member.get("subject")) {
+          Nil => { caseTallyReject!(panel, votes, i + 1, acc, *ret) }
+          v => {
+            if (v.get("decision") == "reject") {
+              caseTallyReject!(panel, votes, i + 1, acc + member.get("weightBps"), *ret)
+            } else {
+              caseTallyReject!(panel, votes, i + 1, acc, *ret)
+            }
+          }
+        }
+      }
+    }
+  }
+} |
+
+contract caseTallyHold(@panel, @votes, @i, @acc, ret) = {
+  if (i >= panel.length()) {
+    ret!(acc)
+  } else {
+    match panel.nth(i) {
+      member => {
+        match votes.get(member.get("subject")) {
+          Nil => { caseTallyHold!(panel, votes, i + 1, acc, *ret) }
+          v => {
+            if (v.get("decision") == "hold") {
+              caseTallyHold!(panel, votes, i + 1, acc + member.get("weightBps"), *ret)
+            } else {
+              caseTallyHold!(panel, votes, i + 1, acc, *ret)
+            }
+          }
+        }
+      }
+    }
+  }
+} |
+
+contract casePanelWeight(@panel, @i, @acc, ret) = {
+  if (i >= panel.length()) {
+    ret!(acc)
+  } else {
+    match panel.nth(i) {
+      member => { casePanelWeight!(panel, i + 1, acc + member.get("weightBps"), *ret) }
+    }
+  }
+} |

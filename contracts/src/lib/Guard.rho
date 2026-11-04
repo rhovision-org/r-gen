@@ -1,0 +1,84 @@
+// M-of-N secp256k1 verification over a canonical payload.
+//
+// Payload: "rgen:admin:v1|<domain>|<nonce>|<action>|<arg0>,<arg1>,..."
+// Digest:  blake2b256(utf8(payload)). Signatures are DER secp256k1 over the digest.
+// verifyAdmin replies (true, Bool); the caller decides the refusal string.
+
+contract guardArgsAppend(@args, @i, @acc, ret) = {
+  if (i >= args.length()) {
+    ret!(acc)
+  } else {
+    match args.nth(i) {
+      a => { guardArgsAppend!(args, i + 1, acc ++ "," ++ a.toString(), *ret) }
+    }
+  }
+} |
+
+contract guardArgsToString(@args, ret) = {
+  if (args.length() == 0) {
+    ret!("")
+  } else {
+    match args.nth(0) {
+      a => {
+        new restCh in {
+          guardArgsAppend!(args, 1, a.toString(), *restCh) |
+          for (@s <- restCh) { ret!(s) }
+        }
+      }
+    }
+  }
+} |
+
+contract guardAnySig(@digest, @sigs, @j, @key, ret) = {
+  if (j >= sigs.length()) {
+    ret!(false)
+  } else {
+    new verify(`rho:crypto:secp256k1Verify`), vCh in {
+      match sigs.nth(j) {
+        sig => {
+          verify!(digest, sig, key, *vCh) |
+          for (@ok <- vCh) {
+            if (ok) { ret!(true) }
+            else { guardAnySig!(digest, sigs, j + 1, key, *ret) }
+          }
+        }
+      }
+    }
+  }
+} |
+
+contract guardCount(@digest, @sigs, @i, @count, @keys, @threshold, ret) = {
+  if (i >= keys.length()) {
+    ret!(count >= threshold)
+  } else {
+    match keys.nth(i) {
+      key => {
+        new anyCh in {
+          guardAnySig!(digest, sigs, 0, key, *anyCh) |
+          for (@any <- anyCh) {
+            if (any) { guardCount!(digest, sigs, i + 1, count + 1, keys, threshold, *ret) }
+            else { guardCount!(digest, sigs, i + 1, count, keys, threshold, *ret) }
+          }
+        }
+      }
+    }
+  }
+} |
+
+contract verifyAdmin(@domain, @nonce, @action, @args, @sigs, @keys, @threshold, ret) = {
+  new hash(`rho:crypto:blake2b256Hash`), strCh, hashCh, okCh in {
+    guardArgsToString!(args, *strCh) |
+    for (@argStr <- strCh) {
+      match "rgen:admin:v1|" ++ domain ++ "|" ++ nonce.toString()
+            ++ "|" ++ action ++ "|" ++ argStr {
+        payload => {
+          hash!(payload.toUtf8Bytes(), *hashCh) |
+          for (@digest <- hashCh) {
+            guardCount!(digest, sigs, 0, 0, keys, threshold, *okCh) |
+            for (@ok <- okCh) { ret!((true, ok)) }
+          }
+        }
+      }
+    }
+  }
+} |

@@ -1,0 +1,12 @@
+schema: rgen.flows/v1
+subsystem: oracle
+rules:
+  - {id: O-open, arm: 'OracleBook@"open"', status: implemented}
+  - {id: O-evidence, arm: 'OracleBook@"evidence"', status: implemented}
+  - {id: O-empanel, arm: 'OracleBook@"empanel"', status: implemented}
+  - {id: O-vote, arm: 'OracleBook@"vote"', status: implemented}
+  - {id: O-tally, arm: 'OracleBook@"tally"', status: implemented}
+  - {id: O-decide, arm: 'OracleBook@"decide"', status: implemented}
+  - {id: O-execute, arm: 'OracleBook@"execute"', status: implemented}
+  - {id: P-fund, arm: 'PaymentBook@"fund"', status: implemented}
+  - {id: P-execute, arm: 'PaymentBook@"executeCase"', status: implemented}

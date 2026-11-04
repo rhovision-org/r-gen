@@ -1,0 +1,50 @@
+{
+  ".devnet/rendered/00_root.rho": {
+    "raw": 12827,
+    "minified": 8068
+  },
+  ".devnet/rendered/01_kernel.rho": {
+    "raw": 3191,
+    "minified": 2589
+  },
+  ".devnet/rendered/02_admin.rho": {
+    "raw": 7221,
+    "minified": 4486
+  },
+  ".devnet/rendered/10_identity.rho": {
+    "raw": 10611,
+    "minified": 6587
+  },
+  ".devnet/rendered/11_credentials.rho": {
+    "raw": 24207,
+    "minified": 14875
+  },
+  ".devnet/rendered/12_token.rho": {
+    "raw": 23869,
+    "minified": 11256
+  },
+  ".devnet/rendered/20_work.rho": {
+    "raw": 17634,
+    "minified": 10366
+  },
+  ".devnet/rendered/21_kasset.rho": {
+    "raw": 46832,
+    "minified": 23895
+  },
+  ".devnet/rendered/22_provenance.rho": {
+    "raw": 12450,
+    "minified": 7899
+  },
+  ".devnet/rendered/30_risk.rho": {
+    "raw": 22286,
+    "minified": 13174
+  },
+  ".devnet/rendered/40_payments.rho": {
+    "raw": 25692,
+    "minified": 12392
+  },
+  ".devnet/rendered/50_oracle.rho": {
+    "raw": 35175,
+    "minified": 20697
+  }
+}

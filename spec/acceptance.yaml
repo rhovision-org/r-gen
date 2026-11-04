@@ -1,0 +1,36 @@
+schema: rgen.acceptance/v1
+checks:
+  - id: A1
+    claim: a fresh devnet installs all twelve terms
+    evidence: make setup exits 0; deployments/devnet.json has root_uri
+  - id: A2
+    claim: credential -> work -> claim -> validate -> approve -> mint works
+    evidence: harness/unit_journey.py exits 0
+  - id: A3
+    claim: an unqualified validator cannot create a K-Asset
+    evidence: harness/unit_journey.py refusal
+  - id: A4
+    claim: a validator cannot validate their own claim
+    evidence: harness/unit_journey.py refusal
+  - id: A5
+    claim: KAT mints once per K-Asset
+    evidence: harness/unit_journey.py double-mint refusal
+  - id: A6
+    claim: transfers preserve supply and earned
+    evidence: harness/unit_journey.py and unit_token.py
+  - id: A7
+    claim: an uninsurable risk cannot be linked or attested
+    evidence: harness/unit_risk.py refusals
+  - id: A8
+    claim: only seated panelists vote; one vote each
+    evidence: harness/unit_oracle.py refusals
+  - id: A9
+    claim: execute is idempotent
+    evidence: harness/unit_oracle.py second execute
+  - id: A10
+    claim: the node parser accepts every rendered term
+    evidence: make parse-check
+owed:
+  - A11: funded r-cash escrow release and refund (unit_payments)
+  - A12: dispute bond split and slashed earned (unit_dispute)
+  - A13: Lean models and flow-to-theorem map

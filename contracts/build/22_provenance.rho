@@ -1,0 +1,364 @@
+// ProvenanceBook: seals, anchors and stakeholder comments. Append-only.
+// Placeholders: __ROOT_URI__, __ADMINS__, __THRESHOLD__.
+new
+  ProvenanceBook, provenanceState,
+  rl(`rho:registry:lookup`),
+  rs(`rho:registry:insertArbitrary`),
+  deployerId(`rho:rchain:deployerId`),
+  deployId(`rho:rchain:deployId`),
+  rootCh, c, ack,
+  adminGuard, resolveComponent, nowHeight,
+  authOwner, authSubject, authPubKey, authIsOwner,
+  anchorHas
+in {
+contract resolveComponent(@key, ret) = {
+  new rCh, Root, kCh in {
+    rl!(`__ROOT_URI__`, *rCh) |
+    for (Root <- rCh) {
+      Root!("resolve", key, 1, *kCh) |
+      for (@r <- kCh) {
+        match r {
+          (true, uri, _) => {
+            new cCh in {
+              rl!(uri, *cCh) |
+              for (C <- cCh) { ret!((true, *C)) }
+            }
+          }
+          _ => { ret!((false, "unavailable", key)) }
+        }
+      }
+    }
+  }
+} |
+// Deployer identity helpers. r-cash owns accounts; RGen uses the REV address as ownerId.
+
+contract authOwner(dId, ret) = {
+  new dops(`rho:rchain:deployerId:ops`), rev(`rho:rev:address`), pkCh, addrCh in {
+    dops!("pubKeyBytes", *dId, *pkCh) |
+    for (@pk <- pkCh) {
+      rev!("fromPublicKey", pk, *addrCh) |
+      for (@addr <- addrCh) { ret!((true, addr, pk)) }
+    }
+  }
+} |
+
+contract authSubject(dId, ret) = {
+  new c in {
+    authOwner!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, addr, _) => { ret!((true, addr)) }
+        _ => { ret!((false, "no identity")) }
+      }
+    }
+  }
+} |
+
+contract authPubKey(dId, ret) = {
+  new c in {
+    authOwner!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, _, pk) => { ret!((true, pk)) }
+        _ => { ret!((false, "no identity")) }
+      }
+    }
+  }
+} |
+
+contract authIsOwner(dId, @ownerId, ret) = {
+  new c in {
+    authSubject!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, addr) => {
+          if (addr == ownerId) { ret!((true, Nil)) }
+          else { ret!((false, "not owner")) }
+        }
+        _ => { ret!((false, "not owner")) }
+      }
+    }
+  }
+} |
+// Resolve the deployed AdminGuard and verify one admin action.
+
+contract adminGuard(@domain, @nonce, @action, @args, @sigs,
+                    @admins, @threshold, ret) = {
+  new rCh, Root, gCh, gc in {
+    rl!(`__ROOT_URI__`, *rCh) |
+    for (Root <- rCh) {
+      Root!("resolve", "component:admin-guard", 1, *gCh) |
+      for (@r <- gCh) {
+        match r {
+          (true, uri, _) => {
+            rl!(uri, *gc) |
+            for (AdminGuard <- gc) {
+              AdminGuard!("verify", domain, nonce, action, args, sigs,
+                          admins, threshold, *ret)
+            }
+          }
+          _ => { ret!((false, "below threshold")) }
+        }
+      }
+    }
+  }
+} |
+// Block height helper for contracts that need an event height without resolving the Clock.
+
+contract nowHeight(ret) = {
+  new bd(`rho:block:data`), ch in {
+    bd!(*ch) |
+    for (@h, @sender, @timestamp <- ch) { ret!(h) }
+  }
+} |
+
+  contract anchorHas(@list, @hash, @i, ret) = {
+    if (i >= list.length()) { ret!(false) }
+    else {
+      match list.nth(i) {
+        a => {
+          if (a.get("hash") == hash) { ret!(true) }
+          else { anchorHas!(list, hash, i + 1, *ret) }
+        }
+      }
+    }
+  } |
+
+  contract ProvenanceBook(@"seal", dId, @seal, ret) = {
+    new aCh, hCh in {
+      authSubject!(dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, subject) <- aCh; @height <- hCh) {
+        for (@s <- provenanceState) {
+          if (seal.get("docHash") == "" || seal.get("docHash") == Nil) {
+            provenanceState!(s) | ret!((false, "doc"))
+          } else {
+            match "sl:" ++ subject ++ ":" ++ s.get("nonce").toString() {
+              sealId => {
+                provenanceState!(s.set("seals", s.get("seals").set(sealId, {
+                  "id": sealId, "subject": subject, "titleHash": seal.get("titleHash"),
+                  "docHash": seal.get("docHash"), "kind": seal.get("kind"),
+                  "at": height })).set("nonce", s.get("nonce") + 1)) |
+                ret!((true, sealId))
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract ProvenanceBook(@"anchor", dId, @ref, @doc, ret) = {
+    new aCh, hCh in {
+      authSubject!(dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, who) <- aCh; @height <- hCh) {
+        for (@s <- provenanceState) {
+          if (ref == "") {
+            provenanceState!(s) | ret!((false, "ref"))
+          } else {
+            if (doc.get("hash") == "" || doc.get("hash") == Nil) {
+              provenanceState!(s) | ret!((false, "hash"))
+            } else {
+              match "an:" ++ ref ++ ":" ++ s.get("nonce").toString() {
+                anchorId => {
+                  match s.get("anchors").get(ref) {
+                    Nil => {
+                      provenanceState!(s.set("anchors",
+                        s.get("anchors").set(ref, [{
+                          "id": anchorId, "kind": doc.get("kind"),
+                          "hash": doc.get("hash"), "by": who, "at": height }]))
+                        .set("nonce", s.get("nonce") + 1)) |
+                      ret!((true, anchorId))
+                    }
+                    list => {
+                      provenanceState!(s.set("anchors",
+                        s.get("anchors").set(ref, list ++ [{
+                          "id": anchorId, "kind": doc.get("kind"),
+                          "hash": doc.get("hash"), "by": who, "at": height }]))
+                        .set("nonce", s.get("nonce") + 1)) |
+                      ret!((true, anchorId))
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract ProvenanceBook(@"comment", dId, @ref, @comment, ret) = {
+    new aCh, hCh, iCh in {
+      authSubject!(dId, *aCh) |
+      nowHeight!(*hCh) |
+      resolveComponent!("component:identity", *iCh) |
+      for (@(true, who) <- aCh; @height <- hCh; @ir <- iCh) {
+        match ir {
+          (true, IdentityBook) => {
+            new pCh in {
+              @IdentityBook!("profile", who, *pCh) |
+              for (@p <- pCh) {
+                match p {
+                  (true, _) => {
+                    for (@s <- provenanceState) {
+                      if (comment.get("hash") == "" || comment.get("hash") == Nil) {
+                        provenanceState!(s) | ret!((false, "hash"))
+                      } else {
+                        match "cm:" ++ ref ++ ":" ++ s.get("nonce").toString() {
+                          commentId => {
+                            match s.get("comments").get(ref) {
+                              Nil => {
+                                provenanceState!(s.set("comments",
+                                  s.get("comments").set(ref, [{
+                                    "id": commentId, "hash": comment.get("hash"),
+                                    "by": who, "at": height }]))
+                                  .set("nonce", s.get("nonce") + 1)) |
+                                ret!((true, commentId))
+                              }
+                              list => {
+                                provenanceState!(s.set("comments",
+                                  s.get("comments").set(ref, list ++ [{
+                                    "id": commentId, "hash": comment.get("hash"),
+                                    "by": who, "at": height }]))
+                                  .set("nonce", s.get("nonce") + 1)) |
+                                ret!((true, commentId))
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  _ => { ret!((false, "not registered")) }
+                }
+              }
+            }
+          }
+          _ => { ret!((false, "unavailable", "component:identity")) }
+        }
+      }
+    }
+  } |
+
+  contract ProvenanceBook(@"verify", @ref, @hash, ret) = {
+    for (@s <<- provenanceState) {
+      new aCh in {
+        match s.get("anchors").get(ref) {
+          Nil => { aCh!(false) }
+          list => { anchorHas!(list, hash, 0, *aCh) }
+        } |
+        for (@found <- aCh) {
+          if (found) { ret!((true, true)) }
+          else {
+            match s.get("seals").get(ref) {
+              Nil => { ret!((true, false)) }
+              seal => { ret!((true, seal.get("docHash") == hash)) }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract ProvenanceBook(@"seal", @sealId, ret) = {
+    for (@s <<- provenanceState) {
+      match s.get("seals").get(sealId) {
+        Nil => { ret!((false, "unknown seal")) }
+        seal => { ret!((true, seal)) }
+      }
+    }
+  } |
+
+  contract ProvenanceBook(@"anchors", @ref, ret) = {
+    for (@s <<- provenanceState) {
+      match s.get("anchors").get(ref) {
+        Nil => { ret!((true, [])) }
+        list => { ret!((true, list)) }
+      }
+    }
+  } |
+
+  contract ProvenanceBook(@"comments", @ref, ret) = {
+    for (@s <<- provenanceState) {
+      match s.get("comments").get(ref) {
+        Nil => { ret!((true, [])) }
+        list => { ret!((true, list)) }
+      }
+    }
+  } |
+
+  contract ProvenanceBook(@"admin", @nonce, @action, @args, @sigs, ret) = {
+    for (@s <- provenanceState) {
+      if (nonce <= s.get("govNonce")) {
+        provenanceState!(s) | ret!((false, "replay"))
+      } else {
+        new vCh in {
+          adminGuard!("provenance", nonce, action, args, sigs,
+                      s.get("admins"), s.get("threshold"), *vCh) |
+          for (@v <- vCh) {
+            match v {
+              (true, ok) => {
+                if (ok == false) {
+                  provenanceState!(s) | ret!((false, "below threshold"))
+                } else {
+                  match action {
+                    "setAdmins" => {
+                      match args.nth(0) {
+                        newAdmins => {
+                          match args.nth(1) {
+                            newThreshold => {
+                              if (newThreshold < 1 || newThreshold > newAdmins.length()) {
+                                provenanceState!(s) | ret!((false, "threshold"))
+                              } else {
+                                provenanceState!(s.set("admins", newAdmins)
+                                  .set("threshold", newThreshold)
+                                  .set("govNonce", nonce)) |
+                                ret!((true, Nil))
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    "setThreshold" => {
+                      match args.nth(0) {
+                        newThreshold => {
+                          if (newThreshold < 1 || newThreshold > s.get("admins").length()) {
+                            provenanceState!(s) | ret!((false, "threshold"))
+                          } else {
+                            provenanceState!(s.set("threshold", newThreshold)
+                              .set("govNonce", nonce)) |
+                            ret!((true, Nil))
+                          }
+                        }
+                      }
+                    }
+                    _ => { provenanceState!(s) | ret!((false, "unknown action")) }
+                  }
+                }
+              }
+              _ => { provenanceState!(s) | ret!((false, "below threshold")) }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  provenanceState!({
+    "seals": {}, "anchors": {}, "comments": {}, "nonce": 0,
+    "admins": __ADMINS__, "threshold": __THRESHOLD__, "govNonce": 0
+  }) |
+
+  rl!(`__ROOT_URI__`, *rootCh) |
+  for (Root <- rootCh) {
+    rs!(bundle+{*ProvenanceBook}, *c) |
+    for (@uri <- c) {
+      Root!("register", "component:provenance-book", uri, 1, "provenance",
+            *deployerId, *ack) |
+      for (@r <- ack) { deployId!([uri]) }
+    }
+  }
+}

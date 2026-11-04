@@ -1,0 +1,21 @@
+// Qualification gates. Resolve CredentialBook and relay its verdict.
+
+contract requireQualified(@subject, @requirement, @atHeight, ret) = {
+  new cCh in {
+    resolveComponent!("component:credential-book", *cCh) |
+    for (@r <- cCh) {
+      match r {
+        (true, CB) => { @CB!("valid", subject, requirement, atHeight, *ret) }
+        _ => { ret!((false, "unavailable", "component:credential-book")) }
+      }
+    }
+  }
+} |
+
+contract requireRole(@subject, @ctype, @discipline, @jurisdiction, @role, @minLevel,
+                     @atHeight, ret) = {
+  requireQualified!(subject,
+                    {"ctype": ctype, "discipline": discipline, "jurisdiction": jurisdiction,
+                     "role": role, "minLevel": minLevel},
+                    atHeight, *ret)
+} |

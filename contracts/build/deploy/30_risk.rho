@@ -1,0 +1,562 @@
+// RiskBook: SPE assessments, the insurability tri-test, attestation and K-Asset linkage.
+// Placeholders: __ROOT_URI__, __ADMINS__, __THRESHOLD__.
+new
+  RiskBook, riskState,
+  rl(`rho:registry:lookup`),
+  rs(`rho:registry:insertArbitrary`),
+  deployerId(`rho:rchain:deployerId`),
+  deployId(`rho:rchain:deployId`),
+  rootCh, c, ack,
+  adminGuard, resolveComponent, nowHeight,
+  authOwner, authSubject, authPubKey, authIsOwner,
+  riskScore, riskClass, riskGates, triTest,
+  attestedBy, storeAssessment
+in {
+contract resolveComponent(@key, ret) = {
+  new rCh, Root, kCh in {
+    rl!(`__ROOT_URI__`, *rCh) |
+    for (Root <- rCh) {
+      Root!("resolve", key, 1, *kCh) |
+      for (@r <- kCh) {
+        match r {
+          (true, uri, _) => {
+            new cCh in {
+              rl!(uri, *cCh) |
+              for (C <- cCh) { ret!((true, *C)) }
+            }
+          }
+          _ => { ret!((false, "unavailable", key)) }
+        }
+      }
+    }
+  }
+} |
+// Deployer identity helpers. r-cash owns accounts; RGen uses the REV address as ownerId.
+
+contract authOwner(dId, ret) = {
+  new dops(`rho:rchain:deployerId:ops`), rev(`rho:rev:address`), pkCh, addrCh in {
+    dops!("pubKeyBytes", *dId, *pkCh) |
+    for (@pk <- pkCh) {
+      rev!("fromPublicKey", pk, *addrCh) |
+      for (@addr <- addrCh) { ret!((true, addr, pk)) }
+    }
+  }
+} |
+
+contract authSubject(dId, ret) = {
+  new c in {
+    authOwner!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, addr, _) => { ret!((true, addr)) }
+        _ => { ret!((false, "no identity")) }
+      }
+    }
+  }
+} |
+
+contract authPubKey(dId, ret) = {
+  new c in {
+    authOwner!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, _, pk) => { ret!((true, pk)) }
+        _ => { ret!((false, "no identity")) }
+      }
+    }
+  }
+} |
+
+contract authIsOwner(dId, @ownerId, ret) = {
+  new c in {
+    authSubject!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, addr) => {
+          if (addr == ownerId) { ret!((true, Nil)) }
+          else { ret!((false, "not owner")) }
+        }
+        _ => { ret!((false, "not owner")) }
+      }
+    }
+  }
+} |
+// Resolve the deployed AdminGuard and verify one admin action.
+
+contract adminGuard(@domain, @nonce, @action, @args, @sigs,
+                    @admins, @threshold, ret) = {
+  new rCh, Root, gCh, gc in {
+    rl!(`__ROOT_URI__`, *rCh) |
+    for (Root <- rCh) {
+      Root!("resolve", "component:admin-guard", 1, *gCh) |
+      for (@r <- gCh) {
+        match r {
+          (true, uri, _) => {
+            rl!(uri, *gc) |
+            for (AdminGuard <- gc) {
+              AdminGuard!("verify", domain, nonce, action, args, sigs,
+                          admins, threshold, *ret)
+            }
+          }
+          _ => { ret!((false, "below threshold")) }
+        }
+      }
+    }
+  }
+} |
+// Block height helper for contracts that need an event height without resolving the Clock.
+
+contract nowHeight(ret) = {
+  new bd(`rho:block:data`), ch in {
+    bd!(*ch) |
+    for (@h, @sender, @timestamp <- ch) { ret!(h) }
+  }
+} |
+// SPE risk arithmetic and the three-question insurability test.
+// severity 1..5, probability 1..5, exposure 1..4; score 1..100.
+
+contract riskScore(@severity, @probability, @exposure, ret) = {
+  if (severity < 1 || severity > 5 || probability < 1 || probability > 5
+      || exposure < 1 || exposure > 4) {
+    ret!((false, "factor range"))
+  } else {
+    ret!((true, severity * probability * exposure))
+  }
+} |
+
+contract riskClass(@score, ret) = {
+  if (score < 1 || score > 100) { ret!((false, "score range")) }
+  else {
+    if (score <= 20) { ret!((true, "low")) }
+    else {
+      if (score <= 45) { ret!((true, "medium")) }
+      else {
+        if (score <= 70) { ret!((true, "high")) }
+        else { ret!((true, "extreme")) }
+      }
+    }
+  }
+} |
+
+contract riskGates(@class, ret) = {
+  match class {
+    "low" => { ret!((true, 1, 1, false)) }
+    "medium" => { ret!((true, 2, 2, false)) }
+    "high" => { ret!((true, 2, 3, false)) }
+    "extreme" => { ret!((true, 3, 3, true)) }
+    _ => { ret!((false, "class")) }
+  }
+} |
+
+contract triTest(@assessment, ret) = {
+  match assessment.get("exposureRef") {
+    Nil => { ret!((false, ["exposureRef"])) }
+    "" => { ret!((false, ["exposureRef"])) }
+    exposureRef => {
+      match assessment.get("probabilityBasis") {
+        Nil => { ret!((false, ["probabilityBasis"])) }
+        "" => { ret!((false, ["probabilityBasis"])) }
+        probabilityBasis => {
+          match assessment.get("consequenceBasis") {
+            Nil => { ret!((false, ["probabilityBasis", "consequenceBasis"])) }
+            "" => { ret!((false, ["consequenceBasis"])) }
+            consequenceBasis => {
+              match assessment.get("consequenceRef") {
+                Nil => { ret!((false, ["consequenceRef"])) }
+                "" => { ret!((false, ["consequenceRef"])) }
+                consequenceRef => { ret!((true, [])) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+} |
+
+  contract attestedBy(@list, @who, @i, ret) = {
+    if (i >= list.length()) { ret!(false) }
+    else {
+      match list.nth(i) {
+        a => {
+          if (a.get("by") == who) { ret!(true) }
+          else { attestedBy!(list, who, i + 1, *ret) }
+        }
+      }
+    }
+  } |
+
+  contract storeAssessment(@assessor, @assessment, @subjectRef, @score, @class,
+                           @validatorLevel, @approverLevel, @needsOracle,
+                           @insurable, @missing, @credId, @height, ret) = {
+    for (@s <- riskState) {
+      match "rk:" ++ subjectRef.get("id") ++ ":" ++ s.get("nonce").toString() {
+        riskId => {
+          match s.get("bySubject").get(subjectRef.get("id")) {
+            Nil => {
+              match s.set("assessments", s.get("assessments").set(riskId, {
+                "id": riskId, "subjectRef": subjectRef,
+                "severity": assessment.get("severity"),
+                "probability": assessment.get("probability"),
+                "exposure": assessment.get("exposure"),
+                "score": score, "class": class,
+                "discipline": assessment.get("discipline"),
+                "jurisdiction": assessment.get("jurisdiction"),
+                "exposureRef": assessment.get("exposureRef"),
+                "probabilityBasis": assessment.get("probabilityBasis"),
+                "consequenceBasis": assessment.get("consequenceBasis"),
+                "consequenceRef": assessment.get("consequenceRef"),
+                "method": assessment.get("method"),
+                "evidenceHash": assessment.get("evidenceHash"),
+                "insurable": insurable, "missing": missing,
+                "validatorLevel": validatorLevel, "approverLevel": approverLevel,
+                "needsOracle": needsOracle, "assessor": assessor,
+                "qualification": {"credId": credId, "atHeight": height},
+                "attestations": [], "status": "unattested",
+                "linkedKasset": Nil, "createdAt": height }))
+                .set("bySubject", s.get("bySubject").set(subjectRef.get("id"), [riskId]))
+                .set("nonce", s.get("nonce") + 1) {
+                s2 => { riskState!(s2) | ret!((true, riskId, insurable)) }
+              }
+            }
+            ids => {
+              match s.set("assessments", s.get("assessments").set(riskId, {
+                "id": riskId, "subjectRef": subjectRef,
+                "severity": assessment.get("severity"),
+                "probability": assessment.get("probability"),
+                "exposure": assessment.get("exposure"),
+                "score": score, "class": class,
+                "discipline": assessment.get("discipline"),
+                "jurisdiction": assessment.get("jurisdiction"),
+                "exposureRef": assessment.get("exposureRef"),
+                "probabilityBasis": assessment.get("probabilityBasis"),
+                "consequenceBasis": assessment.get("consequenceBasis"),
+                "consequenceRef": assessment.get("consequenceRef"),
+                "method": assessment.get("method"),
+                "evidenceHash": assessment.get("evidenceHash"),
+                "insurable": insurable, "missing": missing,
+                "validatorLevel": validatorLevel, "approverLevel": approverLevel,
+                "needsOracle": needsOracle, "assessor": assessor,
+                "qualification": {"credId": credId, "atHeight": height},
+                "attestations": [], "status": "unattested",
+                "linkedKasset": Nil, "createdAt": height }))
+                .set("bySubject", s.get("bySubject").set(subjectRef.get("id"),
+                  ids ++ [riskId]))
+                .set("nonce", s.get("nonce") + 1) {
+                s2 => { riskState!(s2) | ret!((true, riskId, insurable)) }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract RiskBook(@"assess", dId, @assessment, ret) = {
+    new aCh, hCh, cCh in {
+      authSubject!(*dId, *aCh) |
+      nowHeight!(*hCh) |
+      resolveComponent!("component:credential-book", *cCh) |
+      for (@(true, assessor) <- aCh; @height <- hCh; @cr <- cCh) {
+        match cr {
+          (true, CB) => {
+            new okCh in {
+              @CB!("valid", assessor,
+                {"ctype": "RiskAssessor",
+                 "discipline": assessment.get("discipline"),
+                 "jurisdiction": assessment.get("jurisdiction"),
+                 "role": "risk", "minLevel": 2},
+                height, *okCh) |
+              for (@ok <- okCh) {
+                match ok {
+                  (true, true, credId) => {
+                    match assessment.get("subjectRef") {
+                      Nil => { ret!((false, "subject")) }
+                      subjectRef => {
+                        new scCh, triCh in {
+                          riskScore!(assessment.get("severity"),
+                                     assessment.get("probability"),
+                                     assessment.get("exposure"), *scCh) |
+                          triTest!(assessment, *triCh) |
+                          for (@sc <- scCh; @tri <- triCh) {
+                            match sc {
+                              (false, reason) => { ret!((false, reason)) }
+                              (true, score) => {
+                                new clCh in {
+                                  riskClass!(score, *clCh) |
+                                  for (@cl <- clCh) {
+                                    match cl {
+                                      (false, reason) => { ret!((false, reason)) }
+                                      (true, class) => {
+                                        new gCh in {
+                                          riskGates!(class, *gCh) |
+                                          for (@g <- gCh) {
+                                            match g {
+                                              (false, reason) => { ret!((false, reason)) }
+                                              (true, vl, al, no) => {
+                                                match tri {
+                                                  (true, missing) => {
+                                                    storeAssessment!(assessor, assessment,
+                                                      subjectRef, score, class, vl, al, no,
+                                                      true, missing, credId, height, *ret)
+                                                  }
+                                                  (false, missing) => {
+                                                    storeAssessment!(assessor, assessment,
+                                                      subjectRef, score, class, vl, al, no,
+                                                      false, missing, credId, height, *ret)
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  _ => { ret!((false, "not qualified")) }
+                }
+              }
+            }
+          }
+          _ => { ret!((false, "unavailable", "component:credential-book")) }
+        }
+      }
+    }
+  } |
+
+  contract RiskBook(@"attest", dId, @riskId, @hash, ret) = {
+    new aCh, hCh, cCh in {
+      authSubject!(*dId, *aCh) |
+      nowHeight!(*hCh) |
+      resolveComponent!("component:credential-book", *cCh) |
+      for (@(true, who) <- aCh; @height <- hCh; @cr <- cCh) {
+        for (@s0 <<- riskState) {
+          match s0.get("assessments").get(riskId) {
+            Nil => { ret!((false, "unknown risk")) }
+            r => {
+              if (not r.get("insurable")) { ret!((false, "uninsurable")) }
+              else {
+                if (r.get("assessor") == who) { ret!((false, "self attest")) }
+                else {
+                  new dupCh in {
+                    attestedBy!(r.get("attestations"), who, 0, *dupCh) |
+                    for (@dup <- dupCh) {
+                      if (dup) { ret!((false, "already attested")) }
+                      else {
+                        match cr {
+                          (true, CB) => {
+                            new okCh in {
+                              @CB!("valid", who,
+                                {"ctype": "RiskAssessor",
+                                 "discipline": r.get("discipline"),
+                                 "jurisdiction": r.get("jurisdiction"),
+                                 "role": "risk", "minLevel": 2},
+                                height, *okCh) |
+                              for (@ok <- okCh) {
+                                match ok {
+                                  (true, true, _) => {
+                                    for (@s <- riskState) {
+                                      match s.get("assessments").get(riskId) {
+                                        Nil => { riskState!(s) | ret!((false, "unknown risk")) }
+                                        r2 => {
+                                          riskState!(s.set("assessments",
+                                            s.get("assessments").set(riskId,
+                                              r2.set("attestations",
+                                                r2.get("attestations") ++ [{
+                                                  "by": who, "hash": hash, "at": height }])
+                                                .set("status", "attested")))) |
+                                          ret!((true, Nil))
+                                        }
+                                      }
+                                    }
+                                  }
+                                  _ => { ret!((false, "not qualified")) }
+                                }
+                              }
+                            }
+                          }
+                          _ => { ret!((false, "unavailable", "component:credential-book")) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract RiskBook(@"link", dId, @riskId, @kassetId, ret) = {
+    new aCh in {
+      authSubject!(*dId, *aCh) |
+      for (@(true, _) <- aCh) {
+        for (@s0 <<- riskState) {
+          match s0.get("assessments").get(riskId) {
+            Nil => { ret!((false, "unknown risk")) }
+            r => {
+              if (not r.get("insurable")) { ret!((false, "uninsurable")) }
+              else {
+                if (r.get("status") != "attested") { ret!((false, "not attested")) }
+                else {
+                  new kCh in {
+                    resolveComponent!("component:kasset-book", *kCh) |
+                    for (@kr <- kCh) {
+                      match kr {
+                        (true, KB) => {
+                          new kkCh in {
+                            @KB!("kasset", kassetId, *kkCh) |
+                            for (@kk <- kkCh) {
+                              match kk {
+                                (true, kasset) => {
+                                  if (kasset.get("discipline") != r.get("discipline")
+                                      || kasset.get("jurisdiction") != r.get("jurisdiction")) {
+                                    ret!((false, "scope mismatch"))
+                                  } else {
+                                    for (@s <- riskState) {
+                                      match s.get("assessments").get(riskId) {
+                                        Nil => { riskState!(s) | ret!((false, "unknown risk")) }
+                                        r2 => {
+                                          riskState!(s.set("assessments",
+                                            s.get("assessments").set(riskId,
+                                              r2.set("linkedKasset", kassetId)
+                                                .set("status", "linked")))) |
+                                          ret!((true, Nil))
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                                _ => { ret!((false, "unknown kasset")) }
+                              }
+                            }
+                          }
+                        }
+                        _ => { ret!((false, "unavailable", "component:kasset-book")) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract RiskBook(@"gate", @riskId, ret) = {
+    for (@s <<- riskState) {
+      match s.get("assessments").get(riskId) {
+        Nil => { ret!((false, "unknown risk")) }
+        r => {
+          ret!((true, {"insurable": r.get("insurable"), "score": r.get("score"),
+                       "class": r.get("class"), "validatorLevel": r.get("validatorLevel"),
+                       "approverLevel": r.get("approverLevel"),
+                       "needsOracle": r.get("needsOracle"), "status": r.get("status"),
+                       "linkedKasset": r.get("linkedKasset")}))
+        }
+      }
+    }
+  } |
+
+  contract RiskBook(@"risk", @riskId, ret) = {
+    for (@s <<- riskState) {
+      match s.get("assessments").get(riskId) {
+        Nil => { ret!((false, "unknown risk")) }
+        r => { ret!((true, r)) }
+      }
+    }
+  } |
+
+  contract RiskBook(@"bySubject", @subjectId, ret) = {
+    for (@s <<- riskState) {
+      match s.get("bySubject").get(subjectId) {
+        Nil => { ret!((true, [])) }
+        ids => { ret!((true, ids)) }
+      }
+    }
+  } |
+
+  contract RiskBook(@"admin", @nonce, @action, @args, @sigs, ret) = {
+    for (@s <- riskState) {
+      if (nonce <= s.get("govNonce")) {
+        riskState!(s) | ret!((false, "replay"))
+      } else {
+        new vCh in {
+          adminGuard!("risk", nonce, action, args, sigs,
+                      s.get("admins"), s.get("threshold"), *vCh) |
+          for (@v <- vCh) {
+            match v {
+              (true, ok) => {
+                if (ok == false) {
+                  riskState!(s) | ret!((false, "below threshold"))
+                } else {
+                  match action {
+                    "setAdmins" => {
+                      match args.nth(0) {
+                        newAdmins => {
+                          match args.nth(1) {
+                            newThreshold => {
+                              if (newThreshold < 1 || newThreshold > newAdmins.length()) {
+                                riskState!(s) | ret!((false, "threshold"))
+                              } else {
+                                riskState!(s.set("admins", newAdmins)
+                                  .set("threshold", newThreshold)
+                                  .set("govNonce", nonce)) |
+                                ret!((true, Nil))
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    "setThreshold" => {
+                      match args.nth(0) {
+                        newThreshold => {
+                          if (newThreshold < 1 || newThreshold > s.get("admins").length()) {
+                            riskState!(s) | ret!((false, "threshold"))
+                          } else {
+                            riskState!(s.set("threshold", newThreshold)
+                              .set("govNonce", nonce)) |
+                            ret!((true, Nil))
+                          }
+                        }
+                      }
+                    }
+                    _ => { riskState!(s) | ret!((false, "unknown action")) }
+                  }
+                }
+              }
+              _ => { riskState!(s) | ret!((false, "below threshold")) }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  riskState!({
+    "assessments": {}, "bySubject": {}, "nonce": 0,
+    "admins": __ADMINS__, "threshold": __THRESHOLD__, "govNonce": 0
+  }) |
+
+  rl!(`__ROOT_URI__`, *rootCh) |
+  for (Root <- rootCh) {
+    rs!(bundle+{*RiskBook}, *c) |
+    for (@uri <- c) {
+      Root!("register", "component:risk-book", uri, 1, "risk", *deployerId, *ack) |
+      for (@r <- ack) { deployId!([uri]) }
+    }
+  }
+}

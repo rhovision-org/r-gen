@@ -1,0 +1,114 @@
+// Kernel: block-height clock, hash/verify wrapper, canonical codec.
+// Placeholders: __ROOT_URI__.
+new
+  Clock, Verifier, Codec,
+  rl(`rho:registry:lookup`),
+  rs(`rho:registry:insertArbitrary`),
+  deployerId(`rho:rchain:deployerId`),
+  deployId(`rho:rchain:deployId`),
+  rootCh, c1, c2, c3,
+  codecArgsAppend, codecArgsJoin, codecJoin
+in {
+  contract Clock(@"now", ret) = {
+    new bd(`rho:block:data`), ch in {
+      bd!(*ch) |
+      for (@h, @sender, @timestamp <- ch) { ret!((true, h)) }
+    }
+  } |
+
+  contract Verifier(@"hash", @bytes, ret) = {
+    new hash(`rho:crypto:blake2b256Hash`), ch in {
+      hash!(bytes, *ch) |
+      for (@digest <- ch) { ret!((true, digest)) }
+    }
+  } |
+
+  contract Verifier(@"sigOk", @digest, @sig, @pub, ret) = {
+    new verify(`rho:crypto:secp256k1Verify`), ch in {
+      verify!(digest, sig, pub, *ch) |
+      for (@ok <- ch) { ret!((true, ok)) }
+    }
+  } |
+
+  contract codecArgsAppend(@items, @i, @acc, ret) = {
+    if (i >= items.length()) {
+      ret!(acc)
+    } else {
+      match items.nth(i) {
+        x => { codecArgsAppend!(items, i + 1, acc ++ "," ++ x.toString(), *ret) }
+      }
+    }
+  } |
+
+  contract codecArgsJoin(@items, ret) = {
+    if (items.length() == 0) {
+      ret!("")
+    } else {
+      match items.nth(0) {
+        x => { codecArgsAppend!(items, 1, x.toString(), *ret) }
+      }
+    }
+  } |
+
+  contract Codec(@"adminPayload", @domain, @nonce, @action, @args, ret) = {
+    new aCh in {
+      codecArgsJoin!(args, *aCh) |
+      for (@argStr <- aCh) {
+        ret!("rgen:admin:v1|" ++ domain ++ "|" ++ nonce.toString()
+             ++ "|" ++ action ++ "|" ++ argStr)
+      }
+    }
+  } |
+
+  contract codecJoin(@items, @i, @acc, ret) = {
+    if (i >= items.length()) {
+      ret!(acc)
+    } else {
+      match items.nth(i) {
+        x => { codecJoin!(items, i + 1, acc ++ "|" ++ x.toString(), *ret) }
+      }
+    }
+  } |
+
+  contract Codec(@"canonical", @schema, @items, ret) = {
+    if (items.length() == 0) {
+      ret!((true, schema))
+    } else {
+      match items.nth(0) {
+        x => {
+          new jCh in {
+            codecJoin!(items, 1, schema ++ "|" ++ x.toString(), *jCh) |
+            for (@text <- jCh) { ret!((true, text)) }
+          }
+        }
+      }
+    }
+  } |
+
+  contract Codec(@"hash", @schema, @items, ret) = {
+    new hash(`rho:crypto:blake2b256Hash`), cCh, hCh in {
+      Codec!("canonical", schema, items, *cCh) |
+      for (@(true, text) <- cCh) {
+        hash!(text.toUtf8Bytes(), *hCh) |
+        for (@digest <- hCh) { ret!((true, digest)) }
+      }
+    }
+  } |
+
+  rl!(`__ROOT_URI__`, *rootCh) |
+  for (Root <- rootCh) {
+    rs!(bundle+{*Clock}, *c1) |
+    rs!(bundle+{*Verifier}, *c2) |
+    rs!(bundle+{*Codec}, *c3) |
+    for (@uClock <- c1; @uVerifier <- c2; @uCodec <- c3) {
+      new a1, a2, a3 in {
+        Root!("register", "component:clock", uClock, 1, "kernel", *deployerId, *a1) |
+        Root!("register", "component:verifier", uVerifier, 1, "kernel", *deployerId, *a2) |
+        Root!("register", "component:codec", uCodec, 1, "kernel", *deployerId, *a3) |
+        for (@r1 <- a1; @r2 <- a2; @r3 <- a3) {
+          deployId!([uClock, uVerifier, uCodec])
+        }
+      }
+    }
+  }
+}

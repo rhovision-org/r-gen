@@ -1,0 +1,24 @@
+schema: rgen.flows/v1
+subsystem: core
+invariants:
+  Q1: a validation requires an active matching validator credential at the event height
+  K1: at most one validation per claim
+  K2: approval requires a validated or conditional K-Asset
+  K3: KAT is minted once per K-Asset and never on nesting
+  R1: risk score = severity * probability * exposure in 1..100
+  R2: an uninsurable assessment cannot be attested, linked, or approved against
+  O1: one vote per panelist; only seated panelists vote
+  O2: payment executes only against a canonical decision and at most once per hold
+rules:
+  - {id: C-issue, arm: 'CredentialBook@"issue"', status: implemented}
+  - {id: C-valid, arm: 'CredentialBook@"valid"', status: implemented}
+  - {id: W-claim, arm: 'WorkBook@"claim"', status: implemented}
+  - {id: K-validate, arm: 'KAssetBook@"validate"', status: implemented}
+  - {id: K-approve, arm: 'KAssetBook@"approve"', status: implemented}
+  - {id: K-nest, arm: 'KAssetBook@"nest"', status: implemented}
+  - {id: T-mint, arm: 'TokenBook@"mintForKAsset"', status: implemented}
+  - {id: R-assess, arm: 'RiskBook@"assess"', status: implemented}
+  - {id: R-attest, arm: 'RiskBook@"attest"', status: implemented}
+  - {id: R-link, arm: 'RiskBook@"link"', status: implemented}
+  - {id: S-seal, arm: 'ProvenanceBook@"seal"', status: implemented}
+  - {id: S-anchor, arm: 'ProvenanceBook@"anchor"', status: implemented}

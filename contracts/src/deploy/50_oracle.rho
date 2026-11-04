@@ -1,0 +1,790 @@
+// OracleBook: qualification-gated adjudication, panel votes and idempotent execution.
+// Placeholders: __ROOT_URI__, __ADMINS__, __THRESHOLD__.
+new
+  OracleBook, oracleState,
+  rl(`rho:registry:lookup`),
+  rs(`rho:registry:insertArbitrary`),
+  deployerId(`rho:rchain:deployerId`),
+  deployId(`rho:rchain:deployId`),
+  rootCh, c, ack,
+  adminGuard, resolveComponent, nowHeight,
+  authOwner, authSubject, authPubKey, authIsOwner,
+  caseTallyApprove, caseTallyReject, caseTallyHold, casePanelWeight,
+  listHas, panelHas, selectPanel, panelWeights,
+  deadlineFor, partiesFor, requirementFor, openCase, selfVote
+in {
+  // @@INLINE:lib/Resolve.rho@@
+  // @@INLINE:lib/Auth.rho@@
+  // @@INLINE:lib/AdminGuard.rho@@
+  // @@INLINE:lib/Time.rho@@
+  // @@INLINE:lib/CaseMath.rho@@
+
+  contract listHas(@list, @value, @i, ret) = {
+    if (i >= list.length()) { ret!(false) }
+    else {
+      match list.nth(i) {
+        x => {
+          if (x == value) { ret!(true) }
+          else { listHas!(list, value, i + 1, *ret) }
+        }
+      }
+    }
+  } |
+
+  contract panelHas(@panel, @who, @i, ret) = {
+    if (i >= panel.length()) { ret!(false) }
+    else {
+      match panel.nth(i) {
+        member => {
+          if (member.get("subject") == who) { ret!(true) }
+          else { panelHas!(panel, who, i + 1, *ret) }
+        }
+      }
+    }
+  } |
+
+  contract selectPanel(@pool, @i, @need, @exclude, @acc, ret) = {
+    if (acc.length() >= need) {
+      ret!((true, acc))
+    } else {
+      if (i >= pool.length()) {
+        if (acc.length() > 0) { ret!((true, acc)) }
+        else { ret!((false, "pool too small")) }
+      } else {
+        match pool.nth(i) {
+          subject => {
+            new exCh in {
+              listHas!(exclude, subject, 0, *exCh) |
+              for (@ex <- exCh) {
+                if (ex) {
+                  selectPanel!(pool, i + 1, need, exclude, acc, *ret)
+                } else {
+                  selectPanel!(pool, i + 1, need, exclude, acc ++ [subject], *ret)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract panelWeights(@subjects, @i, @acc, ret) = {
+    if (i >= subjects.length()) {
+      ret!(acc)
+    } else {
+      match subjects.nth(i) {
+        subject => {
+          new tCh in {
+            resolveComponent!("component:token", *tCh) |
+            for (@tr <- tCh) {
+              match tr {
+                (true, TB) => {
+                  new rCh in {
+                    @TB!("reputation", subject, *rCh) |
+                    for (@rep <- rCh) {
+                      match rep {
+                        (true, r) => {
+                          panelWeights!(subjects, i + 1,
+                            acc ++ [{"subject": subject, "weightBps": r.get("weightBps")}],
+                            *ret)
+                        }
+                        _ => {
+                          panelWeights!(subjects, i + 1,
+                            acc ++ [{"subject": subject, "weightBps": 10000}], *ret)
+                        }
+                      }
+                    }
+                  }
+                }
+                _ => {
+                  panelWeights!(subjects, i + 1,
+                    acc ++ [{"subject": subject, "weightBps": 10000}], *ret)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract deadlineFor(@caseReq, @height, @window, ret) = {
+    match caseReq.get("deadlineHeight") {
+      Nil => { ret!(height + window) }
+      d => {
+        if (d < height) { ret!(height + window) }
+        else { ret!(d) }
+      }
+    }
+  } |
+
+  contract partiesFor(@caseReq, @opener, ret) = {
+    match caseReq.get("parties") {
+      Nil => { ret!([opener]) }
+      p => { ret!(p) }
+    }
+  } |
+
+  contract requirementFor(@caseReq, @params, ret) = {
+    match caseReq.get("requirement") {
+      Nil => {
+        ret!({"panelSize": params.get("panelSize"),
+              "thresholdBps": params.get("panelThresholdBps"),
+              "ctype": "Oracle", "discipline": "*", "jurisdiction": "*",
+              "role": "oracle", "minLevel": 2})
+      }
+      r => { ret!(r) }
+    }
+  } |
+
+  contract openCase(@opener, @caseReq, @subjectRef, @height, @s, ret) = {
+    new dCh, pCh, rCh, recCh in {
+      deadlineFor!(caseReq, height, s.get("params").get("disputeWindowBlocks"), *dCh) |
+      partiesFor!(caseReq, opener, *pCh) |
+      requirementFor!(caseReq, s.get("params"), *rCh) |
+      for (@deadline <- dCh; @parties <- pCh; @req <- rCh) {
+        recCh!({
+          "id": "cs:" ++ subjectRef.get("id") ++ ":" ++ opener ++ ":"
+                ++ s.get("nonce").toString(),
+          "kind": caseReq.get("kind"), "subjectRef": subjectRef,
+          "openedBy": opener, "openedAt": height,
+          "groundsHash": caseReq.get("groundsHash"),
+          "requirement": req, "panel": [], "votes": {},
+          "status": "open", "decision": Nil,
+          "execution": {"approvalDone": false, "paymentDone": false,
+                        "attempts": 0, "lastError": Nil},
+          "deadlineHeight": deadline,
+          "bondHoldId": caseReq.get("bondHoldId"),
+          "parties": parties, "payment": caseReq.get("payment"),
+          "liability": caseReq.get("liability"), "evidence": [] }) |
+        for (@caseRec <- recCh) {
+          match caseRec.get("id") {
+            caseId => {
+              match s.get("bySubject").get(subjectRef.get("id")) {
+                Nil => {
+                  oracleState!(s.set("cases", s.get("cases").set(caseId, caseRec))
+                    .set("bySubject",
+                      s.get("bySubject").set(subjectRef.get("id"), [caseId]))
+                    .set("nonce", s.get("nonce") + 1)) |
+                  ret!((true, caseId))
+                }
+                ids => {
+                  oracleState!(s.set("cases", s.get("cases").set(caseId, caseRec))
+                    .set("bySubject",
+                      s.get("bySubject").set(subjectRef.get("id"), ids ++ [caseId]))
+                    .set("nonce", s.get("nonce") + 1)) |
+                  ret!((true, caseId))
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract OracleBook(@"open", dId, @caseReq, ret) = {
+    new aCh, hCh in {
+      authSubject!(*dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, opener) <- aCh; @height <- hCh) {
+        for (@s <- oracleState) {
+          match caseReq.get("subjectRef") {
+            Nil => { oracleState!(s) | ret!((false, "subject")) }
+            subjectRef => {
+              match caseReq.get("kind") {
+                "approval" => { openCase!(opener, caseReq, subjectRef, height, s, *ret) }
+                "dispute" => { openCase!(opener, caseReq, subjectRef, height, s, *ret) }
+                "liability" => { openCase!(opener, caseReq, subjectRef, height, s, *ret) }
+                "risk" => { openCase!(opener, caseReq, subjectRef, height, s, *ret) }
+                _ => { oracleState!(s) | ret!((false, "kind")) }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract OracleBook(@"evidence", dId, @caseId, @evidence, ret) = {
+    new aCh, hCh in {
+      authSubject!(*dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, who) <- aCh; @height <- hCh) {
+        for (@s <- oracleState) {
+          match s.get("cases").get(caseId) {
+            Nil => { oracleState!(s) | ret!((false, "unknown case")) }
+            c => {
+              new onCh in {
+                panelHas!(c.get("panel"), who, 0, *onCh) |
+                for (@onPanel <- onCh) {
+                  if (who != c.get("openedBy") && (not onPanel)) {
+                    oracleState!(s) | ret!((false, "not party"))
+                  } else {
+                    oracleState!(s.set("cases", s.get("cases").set(caseId,
+                      c.set("evidence", c.get("evidence") ++ [{
+                        "by": who, "hash": evidence.get("hash"), "at": height }])))) |
+                    ret!((true, Nil))
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract OracleBook(@"empanel", @caseId, ret) = {
+    for (@s0 <<- oracleState) {
+      match s0.get("cases").get(caseId) {
+        Nil => { ret!((false, "unknown case")) }
+        c0 => {
+          if (c0.get("status") != "open") {
+            ret!((false, "not open"))
+          } else {
+            new pCh in {
+              resolveComponent!("component:credential-book", *pCh) |
+              for (@pr <- pCh) {
+                match pr {
+                  (true, CB) => {
+                    new poolCh in {
+                      @CB!("pool", c0.get("requirement"), *poolCh) |
+                      for (@pool <- poolCh) {
+                        match pool {
+                          (true, subjects) => {
+                            new selCh in {
+                              selectPanel!(subjects, 0,
+                                c0.get("requirement").get("panelSize"),
+                                c0.get("parties"), [], *selCh) |
+                              for (@sel <- selCh) {
+                                match sel {
+                                  (true, chosen) => {
+                                    new wCh in {
+                                      panelWeights!(chosen, 0, [], *wCh) |
+                                      for (@panel <- wCh) {
+                                        for (@s <- oracleState) {
+                                          match s.get("cases").get(caseId) {
+                                            Nil => {
+                                              oracleState!(s) |
+                                              ret!((false, "unknown case"))
+                                            }
+                                            c => {
+                                              oracleState!(s.set("cases",
+                                                s.get("cases").set(caseId,
+                                                  c.set("panel", panel)
+                                                    .set("status", "deliberating")))) |
+                                              ret!((true, chosen))
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                  _ => { ret!(sel) }
+                                }
+                              }
+                            }
+                          }
+                          _ => { ret!(pool) }
+                        }
+                      }
+                    }
+                  }
+                  _ => { ret!((false, "unavailable", "component:credential-book")) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract OracleBook(@"empanelWith", @nonce, @caseId, @panel, @sigs, ret) = {
+    for (@s <- oracleState) {
+      if (nonce <= s.get("govNonce")) {
+        oracleState!(s) | ret!((false, "replay"))
+      } else {
+        new vCh in {
+          adminGuard!("oracle", nonce, "empanelWith", [caseId], sigs,
+                      s.get("admins"), s.get("threshold"), *vCh) |
+          for (@v <- vCh) {
+            match v {
+              (true, ok) => {
+                if (ok == false) {
+                  oracleState!(s) | ret!((false, "below threshold"))
+                } else {
+                  match s.get("cases").get(caseId) {
+                    Nil => { oracleState!(s) | ret!((false, "unknown case")) }
+                    c => {
+                      oracleState!(s.set("cases", s.get("cases").set(caseId,
+                        c.set("panel", panel).set("status", "deliberating")))
+                        .set("govNonce", nonce)) |
+                      ret!((true, Nil))
+                    }
+                  }
+                }
+              }
+              _ => { oracleState!(s) | ret!((false, "below threshold")) }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract OracleBook(@"vote", dId, @caseId, @vote, ret) = {
+    new aCh, hCh in {
+      authSubject!(*dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, who) <- aCh; @height <- hCh) {
+        for (@s <- oracleState) {
+          match s.get("cases").get(caseId) {
+            Nil => { oracleState!(s) | ret!((false, "unknown case")) }
+            c => {
+              if (c.get("status") != "deliberating") {
+                oracleState!(s) | ret!((false, "not deliberating"))
+              } else {
+                new onCh in {
+                  panelHas!(c.get("panel"), who, 0, *onCh) |
+                  for (@onPanel <- onCh) {
+                    if (not onPanel) {
+                      oracleState!(s) | ret!((false, "not panelist"))
+                    } else {
+                      match c.get("votes").get(who) {
+                        Nil => {
+                          match vote.get("decision") {
+                            "approve" => { selfVote!(s, caseId, c, who, vote, height, *ret) }
+                            "hold" => { selfVote!(s, caseId, c, who, vote, height, *ret) }
+                            "reject" => { selfVote!(s, caseId, c, who, vote, height, *ret) }
+                            _ => { oracleState!(s) | ret!((false, "decision")) }
+                          }
+                        }
+                        _ => { oracleState!(s) | ret!((false, "already voted")) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract selfVote(@s, @caseId, @c, @who, @vote, @height, ret) = {
+    oracleState!(s.set("cases", s.get("cases").set(caseId,
+      c.set("votes", c.get("votes").set(who, {
+        "decision": vote.get("decision"),
+        "rationaleHash": vote.get("rationaleHash"), "at": height }))))) |
+    ret!((true, Nil))
+  } |
+
+  contract OracleBook(@"tally", @caseId, ret) = {
+    new hCh in {
+      nowHeight!(*hCh) |
+      for (@height <- hCh) {
+        for (@s0 <<- oracleState) {
+          match s0.get("cases").get(caseId) {
+            Nil => { ret!((false, "unknown case")) }
+            c => {
+              if (c.get("status") != "deliberating") {
+                ret!((false, "not deliberating"))
+              } else {
+                new aCh, rCh, hdCh, wCh in {
+                  caseTallyApprove!(c.get("panel"), c.get("votes"), 0, 0, *aCh) |
+                  caseTallyReject!(c.get("panel"), c.get("votes"), 0, 0, *rCh) |
+                  caseTallyHold!(c.get("panel"), c.get("votes"), 0, 0, *hdCh) |
+                  casePanelWeight!(c.get("panel"), 0, 0, *wCh) |
+                  for (@ap <- aCh; @rj <- rCh; @hd <- hdCh; @total <- wCh) {
+                    new outCh in {
+                      if (ap * 10000 >= total * c.get("requirement").get("thresholdBps")) {
+                        outCh!("approve")
+                      } else {
+                        if (rj * 10000 >= total * c.get("requirement").get("thresholdBps")) {
+                          outCh!("reject")
+                        } else {
+                          if (hd * 10000 >= total * c.get("requirement").get("thresholdBps")) {
+                            outCh!("hold")
+                          } else {
+                            if (height >= c.get("deadlineHeight")) {
+                              outCh!("expired")
+                            } else {
+                              outCh!(Nil)
+                            }
+                          }
+                        }
+                      } |
+                      for (@outcome <- outCh) {
+                        match outcome {
+                          Nil => { ret!((false, "no threshold")) }
+                          _ => {
+                            for (@s <- oracleState) {
+                              match s.get("cases").get(caseId) {
+                                Nil => { oracleState!(s) | ret!((false, "unknown case")) }
+                                c2 => {
+                                  oracleState!(s.set("cases", s.get("cases").set(caseId,
+                                    c2.set("status", "decided")
+                                      .set("decision", {
+                                        "outcome": outcome,
+                                        "liability": c2.get("liability"),
+                                        "payment": c2.get("payment"),
+                                        "conditionsHash": "",
+                                        "adjudicator": Nil,
+                                        "decidedAt": height,
+                                        "votesHash": "" })))) |
+                                  ret!((true, outcome))
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract OracleBook(@"decide", dId, @caseId, @decision, ret) = {
+    new aCh, hCh in {
+      authSubject!(*dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, who) <- aCh; @height <- hCh) {
+        for (@s <- oracleState) {
+          match s.get("cases").get(caseId) {
+            Nil => { oracleState!(s) | ret!((false, "unknown case")) }
+            c => {
+              if (c.get("panel").length() != 1) {
+                oracleState!(s) | ret!((false, "panel required"))
+              } else {
+                match c.get("panel").nth(0) {
+                  member => {
+                    if (member.get("subject") != who) {
+                      oracleState!(s) | ret!((false, "not adjudicator"))
+                    } else {
+                      oracleState!(s.set("cases", s.get("cases").set(caseId,
+                        c.set("status", "decided")
+                          .set("decision", decision.set("adjudicator", who)
+                            .set("decidedAt", height))))) |
+                      ret!((true, Nil))
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract OracleBook(@"execute", @caseId, ret) = {
+    for (@c0 <<- oracleState) {
+      match c0.get("cases").get(caseId) {
+        Nil => { ret!((false, "unknown case")) }
+        c => {
+          if (c.get("status") == "executed") {
+            ret!((true, c.get("execution")))
+          } else {
+            if (c.get("decision") == Nil) {
+              ret!((false, "not decided"))
+            } else {
+              new aCh in {
+                if (c.get("execution").get("approvalDone")) { aCh!((true, "already")) }
+                else {
+                  new kCh in {
+                    resolveComponent!("component:kasset-book", *kCh) |
+                    for (@kr <- kCh) {
+                      match kr {
+                        (true, KB) => {
+                          match c.get("kind") {
+                            "dispute" => {
+                              match c.get("decision").get("outcome") {
+                                "reject" => { @KB!("revoke", caseId, c.get("subjectRef").get("id"), *aCh) }
+                                "partial" => { @KB!("revoke", caseId, c.get("subjectRef").get("id"), *aCh) }
+                                _ => { aCh!((true, "no approval")) }
+                              }
+                            }
+                            "approval" => {
+                              @KB!("oracleApprove", caseId, c.get("subjectRef").get("id"), *aCh)
+                            }
+                            _ => { aCh!((true, "no approval")) }
+                          }
+                        }
+                        _ => { aCh!((false, "unavailable")) }
+                      }
+                    }
+                  }
+                } |
+                for (@ar <- aCh) {
+                  match ar {
+                    (true, _) => {
+                      new pCh in {
+                        match c.get("decision").get("payment") {
+                          Nil => { pCh!((true, "no payment")) }
+                          payment => {
+                            match payment.get("holdId") {
+                              Nil => { pCh!((true, "no payment")) }
+                              holdId => {
+                                new pbCh in {
+                                  resolveComponent!("component:payments", *pbCh) |
+                                  for (@pr <- pbCh) {
+                                    match pr {
+                                      (true, PB) => { @PB!("executeCase", caseId, *pCh) }
+                                      _ => { pCh!((false, "unavailable")) }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        } |
+                        for (@pr2 <- pCh) {
+                          match pr2 {
+                            (true, _) => {
+                              for (@s <- oracleState) {
+                                match s.get("cases").get(caseId) {
+                                  Nil => {
+                                    oracleState!(s) |
+                                    ret!((false, "unknown case"))
+                                  }
+                                  c2 => {
+                                    match c2.get("execution").get("attempts") {
+                                      attempts => {
+                                        oracleState!(s.set("cases", s.get("cases").set(caseId,
+                                          c2.set("execution", {
+                                            "approvalDone": true, "paymentDone": true,
+                                            "attempts": attempts + 1, "lastError": Nil })
+                                            .set("status", "executed")))) |
+                                        ret!((true, {"approvalDone": true,
+                                                     "paymentDone": true}))
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                            (false, reason) => {
+                              for (@s <- oracleState) {
+                                match s.get("cases").get(caseId) {
+                                  Nil => { oracleState!(s) | ret!((false, reason)) }
+                                  c2 => {
+                                    match c2.get("execution").get("attempts") {
+                                      attempts => {
+                                        oracleState!(s.set("cases", s.get("cases").set(caseId,
+                                          c2.set("execution", {
+                                            "approvalDone": c2.get("execution").get("approvalDone"),
+                                            "paymentDone": c2.get("execution").get("paymentDone"),
+                                            "attempts": attempts + 1,
+                                            "lastError": reason })
+                                            .set("status", "executing")))) |
+                                        ret!((false, reason))
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    (false, reason) => {
+                      for (@s <- oracleState) {
+                        match s.get("cases").get(caseId) {
+                          Nil => { oracleState!(s) | ret!((false, reason)) }
+                          c2 => {
+                            match c2.get("execution").get("attempts") {
+                              attempts => {
+                                oracleState!(s.set("cases", s.get("cases").set(caseId,
+                                  c2.set("execution", {
+                                    "approvalDone": false,
+                                    "paymentDone": c2.get("execution").get("paymentDone"),
+                                    "attempts": attempts + 1,
+                                    "lastError": reason })
+                                    .set("status", "executing")))) |
+                                ret!((false, reason))
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract OracleBook(@"close", @caseId, ret) = {
+    for (@s <- oracleState) {
+      match s.get("cases").get(caseId) {
+        Nil => { oracleState!(s) | ret!((false, "unknown case")) }
+        c => {
+          if (c.get("status") != "executed" && c.get("status") != "expired") {
+            oracleState!(s) | ret!((false, "not finished"))
+          } else {
+            oracleState!(s.set("cases", s.get("cases").set(caseId,
+              c.set("status", "closed")))) |
+            ret!((true, Nil))
+          }
+        }
+      }
+    }
+  } |
+
+  contract OracleBook(@"case", @caseId, ret) = {
+    for (@s <<- oracleState) {
+      match s.get("cases").get(caseId) {
+        Nil => { ret!((false, "unknown case")) }
+        c => { ret!((true, c)) }
+      }
+    }
+  } |
+
+  contract OracleBook(@"casesOf", @subjectId, ret) = {
+    for (@s <<- oracleState) {
+      match s.get("bySubject").get(subjectId) {
+        Nil => { ret!((true, [])) }
+        ids => { ret!((true, ids)) }
+      }
+    }
+  } |
+
+  contract OracleBook(@"panelOf", @caseId, ret) = {
+    for (@s <<- oracleState) {
+      match s.get("cases").get(caseId) {
+        Nil => { ret!((false, "unknown case")) }
+        c => { ret!((true, c.get("panel"))) }
+      }
+    }
+  } |
+
+  contract OracleBook(@"decisionOf", @caseId, ret) = {
+    for (@s <<- oracleState) {
+      match s.get("cases").get(caseId) {
+        Nil => { ret!((false, "unknown case")) }
+        c => {
+          match c.get("decision") {
+            Nil => { ret!((false, "not decided")) }
+            d => { ret!((true, d)) }
+          }
+        }
+      }
+    }
+  } |
+
+  contract OracleBook(@"paymentInstruction", @caseId, ret) = {
+    for (@s <<- oracleState) {
+      match s.get("cases").get(caseId) {
+        Nil => { ret!((false, "unknown case")) }
+        c => {
+          match c.get("decision") {
+            Nil => { ret!((false, "not decided")) }
+            d => {
+              match d.get("payment") {
+                Nil => { ret!((false, "no payment")) }
+                payment => { ret!((true, payment)) }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract OracleBook(@"admin", @nonce, @action, @args, @sigs, ret) = {
+    for (@s <- oracleState) {
+      if (nonce <= s.get("govNonce")) {
+        oracleState!(s) | ret!((false, "replay"))
+      } else {
+        new vCh in {
+          adminGuard!("oracle", nonce, action, args, sigs,
+                      s.get("admins"), s.get("threshold"), *vCh) |
+          for (@v <- vCh) {
+            match v {
+              (true, ok) => {
+                if (ok == false) {
+                  oracleState!(s) | ret!((false, "below threshold"))
+                } else {
+                  match action {
+                    "setParams" => {
+                      match args.nth(0) {
+                        params => {
+                          oracleState!(s.set("params", params).set("govNonce", nonce)) |
+                          ret!((true, Nil))
+                        }
+                      }
+                    }
+                    "setAdmins" => {
+                      match args.nth(0) {
+                        newAdmins => {
+                          match args.nth(1) {
+                            newThreshold => {
+                              if (newThreshold < 1 || newThreshold > newAdmins.length()) {
+                                oracleState!(s) | ret!((false, "threshold"))
+                              } else {
+                                oracleState!(s.set("admins", newAdmins)
+                                  .set("threshold", newThreshold)
+                                  .set("govNonce", nonce)) |
+                                ret!((true, Nil))
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    "setThreshold" => {
+                      match args.nth(0) {
+                        newThreshold => {
+                          if (newThreshold < 1 || newThreshold > s.get("admins").length()) {
+                            oracleState!(s) | ret!((false, "threshold"))
+                          } else {
+                            oracleState!(s.set("threshold", newThreshold)
+                              .set("govNonce", nonce)) |
+                            ret!((true, Nil))
+                          }
+                        }
+                      }
+                    }
+                    _ => { oracleState!(s) | ret!((false, "unknown action")) }
+                  }
+                }
+              }
+              _ => { oracleState!(s) | ret!((false, "below threshold")) }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  oracleState!({
+    "cases": {}, "bySubject": {}, "nonce": 0,
+    "params": {"panelSize": 3, "panelThresholdBps": 6666,
+               "disputeWindowBlocks": 1440},
+    "admins": __ADMINS__, "threshold": __THRESHOLD__, "govNonce": 0
+  }) |
+
+  rl!(`__ROOT_URI__`, *rootCh) |
+  for (Root <- rootCh) {
+    rs!(bundle+{*OracleBook}, *c) |
+    for (@uri <- c) {
+      Root!("register", "component:oracle", uri, 1, "oracle", *deployerId, *ack) |
+      for (@r <- ack) { deployId!([uri]) }
+    }
+  }
+}

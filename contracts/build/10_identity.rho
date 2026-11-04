@@ -1,0 +1,307 @@
+// IdentityBook: one profile per REV address.
+// Placeholders: __ROOT_URI__, __ADMINS__, __THRESHOLD__.
+new
+  IdentityBook, identityState,
+  rl(`rho:registry:lookup`),
+  rs(`rho:registry:insertArbitrary`),
+  deployerId(`rho:rchain:deployerId`),
+  deployId(`rho:rchain:deployId`),
+  rootCh, c, ack,
+  adminGuard, resolveComponent, nowHeight,
+  authOwner, authSubject, authPubKey, authIsOwner
+in {
+contract resolveComponent(@key, ret) = {
+  new rCh, Root, kCh in {
+    rl!(`__ROOT_URI__`, *rCh) |
+    for (Root <- rCh) {
+      Root!("resolve", key, 1, *kCh) |
+      for (@r <- kCh) {
+        match r {
+          (true, uri, _) => {
+            new cCh in {
+              rl!(uri, *cCh) |
+              for (C <- cCh) { ret!((true, *C)) }
+            }
+          }
+          _ => { ret!((false, "unavailable", key)) }
+        }
+      }
+    }
+  }
+} |
+// Deployer identity helpers. r-cash owns accounts; RGen uses the REV address as ownerId.
+
+contract authOwner(dId, ret) = {
+  new dops(`rho:rchain:deployerId:ops`), rev(`rho:rev:address`), pkCh, addrCh in {
+    dops!("pubKeyBytes", *dId, *pkCh) |
+    for (@pk <- pkCh) {
+      rev!("fromPublicKey", pk, *addrCh) |
+      for (@addr <- addrCh) { ret!((true, addr, pk)) }
+    }
+  }
+} |
+
+contract authSubject(dId, ret) = {
+  new c in {
+    authOwner!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, addr, _) => { ret!((true, addr)) }
+        _ => { ret!((false, "no identity")) }
+      }
+    }
+  }
+} |
+
+contract authPubKey(dId, ret) = {
+  new c in {
+    authOwner!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, _, pk) => { ret!((true, pk)) }
+        _ => { ret!((false, "no identity")) }
+      }
+    }
+  }
+} |
+
+contract authIsOwner(dId, @ownerId, ret) = {
+  new c in {
+    authSubject!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, addr) => {
+          if (addr == ownerId) { ret!((true, Nil)) }
+          else { ret!((false, "not owner")) }
+        }
+        _ => { ret!((false, "not owner")) }
+      }
+    }
+  }
+} |
+// Resolve the deployed AdminGuard and verify one admin action.
+
+contract adminGuard(@domain, @nonce, @action, @args, @sigs,
+                    @admins, @threshold, ret) = {
+  new rCh, Root, gCh, gc in {
+    rl!(`__ROOT_URI__`, *rCh) |
+    for (Root <- rCh) {
+      Root!("resolve", "component:admin-guard", 1, *gCh) |
+      for (@r <- gCh) {
+        match r {
+          (true, uri, _) => {
+            rl!(uri, *gc) |
+            for (AdminGuard <- gc) {
+              AdminGuard!("verify", domain, nonce, action, args, sigs,
+                          admins, threshold, *ret)
+            }
+          }
+          _ => { ret!((false, "below threshold")) }
+        }
+      }
+    }
+  }
+} |
+// Block height helper for contracts that need an event height without resolving the Clock.
+
+contract nowHeight(ret) = {
+  new bd(`rho:block:data`), ch in {
+    bd!(*ch) |
+    for (@h, @sender, @timestamp <- ch) { ret!(h) }
+  }
+} |
+
+  contract IdentityBook(@"register", dId, @profile, ret) = {
+    new aCh, hCh in {
+      authOwner!(dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, subject, pk) <- aCh; @height <- hCh) {
+        for (@s <- identityState) {
+          match s.get("profiles").get(subject) {
+            Nil => {
+              match profile.get("handle") {
+                Nil => { identityState!(s) | ret!((false, "handle")) }
+                "" => { identityState!(s) | ret!((false, "handle")) }
+                handle => {
+                  match s.get("handles").get(handle) {
+                    Nil => {
+                      match s.get("profiles").set(subject, {
+                        "subject": subject, "pubKey": pk, "handle": handle,
+                        "displayName": profile.get("displayName"),
+                        "orgHash": profile.get("orgHash"),
+                        "contactHash": profile.get("contactHash"),
+                        "createdAt": height, "updatedAt": height, "status": "active"
+                      }).set("handles", s.get("handles").set(handle, subject)) {
+                        profiles => {
+                          identityState!(s.set("profiles", profiles)) |
+                          ret!((true, subject))
+                        }
+                      }
+                    }
+                    _ => { identityState!(s) | ret!((false, "handle taken")) }
+                  }
+                }
+              }
+            }
+            _ => { identityState!(s) | ret!((false, "duplicate")) }
+          }
+        }
+      }
+    }
+  } |
+
+  contract IdentityBook(@"update", dId, @patch, ret) = {
+    new aCh, hCh in {
+      authSubject!(dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, subject) <- aCh; @height <- hCh) {
+        for (@s <- identityState) {
+          match s.get("profiles").get(subject) {
+            Nil => { identityState!(s) | ret!((false, "unknown subject")) }
+            rec => {
+              match rec.set("displayName", patch.get("displayName"))
+                       .set("orgHash", patch.get("orgHash"))
+                       .set("contactHash", patch.get("contactHash"))
+                       .set("updatedAt", height) {
+                rec2 => {
+                  identityState!(s.set("profiles", s.get("profiles").set(subject, rec2))) |
+                  ret!((true, Nil))
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract IdentityBook(@"profile", @subject, ret) = {
+    for (@s <<- identityState) {
+      match s.get("profiles").get(subject) {
+        Nil => { ret!((false, "unknown subject")) }
+        rec => { ret!((true, rec)) }
+      }
+    }
+  } |
+
+  contract IdentityBook(@"byHandle", @handle, ret) = {
+    for (@s <<- identityState) {
+      match s.get("handles").get(handle) {
+        Nil => { ret!((false, "unknown handle")) }
+        subject => { ret!((true, subject)) }
+      }
+    }
+  } |
+
+  contract IdentityBook(@"count", ret) = {
+    for (@s <<- identityState) {
+      ret!((true, s.get("profiles").keys().length()))
+    }
+  } |
+
+  contract IdentityBook(@"admin", @nonce, @action, @args, @sigs, ret) = {
+    for (@s <- identityState) {
+      if (nonce <= s.get("govNonce")) {
+        identityState!(s) | ret!((false, "replay"))
+      } else {
+        new vCh in {
+          adminGuard!("identity", nonce, action, args, sigs,
+                      s.get("admins"), s.get("threshold"), *vCh) |
+          for (@v <- vCh) {
+            match v {
+              (true, ok) => {
+                if (ok == false) {
+                  identityState!(s) | ret!((false, "below threshold"))
+                } else {
+                  match action {
+                    "suspend" => {
+                      match args.nth(0) {
+                        subject => {
+                          match s.get("profiles").get(subject) {
+                            Nil => { identityState!(s) | ret!((false, "unknown subject")) }
+                            rec => {
+                              identityState!(s.set("profiles",
+                                s.get("profiles").set(subject, rec.set("status", "suspended")))
+                                .set("govNonce", nonce)) |
+                              ret!((true, Nil))
+                            }
+                          }
+                        }
+                      }
+                    }
+                    "unsuspend" => {
+                      match args.nth(0) {
+                        subject => {
+                          match s.get("profiles").get(subject) {
+                            Nil => { identityState!(s) | ret!((false, "unknown subject")) }
+                            rec => {
+                              identityState!(s.set("profiles",
+                                s.get("profiles").set(subject, rec.set("status", "active")))
+                                .set("govNonce", nonce)) |
+                              ret!((true, Nil))
+                            }
+                          }
+                        }
+                      }
+                    }
+                    "setAdmins" => {
+                      match args.nth(0) {
+                        newAdmins => {
+                          match args.nth(1) {
+                            newThreshold => {
+                              if (newThreshold < 1 || newThreshold > newAdmins.length()) {
+                                identityState!(s) | ret!((false, "threshold"))
+                              } else {
+                                identityState!(s.set("admins", newAdmins)
+                                  .set("threshold", newThreshold)
+                                  .set("govNonce", nonce)) |
+                                ret!((true, Nil))
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    "setThreshold" => {
+                      match args.nth(0) {
+                        newThreshold => {
+                          if (newThreshold < 1 || newThreshold > s.get("admins").length()) {
+                            identityState!(s) | ret!((false, "threshold"))
+                          } else {
+                            identityState!(s.set("threshold", newThreshold)
+                              .set("govNonce", nonce)) |
+                            ret!((true, Nil))
+                          }
+                        }
+                      }
+                    }
+                    _ => { identityState!(s) | ret!((false, "unknown action")) }
+                  }
+                }
+              }
+              _ => { identityState!(s) | ret!((false, "below threshold")) }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  identityState!({
+    "profiles": {},
+    "handles": {},
+    "nonce": 0,
+    "admins": __ADMINS__,
+    "threshold": __THRESHOLD__,
+    "govNonce": 0
+  }) |
+
+  rl!(`__ROOT_URI__`, *rootCh) |
+  for (Root <- rootCh) {
+    rs!(bundle+{*IdentityBook}, *c) |
+    for (@uri <- c) {
+      Root!("register", "component:identity", uri, 1, "identity", *deployerId, *ack) |
+      for (@r <- ack) { deployId!([uri]) }
+    }
+  }
+}

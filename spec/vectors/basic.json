@@ -1,0 +1,33 @@
+{
+  "risk": [
+    {"severity": 1, "probability": 1, "exposure": 1, "score": 1, "class": "low"},
+    {"severity": 4, "probability": 3, "exposure": 3, "score": 36, "class": "medium"},
+    {"severity": 5, "probability": 5, "exposure": 4, "score": 100, "class": "extreme"}
+  ],
+  "mint": [
+    {
+      "quality": {"completeness": 5, "correctness": 5, "traceability": 5, "fitness": 5},
+      "verdict": "valid",
+      "unitMint": 10000000000,
+      "repBps": 10000,
+      "claimant": 5000000000,
+      "validator": 5000000000
+    },
+    {
+      "quality": {"completeness": 4, "correctness": 5, "traceability": 4, "fitness": 5},
+      "verdict": "partial",
+      "unitMint": 10000000000,
+      "repBps": 10000,
+      "claimant": 2250000000,
+      "validator": 2250000000
+    },
+    {
+      "quality": {"completeness": 5, "correctness": 5, "traceability": 5, "fitness": 5},
+      "verdict": "valid",
+      "unitMint": 10000000000,
+      "repBps": 15000,
+      "claimant": 5000000000,
+      "validator": 7500000000
+    }
+  ]
+}

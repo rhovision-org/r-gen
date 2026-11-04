@@ -1,0 +1,61 @@
+// SPE risk arithmetic and the three-question insurability test.
+// severity 1..5, probability 1..5, exposure 1..4; score 1..100.
+
+contract riskScore(@severity, @probability, @exposure, ret) = {
+  if (severity < 1 || severity > 5 || probability < 1 || probability > 5
+      || exposure < 1 || exposure > 4) {
+    ret!((false, "factor range"))
+  } else {
+    ret!((true, severity * probability * exposure))
+  }
+} |
+
+contract riskClass(@score, ret) = {
+  if (score < 1 || score > 100) { ret!((false, "score range")) }
+  else {
+    if (score <= 20) { ret!((true, "low")) }
+    else {
+      if (score <= 45) { ret!((true, "medium")) }
+      else {
+        if (score <= 70) { ret!((true, "high")) }
+        else { ret!((true, "extreme")) }
+      }
+    }
+  }
+} |
+
+contract riskGates(@class, ret) = {
+  match class {
+    "low" => { ret!((true, 1, 1, false)) }
+    "medium" => { ret!((true, 2, 2, false)) }
+    "high" => { ret!((true, 2, 3, false)) }
+    "extreme" => { ret!((true, 3, 3, true)) }
+    _ => { ret!((false, "class")) }
+  }
+} |
+
+contract triTest(@assessment, ret) = {
+  match assessment.get("exposureRef") {
+    Nil => { ret!((false, ["exposureRef"])) }
+    "" => { ret!((false, ["exposureRef"])) }
+    exposureRef => {
+      match assessment.get("probabilityBasis") {
+        Nil => { ret!((false, ["probabilityBasis"])) }
+        "" => { ret!((false, ["probabilityBasis"])) }
+        probabilityBasis => {
+          match assessment.get("consequenceBasis") {
+            Nil => { ret!((false, ["probabilityBasis", "consequenceBasis"])) }
+            "" => { ret!((false, ["consequenceBasis"])) }
+            consequenceBasis => {
+              match assessment.get("consequenceRef") {
+                Nil => { ret!((false, ["consequenceRef"])) }
+                "" => { ret!((false, ["consequenceRef"])) }
+                consequenceRef => { ret!((true, [])) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+} |

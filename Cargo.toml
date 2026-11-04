@@ -1,0 +1,36 @@
+[workspace]
+resolver = "2"
+exclude = [".devnet/parse-check"]
+members = [
+  "crates/rgen-core",
+  "crates/rgen-sdk",
+  "crates/rgen-cli",
+]
+default-members = [
+  "crates/rgen-core",
+  "crates/rgen-sdk",
+  "crates/rgen-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+rust-version = "1.95"
+repository = "https://github.com/rhovision-org/r-gen"
+
+[workspace.dependencies]
+rgen-core = { path = "crates/rgen-core" }
+rgen-sdk = { path = "crates/rgen-sdk" }
+
+# r-cash is the settlement rail and the single source of the deploy/signing primitives.
+rcash-core = { git = "https://github.com/rhovision-org/r-cash", rev = "49b441dea4f5561992387ed670ab263fcd5dd164" }
+rcash-chain = { git = "https://github.com/rhovision-org/r-cash", rev = "49b441dea4f5561992387ed670ab263fcd5dd164", default-features = false }
+rcash-sdk = { git = "https://github.com/rhovision-org/r-cash", rev = "49b441dea4f5561992387ed670ab263fcd5dd164", default-features = false }
+rchain-crypto = { git = "https://github.com/rhovision-org/rholo", rev = "841cb842876369deaa63e3b3e26c20d60e6c74c6", default-features = false }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+clap = { version = "4", features = ["derive", "env"] }
+ureq = { version = "2", features = ["json"] }

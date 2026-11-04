@@ -1,0 +1,17 @@
+[package]
+name = "rgen-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "rgen-cli"
+path = "src/main.rs"
+
+[dependencies]
+rgen-core = { workspace = true }
+rgen-sdk = { workspace = true }
+clap = { workspace = true }
+serde_json = { workspace = true }

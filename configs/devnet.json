@@ -1,0 +1,13 @@
+{
+  "node": "http://localhost:40403",
+  "admin_node": "http://localhost:40405",
+  "shard_id": "/root",
+  "grpc": "localhost:40402",
+  "phlo_price": 1,
+  "phlo_limit": 8000000,
+  "keys": ".devnet/keys.json",
+  "state": ".devnet/rgen-install.json",
+  "manifest": "deployments/devnet.json",
+  "rcash_manifest": "../Rholphin/deployments/devnet-v4.json",
+  "rcash_state": "../Rholphin/.devnet/v3-install.json"
+}

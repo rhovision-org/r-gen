@@ -1,0 +1,546 @@
+// PaymentBook: the r-cash adapter and contract-held REV escrow.
+// Placeholders: __ROOT_URI__, __RCASH_ROOT_URI__, __PLATFORM_OWNER__, __ADMINS__, __THRESHOLD__.
+new
+  PaymentBook, paymentState,
+  rl(`rho:registry:lookup`),
+  rs(`rho:registry:insertArbitrary`),
+  deployerId(`rho:rchain:deployerId`),
+  deployId(`rho:rchain:deployId`),
+  rootCh, c, ack,
+  adminGuard, resolveComponent, nowHeight,
+  authOwner, authSubject, authPubKey, authIsOwner,
+  payResolveUri, sharesSum, shareFor, payeesFor, holdStatus,
+  escrowPurse, payoutPayees
+in {
+  // @@INLINE:lib/Resolve.rho@@
+  // @@INLINE:lib/Auth.rho@@
+  // @@INLINE:lib/AdminGuard.rho@@
+  // @@INLINE:lib/Time.rho@@
+
+  contract payResolveUri(@key, ret) = {
+    for (@s <<- paymentState) {
+      new rCh, Root, kCh in {
+        rl!(s.get("rcashRootUri"), *rCh) |
+        for (Root <- rCh) {
+          Root!("resolve", key, s.get("minVersion"), *kCh) |
+          for (@r <- kCh) { ret!(r) }
+        }
+      }
+    }
+  } |
+
+  contract sharesSum(@payees, @i, @acc, ret) = {
+    if (i >= payees.length()) { ret!(acc) }
+    else {
+      match payees.nth(i) {
+        p => { sharesSum!(payees, i + 1, acc + p.get("shareBps"), *ret) }
+      }
+    }
+  } |
+
+  contract shareFor(@amount, @bps, @isLast, @paid, ret) = {
+    if (isLast) { ret!(amount - paid) }
+    else { ret!(amount * bps / 10000) }
+  } |
+
+  contract payeesFor(@instruction, @hold, ret) = {
+    match instruction.get("action") {
+      "refund" => {
+        ret!((true, [{"owner": hold.get("payer"), "shareBps": 10000}]))
+      }
+      "split" => {
+        match instruction.get("payees") {
+          Nil => { ret!((true, hold.get("payees"))) }
+          payees => { ret!((true, payees)) }
+        }
+      }
+      _ => { ret!((true, hold.get("payees"))) }
+    }
+  } |
+
+  contract holdStatus(@action, ret) = {
+    match action {
+      "refund" => { ret!("refunded") }
+      "split" => { ret!("split") }
+      _ => { ret!("released") }
+    }
+  } |
+
+  contract escrowPurse(@asset, ret) = {
+    if (asset != "REV") {
+      ret!((false, "unsupported asset"))
+    } else {
+      for (@s <<- paymentState) {
+        match s.get("escrowPurses").get(asset) {
+          Nil => {
+            new eCh, iCh in {
+              rl!(`rho:rchain:ertp`, *eCh) |
+              for (@(_, ERTP) <- eCh) {
+                @ERTP!("getRevIssuer", *iCh) |
+                for (@(revBrand, issuer) <- iCh) {
+                  new pCh in {
+                    @issuer!("makeEmptyPurse", *pCh) |
+                    for (@r <- pCh) {
+                      match r {
+                        (true, purse) => {
+                          for (@s2 <- paymentState) {
+                            match s2.get("escrowPurses").get(asset) {
+                              Nil => {
+                                paymentState!(s2.set("escrowPurses",
+                                  s2.get("escrowPurses").set(asset,
+                                    {"purse": purse, "brand": revBrand}))) |
+                                ret!((true, purse, revBrand))
+                              }
+                              e => {
+                                paymentState!(s2) |
+                                ret!((true, e.get("purse"), e.get("brand")))
+                              }
+                            }
+                          }
+                        }
+                        _ => { ret!(r) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          e => { ret!((true, e.get("purse"), e.get("brand"))) }
+        }
+      }
+    }
+  } |
+
+  contract payoutPayees(@purse, @brand, @AF, @asset, @payees, @i, @amount, @paid, ret) = {
+    if (i >= payees.length()) {
+      ret!((true, paid))
+    } else {
+      match payees.nth(i) {
+        p => {
+          match (i + 1 == payees.length()) {
+            last => {
+              new sCh in {
+                shareFor!(amount, p.get("shareBps"), last, paid, *sCh) |
+                for (@share <- sCh) {
+                  new aCh in {
+                    @AF!("accountOf", p.get("owner"), *aCh) |
+                    for (@ar <- aCh) {
+                      match ar {
+                        (true, account) => {
+                          new wCh in {
+                            @purse!("withdraw", (brand, share), *wCh) |
+                            for (@w <- wCh) {
+                              match w {
+                                (true, payment) => {
+                                  new dCh in {
+                                    @account!("deposit", asset, payment, *dCh) |
+                                    for (@d <- dCh) {
+                                      match d {
+                                        (true, _) => {
+                                          payoutPayees!(purse, brand, AF, asset, payees,
+                                                        i + 1, amount, paid + share, *ret)
+                                        }
+                                        _ => { ret!((false, "deposit")) }
+                                      }
+                                    }
+                                  }
+                                }
+                                _ => { ret!((false, "withdraw")) }
+                              }
+                            }
+                          }
+                        }
+                        _ => { ret!((false, "no account", p.get("owner"))) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract PaymentBook(@"health", ret) = {
+    new afCh, arCh, clkCh in {
+      payResolveUri!("component:account-factory", *afCh) |
+      payResolveUri!("component:asset-resolver", *arCh) |
+      payResolveUri!("component:clock", *clkCh) |
+      for (@a <- afCh; @b <- arCh; @c2 <- clkCh) {
+        match a {
+          (true, _, av) => {
+            match b {
+              (true, _, bv) => {
+                match c2 {
+                  (true, _, cv) => {
+                    ret!((true, {"accountFactory": av, "assetResolver": bv, "clock": cv}))
+                  }
+                  _ => { ret!(c2) }
+                }
+              }
+              _ => { ret!(b) }
+            }
+          }
+          _ => { ret!(a) }
+        }
+      }
+    }
+  } |
+
+  contract PaymentBook(@"platformOwner", ret) = {
+    for (@s <<- paymentState) { ret!((true, s.get("platformOwnerId"))) }
+  } |
+
+  contract PaymentBook(@"ensureAccount", dId, ret) = {
+    new pkCh in {
+      authPubKey!(*dId, *pkCh) |
+      for (@(true, pk) <- pkCh) {
+        new afCh in {
+          payResolveUri!("component:account-factory", *afCh) |
+          for (@a <- afCh) {
+            match a {
+              (true, uri, _) => {
+                new ac in {
+                  rl!(uri, *ac) |
+                  for (@AF <- ac) { @AF!("getOrCreate", pk, *ret) }
+                }
+              }
+              _ => { ret!(a) }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract PaymentBook(@"accountOf", @ownerId, ret) = {
+    new afCh in {
+      payResolveUri!("component:account-factory", *afCh) |
+      for (@a <- afCh) {
+        match a {
+          (true, uri, _) => {
+            new ac in {
+              rl!(uri, *ac) |
+              for (@AF <- ac) { @AF!("accountOf", ownerId, *ret) }
+            }
+          }
+          _ => { ret!(a) }
+        }
+      }
+    }
+  } |
+
+  contract PaymentBook(@"fund", dId, @intent, payment, ret) = {
+    new aCh, hCh in {
+      authSubject!(*dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, payer) <- aCh; @height <- hCh) {
+        match (intent.get("caseId"), intent.get("asset"), intent.get("amount"),
+               intent.get("payees")) {
+          (caseId, asset, amount, payees) => {
+            if (caseId == "" || amount < 1) {
+              ret!((false, "intent"))
+            } else {
+              new sumCh in {
+                sharesSum!(payees, 0, 0, *sumCh) |
+                for (@sum <- sumCh) {
+                  if (sum != 10000) {
+                    ret!((false, "shares"))
+                  } else {
+                    new eCh, iCh in {
+                      rl!(`rho:rchain:ertp`, *eCh) |
+                      for (@(_, ERTP) <- eCh) {
+                        @ERTP!("getRevIssuer", *iCh) |
+                        for (@(revBrand, issuer) <- iCh) {
+                          new amtCh in {
+                            @issuer!("getAmountOf", *payment, *amtCh) |
+                            for (@amt <- amtCh) {
+                              match amt {
+                                (true, value) => {
+                                  if (value != amount) {
+                                    ret!((false, "amount"))
+                                  } else {
+                                    new pCh in {
+                                      escrowPurse!("REV", *pCh) |
+                                      for (@pr <- pCh) {
+                                        match pr {
+                                          (true, purse, brand) => {
+                                            for (@s <- paymentState) {
+                                              match "hd:" ++ caseId ++ ":" ++ s.get("nonce").toString() {
+                                                holdId => {
+                                                  match s.get("holds").get(holdId) {
+                                                    Nil => {
+                                                      paymentState!(s.set("holds",
+                                                        s.get("holds").set(holdId, {
+                                                          "id": holdId, "caseId": caseId,
+                                                          "asset": asset, "amount": amount,
+                                                          "payer": payer, "payees": payees,
+                                                          "status": "pending",
+                                                          "createdAt": height,
+                                                          "releasedAt": Nil }))
+                                                        .set("nonce", s.get("nonce") + 1)) |
+                                                      new dCh in {
+                                                        @purse!("deposit", *payment, *dCh) |
+                                                        for (@d <- dCh) {
+                                                          match d {
+                                                            (true, _) => {
+                                                              for (@s2 <- paymentState) {
+                                                                match s2.get("holds").get(holdId) {
+                                                                  Nil => {
+                                                                    paymentState!(s2) |
+                                                                    ret!((false, "hold lost"))
+                                                                  }
+                                                                  h => {
+                                                                    paymentState!(s2.set("holds",
+                                                                      s2.get("holds").set(holdId,
+                                                                        h.set("status", "escrowed")))) |
+                                                                    ret!((true, holdId))
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                            _ => {
+                                                              for (@s2 <- paymentState) {
+                                                                match s2.get("holds").get(holdId) {
+                                                                  Nil => { paymentState!(s2) | ret!((false, "deposit")) }
+                                                                  h => {
+                                                                    paymentState!(s2.set("holds",
+                                                                      s2.get("holds").set(holdId,
+                                                                        h.set("status", "failed")))) |
+                                                                    ret!((false, "deposit"))
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                    _ => { paymentState!(s) | ret!((false, "duplicate")) }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                          _ => { ret!(pr) }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                                _ => { ret!(amt) }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract PaymentBook(@"executeCase", @caseId, ret) = {
+    new oCh in {
+      resolveComponent!("component:oracle", *oCh) |
+      for (@or <- oCh) {
+        match or {
+          (true, OB) => {
+            new iCh in {
+              @OB!("paymentInstruction", caseId, *iCh) |
+              for (@ins <- iCh) {
+                match ins {
+                  (true, instruction) => {
+                    new hCh in {
+                      PaymentBook!("hold", instruction.get("holdId"), *hCh) |
+                      for (@hr <- hCh) {
+                        match hr {
+                          (true, hold) => {
+                            if (hold.get("caseId") != caseId) {
+                              ret!((false, "case mismatch"))
+                            } else {
+                              if (hold.get("status") != "escrowed") {
+                                ret!((true, hold.get("status")))
+                              } else {
+                                new pCh, payCh, afCh in {
+                                  payeesFor!(instruction, hold, *payCh) |
+                                  escrowPurse!(hold.get("asset"), *pCh) |
+                                  payResolveUri!("component:account-factory", *afCh) |
+                                  for (@pr <- pCh; @pys <- payCh; @af <- afCh) {
+                                    match (pr, pys, af) {
+                                      ((true, purse, brand), (true, payees), (true, uri, _)) => {
+                                        new ac in {
+                                          rl!(uri, *ac) |
+                                          for (@AF <- ac) {
+                                            new payoutCh in {
+                                              payoutPayees!(purse, brand, AF, hold.get("asset"),
+                                                            payees, 0, hold.get("amount"), 0,
+                                                            *payoutCh) |
+                                              for (@payout <- payoutCh) {
+                                                match payout {
+                                                  (true, paid) => {
+                                                    new stCh in {
+                                                      holdStatus!(instruction.get("action"), *stCh) |
+                                                      for (@st <- stCh) {
+                                                        for (@s <- paymentState) {
+                                                          match s.get("holds").get(hold.get("id")) {
+                                                            Nil => { paymentState!(s) | ret!((false, "hold lost")) }
+                                                            h => {
+                                                              paymentState!(s.set("holds",
+                                                                s.get("holds").set(hold.get("id"),
+                                                                  h.set("status", st).set("releasedAt", hold.get("releasedAt"))))) |
+                                                              ret!((true, {"holdId": hold.get("id"),
+                                                                           "action": instruction.get("action"),
+                                                                           "paid": paid}))
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                  _ => { 1 / 0 }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                      _ => { 1 / 0 }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          _ => { ret!((false, "unknown hold")) }
+                        }
+                      }
+                    }
+                  }
+                  _ => { ret!((false, "not decided")) }
+                }
+              }
+            }
+          }
+          _ => { ret!((false, "unavailable", "component:oracle")) }
+        }
+      }
+    }
+  } |
+
+  contract PaymentBook(@"hold", @holdId, ret) = {
+    for (@s <<- paymentState) {
+      match s.get("holds").get(holdId) {
+        Nil => { ret!((false, "unknown hold")) }
+        h => { ret!((true, h)) }
+      }
+    }
+  } |
+
+  contract PaymentBook(@"holds", @caseId, ret) = {
+    for (@s <<- paymentState) {
+      ret!((true, s.get("holds")))
+    }
+  } |
+
+  contract PaymentBook(@"admin", @nonce, @action, @args, @sigs, ret) = {
+    for (@s <- paymentState) {
+      if (nonce <= s.get("govNonce")) {
+        paymentState!(s) | ret!((false, "replay"))
+      } else {
+        new vCh in {
+          adminGuard!("payments", nonce, action, args, sigs,
+                      s.get("admins"), s.get("threshold"), *vCh) |
+          for (@v <- vCh) {
+            match v {
+              (true, ok) => {
+                if (ok == false) {
+                  paymentState!(s) | ret!((false, "below threshold"))
+                } else {
+                  match action {
+                    "setRcashRoot" => {
+                      match args.nth(0) {
+                        newRoot => {
+                          paymentState!(s.set("rcashRootUri", newRoot)
+                            .set("govNonce", nonce)) |
+                          ret!((true, Nil))
+                        }
+                      }
+                    }
+                    "setPlatformOwner" => {
+                      match args.nth(0) {
+                        owner => {
+                          paymentState!(s.set("platformOwnerId", owner)
+                            .set("govNonce", nonce)) |
+                          ret!((true, Nil))
+                        }
+                      }
+                    }
+                    "setAdmins" => {
+                      match args.nth(0) {
+                        newAdmins => {
+                          match args.nth(1) {
+                            newThreshold => {
+                              if (newThreshold < 1 || newThreshold > newAdmins.length()) {
+                                paymentState!(s) | ret!((false, "threshold"))
+                              } else {
+                                paymentState!(s.set("admins", newAdmins)
+                                  .set("threshold", newThreshold)
+                                  .set("govNonce", nonce)) |
+                                ret!((true, Nil))
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    "setThreshold" => {
+                      match args.nth(0) {
+                        newThreshold => {
+                          if (newThreshold < 1 || newThreshold > s.get("admins").length()) {
+                            paymentState!(s) | ret!((false, "threshold"))
+                          } else {
+                            paymentState!(s.set("threshold", newThreshold)
+                              .set("govNonce", nonce)) |
+                            ret!((true, Nil))
+                          }
+                        }
+                      }
+                    }
+                    _ => { paymentState!(s) | ret!((false, "unknown action")) }
+                  }
+                }
+              }
+              _ => { paymentState!(s) | ret!((false, "below threshold")) }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  paymentState!({
+    "rcashRootUri": "__RCASH_ROOT_URI__",
+    "minVersion": 1,
+    "platformOwnerId": "__PLATFORM_OWNER__",
+    "holds": {}, "escrowPurses": {}, "nonce": 0,
+    "admins": __ADMINS__, "threshold": __THRESHOLD__, "govNonce": 0
+  }) |
+
+  rl!(`__ROOT_URI__`, *rootCh) |
+  for (Root <- rootCh) {
+    rs!(bundle+{*PaymentBook}, *c) |
+    for (@uri <- c) {
+      Root!("register", "component:payments", uri, 1, "payments", *deployerId, *ack) |
+      for (@r <- ack) { deployId!([uri]) }
+    }
+  }
+}

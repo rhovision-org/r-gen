@@ -1,0 +1,1120 @@
+// KAssetBook: validation, approval, nesting, mint authorization and dispute hooks.
+// Placeholders: __ROOT_URI__, __ADMINS__, __THRESHOLD__.
+new
+  KAssetBook, kassetState,
+  rl(`rho:registry:lookup`),
+  rs(`rho:registry:insertArbitrary`),
+  deployerId(`rho:rchain:deployerId`),
+  deployId(`rho:rchain:deployId`),
+  rootCh, c, ack,
+  adminGuard, resolveComponent, nowHeight,
+  authOwner, authSubject, authPubKey, authIsOwner,
+  mintQuality, mintAmounts, reputationBps,
+  indexValue, qualityScore, listHas, requirementFor,
+  writeValidation, writeApproval, nestCheck, nestApply, linkChild
+in {
+contract resolveComponent(@key, ret) = {
+  new rCh, Root, kCh in {
+    rl!(`__ROOT_URI__`, *rCh) |
+    for (Root <- rCh) {
+      Root!("resolve", key, 1, *kCh) |
+      for (@r <- kCh) {
+        match r {
+          (true, uri, _) => {
+            new cCh in {
+              rl!(uri, *cCh) |
+              for (C <- cCh) { ret!((true, *C)) }
+            }
+          }
+          _ => { ret!((false, "unavailable", key)) }
+        }
+      }
+    }
+  }
+} |
+// Deployer identity helpers. r-cash owns accounts; RGen uses the REV address as ownerId.
+
+contract authOwner(dId, ret) = {
+  new dops(`rho:rchain:deployerId:ops`), rev(`rho:rev:address`), pkCh, addrCh in {
+    dops!("pubKeyBytes", *dId, *pkCh) |
+    for (@pk <- pkCh) {
+      rev!("fromPublicKey", pk, *addrCh) |
+      for (@addr <- addrCh) { ret!((true, addr, pk)) }
+    }
+  }
+} |
+
+contract authSubject(dId, ret) = {
+  new c in {
+    authOwner!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, addr, _) => { ret!((true, addr)) }
+        _ => { ret!((false, "no identity")) }
+      }
+    }
+  }
+} |
+
+contract authPubKey(dId, ret) = {
+  new c in {
+    authOwner!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, _, pk) => { ret!((true, pk)) }
+        _ => { ret!((false, "no identity")) }
+      }
+    }
+  }
+} |
+
+contract authIsOwner(dId, @ownerId, ret) = {
+  new c in {
+    authSubject!(*dId, *c) |
+    for (@r <- c) {
+      match r {
+        (true, addr) => {
+          if (addr == ownerId) { ret!((true, Nil)) }
+          else { ret!((false, "not owner")) }
+        }
+        _ => { ret!((false, "not owner")) }
+      }
+    }
+  }
+} |
+// Resolve the deployed AdminGuard and verify one admin action.
+
+contract adminGuard(@domain, @nonce, @action, @args, @sigs,
+                    @admins, @threshold, ret) = {
+  new rCh, Root, gCh, gc in {
+    rl!(`__ROOT_URI__`, *rCh) |
+    for (Root <- rCh) {
+      Root!("resolve", "component:admin-guard", 1, *gCh) |
+      for (@r <- gCh) {
+        match r {
+          (true, uri, _) => {
+            rl!(uri, *gc) |
+            for (AdminGuard <- gc) {
+              AdminGuard!("verify", domain, nonce, action, args, sigs,
+                          admins, threshold, *ret)
+            }
+          }
+          _ => { ret!((false, "below threshold")) }
+        }
+      }
+    }
+  }
+} |
+// Block height helper for contracts that need an event height without resolving the Clock.
+
+contract nowHeight(ret) = {
+  new bd(`rho:block:data`), ch in {
+    bd!(*ch) |
+    for (@h, @sender, @timestamp <- ch) { ret!(h) }
+  }
+} |
+// Integer-only KAT mint arithmetic. Amounts are 8-decimal base units.
+// quality has four dimensions, each 1..5, so the sum is 4..20.
+
+contract mintQuality(@quality, @verdict, ret) = {
+  match quality.get("completeness") + quality.get("correctness")
+        + quality.get("traceability") + quality.get("fitness") {
+    sum => {
+      if (sum < 4 || sum > 20) {
+        ret!((false, "quality"))
+      } else {
+        match sum * 100 / 20 {
+          pct => {
+            if (verdict == "partial") {
+              ret!((true, pct * 5000 / 10000))
+            } else {
+              ret!((true, pct))
+            }
+          }
+        }
+      }
+    }
+  }
+} |
+
+contract mintAmounts(@unitMint, @qualityPct, @repBps, ret) = {
+  if (unitMint < 1 || qualityPct < 0 || qualityPct > 100 || repBps < 10000 || repBps > 15000) {
+    ret!((false, "mint bounds"))
+  } else {
+    match unitMint * qualityPct / 100 {
+      total => {
+        match total * 5000 / 10000 {
+          claimant => {
+            match total - claimant {
+              validatorBase => {
+                match validatorBase * repBps / 10000 {
+                  validator => { ret!((true, claimant, validator, total)) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+} |
+
+contract reputationBps(@earned, ret) = {
+  match earned {
+    e => {
+      if (e < 10000000000) { ret!(10000) }
+      else {
+        if (e < 100000000000) { ret!(11000) }
+        else {
+          if (e < 1000000000000) { ret!(12500) }
+          else { ret!(15000) }
+        }
+      }
+    }
+  }
+} |
+
+  contract indexValue(@s, @key, @owner, ret) = {
+    match s.get(key).get(owner) {
+      Nil => { ret!([]) }
+      ids => { ret!(ids) }
+    }
+  } |
+
+  contract listHas(@list, @value, @i, ret) = {
+    if (i >= list.length()) { ret!(false) }
+    else {
+      match list.nth(i) {
+        x => {
+          if (x == value) { ret!(true) }
+          else { listHas!(list, value, i + 1, *ret) }
+        }
+      }
+    }
+  } |
+
+  contract qualityScore(@quality, ret) = {
+    match (quality.get("completeness"), quality.get("correctness"),
+           quality.get("traceability"), quality.get("fitness")) {
+      (a, b, c2, d) => {
+        if (a < 1 || a > 5 || b < 1 || b > 5 || c2 < 1 || c2 > 5 || d < 1 || d > 5) {
+          ret!((false, "quality"))
+        } else {
+          ret!((true, a + b + c2 + d))
+        }
+      }
+    }
+  } |
+
+  contract requirementFor(@ctype, @discipline, @jurisdiction, @role, @minLevel, ret) = {
+    ret!({"ctype": ctype, "discipline": discipline, "jurisdiction": jurisdiction,
+          "role": role, "minLevel": minLevel})
+  } |
+
+  contract KAssetBook(@"validate", dId, @claimId, @validation, ret) = {
+    new aCh, hCh in {
+      authSubject!(dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, validator) <- aCh; @height <- hCh) {
+        new wCh in {
+          resolveComponent!("component:work-book", *wCh) |
+          for (@wr <- wCh) {
+            match wr {
+              (true, WB) => {
+                new cCh in {
+                  @WB!("claim", claimId, *cCh) |
+                  for (@cr <- cCh) {
+                    match cr {
+                      (true, claim) => {
+                        if (validator == claim.get("claimant")) {
+                          ret!((false, "self validation"))
+                        } else {
+                          if (claim.get("status") != "open") {
+                            ret!((false, "not open"))
+                          } else {
+                            new qCh in {
+                              requirementFor!("Validator", claim.get("discipline"),
+                                              claim.get("jurisdiction"), "validator", 1, *qCh) |
+                              for (@req <- qCh) {
+                                new vqCh in {
+                                  resolveComponent!("component:credential-book", *vqCh) |
+                                  for (@qr <- vqCh) {
+                                    match qr {
+                                      (true, CB) => {
+                                        new okCh in {
+                                          @CB!("valid", validator, req, height, *okCh) |
+                                          for (@ok <- okCh) {
+                                            match ok {
+                                              (true, true, credId) => {
+                                                new qsCh in {
+                                                  qualityScore!(validation.get("quality"), *qsCh) |
+                                                  for (@qs <- qsCh) {
+                                                    match qs {
+                                                      (false, reason) => { ret!((false, reason)) }
+                                                      (true, sum) => {
+                                                        for (@s <- kassetState) {
+                                                          match s.get("byClaim").get(claimId) {
+                                                            Nil => {
+                                                              match validation.get("verdict") {
+                                                                "valid" => {
+                                                                  kassetState!(s) |
+                                                                  new writeCh in {
+                                                                    writeValidation!(
+                                                                      validator, claim, claimId,
+                                                                      validation, sum, credId,
+                                                                      height, "validated", *writeCh) |
+                                                                    for (@w <- writeCh) { ret!(w) }
+                                                                  }
+                                                                }
+                                                                "partial" => {
+                                                                  kassetState!(s) |
+                                                                  new writeCh in {
+                                                                    writeValidation!(
+                                                                      validator, claim, claimId,
+                                                                      validation, sum, credId,
+                                                                      height, "conditional", *writeCh) |
+                                                                    for (@w <- writeCh) { ret!(w) }
+                                                                  }
+                                                                }
+                                                                "invalid" => {
+                                                                  kassetState!(s) |
+                                                                  new writeCh in {
+                                                                    writeValidation!(
+                                                                      validator, claim, claimId,
+                                                                      validation, sum, credId,
+                                                                      height, "rejected", *writeCh) |
+                                                                    for (@w <- writeCh) { ret!(w) }
+                                                                  }
+                                                                }
+                                                                _ => {
+                                                                  kassetState!(s) |
+                                                                  ret!((false, "verdict"))
+                                                                }
+                                                              }
+                                                            }
+                                                            _ => {
+                                                              kassetState!(s) |
+                                                              ret!((false, "already validated"))
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                              (true, false, reason) => { ret!((false, "not qualified")) }
+                                              _ => { ret!((false, "not qualified")) }
+                                            }
+                                          }
+                                        }
+                                      }
+                                      _ => { ret!((false, "unavailable", "component:credential-book")) }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                      _ => { ret!((false, "unknown claim")) }
+                    }
+                  }
+                }
+              }
+              _ => { ret!((false, "unavailable", "component:work-book")) }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract writeValidation(@validator, @claim, @claimId, @validation,
+                       @sum, @credId, @height, @status, ret) = {
+    for (@s <- kassetState) {
+      match s.get("byClaim").get(claimId) {
+        Nil => {
+          match "vl:" ++ claimId ++ ":" ++ validator {
+            validationId => {
+              match "ka:" ++ claimId {
+                kassetId => {
+                  new cc, vv, vk in {
+                    indexValue!(s, "claimsBySubject", claim.get("claimant"), *cc) |
+                    indexValue!(s, "validationsBySubject", validator, *vv) |
+                    indexValue!(s, "kassetsBySubject", validator, *vk) |
+                    for (@claims <- cc; @vals <- vv; @kass <- vk) {
+                      match s.set("validations", s.get("validations").set(validationId, {
+                        "id": validationId, "claimId": claimId, "validator": validator,
+                        "verdict": validation.get("verdict"), "quality": validation.get("quality"),
+                        "qualityScore": sum,
+                        "characteristicsHash": validation.get("characteristicsHash"),
+                        "commentHash": validation.get("commentHash"),
+                        "evidence": validation.get("evidence"),
+                        "qualification": {"credId": credId, "atHeight": height},
+                        "weightBps": 10000, "createdAt": height, "status": "recorded" }))
+                        .set("kassets", s.get("kassets").set(kassetId, {
+                          "id": kassetId, "claimId": claimId, "validationId": validationId,
+                          "claimant": claim.get("claimant"), "validator": validator,
+                          "approver": Nil, "status": status,
+                          "verdict": validation.get("verdict"),
+                          "quality": validation.get("quality"), "qualityScore": sum,
+                          "quantity": claim.get("quantity"),
+                          "discipline": claim.get("discipline"),
+                          "jurisdiction": claim.get("jurisdiction"),
+                          "ctype": claim.get("ctype"),
+                          "parentIds": [], "childIds": [], "approvalId": Nil,
+                          "riskId": Nil, "createdAt": height, "revokedAt": Nil,
+                          "revocationCaseId": Nil }))
+                        .set("byClaim", s.get("byClaim").set(claimId, validationId))
+                        .set("byValidation", s.get("byValidation").set(validationId, kassetId))
+                        .set("claimsBySubject",
+                          s.get("claimsBySubject").set(claim.get("claimant"),
+                            claims ++ [claimId]))
+                        .set("validationsBySubject",
+                          s.get("validationsBySubject").set(validator, vals ++ [validationId]))
+                        .set("kassetsBySubject",
+                          s.get("kassetsBySubject").set(validator, kass ++ [kassetId])) {
+                        s2 => {
+                          kassetState!(s2) |
+                          new wCh, stCh in {
+                            if (status == "rejected") { stCh!("rejected") }
+                            else { stCh!("validated") } |
+                            resolveComponent!("component:work-book", *wCh) |
+                            for (@claimStatus <- stCh; @wr <- wCh) {
+                              match wr {
+                                (true, WB) => {
+                                  new eCh in {
+                                    @WB!("close", claimId, claimStatus, kassetId, *eCh) |
+                                    for (@e <- eCh) {
+                                      ret!((true, validationId, kassetId))
+                                    }
+                                  }
+                                }
+                                _ => { ret!((true, validationId, kassetId)) }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        _ => { kassetState!(s) | ret!((false, "already validated")) }
+      }
+    }
+  } |
+
+  contract KAssetBook(@"approve", dId, @kassetId, @approval, ret) = {
+    new aCh, hCh in {
+      authSubject!(dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, approver) <- aCh; @height <- hCh) {
+        for (@s0 <<- kassetState) {
+          match s0.get("kassets").get(kassetId) {
+            Nil => { ret!((false, "unknown kasset")) }
+            kasset => {
+              if (kasset.get("status") != "validated"
+                  && kasset.get("status") != "conditional") {
+                ret!((false, "not validated"))
+              } else {
+                if (approver == kasset.get("claimant") || approver == kasset.get("validator")) {
+                  ret!((false, "conflict"))
+                } else {
+                  match approval.get("riskId") {
+                    Nil => {
+                      new qCh, minCh in {
+                        requirementFor!("Approver", kasset.get("discipline"),
+                                        kasset.get("jurisdiction"), "approver", 1, *qCh) |
+                        for (@req <- qCh) {
+                          new cCh in {
+                            resolveComponent!("component:credential-book", *cCh) |
+                            for (@cr <- cCh) {
+                              match cr {
+                                (true, CB) => {
+                                  new okCh in {
+                                    @CB!("valid", approver, req, height, *okCh) |
+                                    for (@ok <- okCh) {
+                                      match ok {
+                                        (true, true, credId) => {
+                                          new writeCh in {
+                                            writeApproval!(approver, kasset,
+                                              kassetId, approval, credId, height, Nil, *writeCh) |
+                                            for (@w <- writeCh) { ret!(w) }
+                                          }
+                                        }
+                                        _ => { ret!((false, "not qualified")) }
+                                      }
+                                    }
+                                  }
+                                }
+                                _ => { ret!((false, "unavailable", "component:credential-book")) }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    riskId => {
+                      new rCh in {
+                        resolveComponent!("component:risk-book", *rCh) |
+                        for (@rr <- rCh) {
+                          match rr {
+                            (true, RB) => {
+                              new gCh in {
+                                @RB!("gate", riskId, *gCh) |
+                                for (@g <- gCh) {
+                                  match g {
+                                    (true, gate) => {
+                                      if (not gate.get("insurable")) {
+                                        ret!((false, "uninsurable"))
+                                      } else {
+                                        if (gate.get("class") == "extreme"
+                                            && approval.get("oracleCaseId") == Nil) {
+                                          ret!((false, "oracle required"))
+                                        } else {
+                                          new qCh in {
+                                            requirementFor!("Approver", kasset.get("discipline"),
+                                                            kasset.get("jurisdiction"),
+                                                            "approver",
+                                                            gate.get("approverLevel"), *qCh) |
+                                            for (@req <- qCh) {
+                                              new cCh in {
+                                                resolveComponent!("component:credential-book", *cCh) |
+                                                for (@cr <- cCh) {
+                                                  match cr {
+                                                    (true, CB) => {
+                                                      new okCh in {
+                                                        @CB!("valid", approver, req, height, *okCh) |
+                                                        for (@ok <- okCh) {
+                                                          match ok {
+                                                            (true, true, credId) => {
+                                                              new writeCh in {
+                                                                writeApproval!(
+                                                                  approver, kasset, kassetId,
+                                                                  approval, credId, height,
+                                                                  riskId, *writeCh) |
+                                                                for (@w <- writeCh) { ret!(w) }
+                                                              }
+                                                            }
+                                                            _ => { ret!((false, "not qualified")) }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                    _ => { ret!((false, "unavailable",
+                                                                "component:credential-book")) }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                    _ => { ret!((false, "no risk")) }
+                                  }
+                                }
+                              }
+                            }
+                            _ => { ret!((false, "unavailable", "component:risk-book")) }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract writeApproval(@approver, @kasset, @kassetId, @approval,
+                       @credId, @height, @riskId, ret) = {
+    for (@s <- kassetState) {
+      match s.get("kassets").get(kassetId) {
+        Nil => { kassetState!(s) | ret!((false, "unknown kasset")) }
+        k2 => {
+          if (k2.get("status") != "validated" && k2.get("status") != "conditional") {
+            kassetState!(s) | ret!((false, "not validated"))
+          } else {
+            match "ap:" ++ kassetId ++ ":" ++ approver {
+              approvalId => {
+                match s.get("approvals").get(approvalId) {
+                  Nil => {
+                    match approval.get("decision") {
+                      "approve" => {
+                        new s2 in {
+                          s2!(s.set("approvals", s.get("approvals").set(approvalId, {
+                            "id": approvalId, "kassetId": kassetId, "approver": approver,
+                            "decision": "approve",
+                            "conditionsHash": approval.get("conditionsHash"),
+                            "liability": approval.get("liability"),
+                            "riskId": riskId, "oracleCaseId": approval.get("oracleCaseId"),
+                            "createdAt": height }))
+                            .set("kassets", s.get("kassets").set(kassetId,
+                              k2.set("status", "approved").set("approver", approver)
+                                .set("approvalId", approvalId).set("riskId", riskId)))) |
+                          for (@state <- s2) {
+                            kassetState!(state) |
+                            ret!((true, approvalId))
+                          }
+                        }
+                      }
+                      "conditional" => {
+                        new s2 in {
+                          s2!(s.set("approvals", s.get("approvals").set(approvalId, {
+                            "id": approvalId, "kassetId": kassetId, "approver": approver,
+                            "decision": "conditional",
+                            "conditionsHash": approval.get("conditionsHash"),
+                            "liability": approval.get("liability"),
+                            "riskId": riskId, "oracleCaseId": approval.get("oracleCaseId"),
+                            "createdAt": height }))
+                            .set("kassets", s.get("kassets").set(kassetId,
+                              k2.set("status", "conditional").set("approver", approver)
+                                .set("approvalId", approvalId).set("riskId", riskId)))) |
+                          for (@state <- s2) {
+                            kassetState!(state) |
+                            ret!((true, approvalId))
+                          }
+                        }
+                      }
+                      _ => { kassetState!(s) | ret!((false, "decision")) }
+                    }
+                  }
+                  _ => { kassetState!(s) | ret!((false, "duplicate approval")) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract KAssetBook(@"reject", dId, @kassetId, @reason, ret) = {
+    new aCh, hCh in {
+      authSubject!(dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, approver) <- aCh; @height <- hCh) {
+        for (@s0 <<- kassetState) {
+          match s0.get("kassets").get(kassetId) {
+            Nil => { ret!((false, "unknown kasset")) }
+            kasset => {
+              if (approver == kasset.get("claimant") || approver == kasset.get("validator")) {
+                ret!((false, "conflict"))
+              } else {
+                new qCh in {
+                  requirementFor!("Approver", kasset.get("discipline"),
+                                  kasset.get("jurisdiction"), "approver", 1, *qCh) |
+                  for (@req <- qCh) {
+                    new cCh in {
+                      resolveComponent!("component:credential-book", *cCh) |
+                      for (@cr <- cCh) {
+                        match cr {
+                          (true, CB) => {
+                            new okCh in {
+                              @CB!("valid", approver, req, height, *okCh) |
+                              for (@ok <- okCh) {
+                                match ok {
+                                  (true, true, _) => {
+                                    for (@s <- kassetState) {
+                                      match s.get("kassets").get(kassetId) {
+                                        Nil => { kassetState!(s) | ret!((false, "unknown kasset")) }
+                                        k2 => {
+                                          kassetState!(s.set("kassets",
+                                            s.get("kassets").set(kassetId,
+                                              k2.set("status", "rejected")
+                                                .set("approver", approver)
+                                                .set("revokedAt", height)
+                                                .set("revocationCaseId", Nil)))) |
+                                          ret!((true, Nil))
+                                        }
+                                      }
+                                    }
+                                  }
+                                  _ => { ret!((false, "not qualified")) }
+                                }
+                              }
+                            }
+                          }
+                          _ => { ret!((false, "unavailable", "component:credential-book")) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract KAssetBook(@"nest", dId, @parentId, @childIds, ret) = {
+    new aCh in {
+      authSubject!(dId, *aCh) |
+      for (@(true, who) <- aCh) {
+        for (@s0 <<- kassetState) {
+          match s0.get("kassets").get(parentId) {
+            Nil => { ret!((false, "unknown parent")) }
+            parent => {
+              if (parent.get("claimant") != who) {
+                ret!((false, "not claimant"))
+              } else {
+                if (parent.get("status") != "approved") {
+                  ret!((false, "parent not approved"))
+                } else {
+                  new checkCh in {
+                    nestCheck!(parent, childIds, 0, *checkCh) |
+                    for (@c <- checkCh) {
+                      match c {
+                        (true, Nil) => {
+                          for (@s <- kassetState) {
+                            match s.get("kassets").get(parentId) {
+                              Nil => { kassetState!(s) | ret!((false, "unknown parent")) }
+                              p2 => {
+                                new updCh in {
+                                  nestApply!(p2, childIds, 0, *updCh) |
+                                  for (@u <- updCh) {
+                                    match u {
+                                      (true, kids) => {
+                                        kassetState!(s.set("kassets",
+                                          s.get("kassets").set(parentId,
+                                            p2.set("childIds", p2.get("childIds") ++ kids)))) |
+                                        ret!((true, Nil))
+                                      }
+                                      _ => { kassetState!(s) | ret!(u) }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                        _ => { ret!(c) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract nestCheck(@parent, @childIds, @i, ret) = {
+    if (i >= childIds.length()) {
+      ret!((true, Nil))
+    } else {
+      match childIds.nth(i) {
+        childId => {
+          if (childId == parent.get("id")) {
+            ret!((false, "cycle"))
+          } else {
+            for (@s <<- kassetState) {
+              match s.get("kassets").get(childId) {
+                Nil => { ret!((false, "unknown child")) }
+                child => {
+                  if (child.get("status") != "approved") {
+                    ret!((false, "child not approved"))
+                  } else {
+                    if (child.get("discipline") != parent.get("discipline")
+                        || child.get("jurisdiction") != parent.get("jurisdiction")) {
+                      ret!((false, "scope mismatch"))
+                    } else {
+                      new dupCh in {
+                        listHas!(parent.get("childIds"), childId, 0, *dupCh) |
+                        for (@dup <- dupCh) {
+                          if (dup) { ret!((false, "duplicate child")) }
+                          else { nestCheck!(parent, childIds, i + 1, *ret) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract nestApply(@parent, @childIds, @i, ret) = {
+    if (i >= childIds.length()) {
+      ret!((true, []))
+    } else {
+      match childIds.nth(i) {
+        childId => {
+          new restCh in {
+            nestApply!(parent, childIds, i + 1, *restCh) |
+            for (@r <- restCh) {
+              match r {
+                (true, rest) => {
+                  new updCh in {
+                    linkChild!(childId, parent.get("id"), *updCh) |
+                    for (@u <- updCh) {
+                      match u {
+                        (true, Nil) => { ret!((true, [childId] ++ rest)) }
+                        _ => { ret!(u) }
+                      }
+                    }
+                  }
+                }
+                _ => { ret!(r) }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract linkChild(@childId, @parentId, ret) = {
+    for (@s <- kassetState) {
+      match s.get("kassets").get(childId) {
+        Nil => { kassetState!(s) | ret!((false, "unknown child")) }
+        child => {
+          kassetState!(s.set("kassets",
+            s.get("kassets").set(childId,
+              child.set("parentIds", child.get("parentIds") ++ [parentId])))) |
+          ret!((true, Nil))
+        }
+      }
+    }
+  } |
+
+  contract KAssetBook(@"mintAuthorization", @kassetId, ret) = {
+    for (@s <<- kassetState) {
+      match s.get("kassets").get(kassetId) {
+        Nil => { ret!((false, "unknown kasset")) }
+        kasset => {
+          if (kasset.get("status") != "approved" && kasset.get("status") != "conditional") {
+            ret!((false, "not approved"))
+          } else {
+            new qCh in {
+              mintQuality!(kasset.get("quality"), kasset.get("verdict"), *qCh) |
+              for (@q <- qCh) {
+                match q {
+                  (true, pct) => {
+                    new rCh in {
+                      resolveComponent!("component:token", *rCh) |
+                      for (@rr <- rCh) {
+                        match rr {
+                          (true, TB) => {
+                            new repCh in {
+                              @TB!("reputation", kasset.get("validator"), *repCh) |
+                              for (@rep <- repCh) {
+                                match rep {
+                                  (true, r) => {
+                                    new amtCh in {
+                                      mintAmounts!(s.get("unitMint"), pct,
+                                                   r.get("weightBps"), *amtCh) |
+                                      for (@amt <- amtCh) {
+                                        match amt {
+                                          (true, claimantAmount, validatorAmount, total) => {
+                                            ret!((true, {
+                                              "claimant": kasset.get("claimant"),
+                                              "validator": kasset.get("validator"),
+                                              "claimantAmount": claimantAmount,
+                                              "validatorAmount": validatorAmount,
+                                              "total": total}))
+                                          }
+                                          _ => { ret!((false, "mint bounds")) }
+                                        }
+                                      }
+                                    }
+                                  }
+                                  _ => { ret!((false, "no reputation")) }
+                                }
+                              }
+                            }
+                          }
+                          _ => { ret!((false, "unavailable", "component:token")) }
+                        }
+                      }
+                    }
+                  }
+                  _ => { ret!((false, "quality")) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract KAssetBook(@"markDisputed", @kassetId, @caseId, ret) = {
+    new oCh in {
+      resolveComponent!("component:oracle", *oCh) |
+      for (@or <- oCh) {
+        match or {
+          (true, OB) => {
+            new cCh in {
+              @OB!("case", caseId, *cCh) |
+              for (@cr <- cCh) {
+                match cr {
+                  (true, _) => {
+                    for (@s <- kassetState) {
+                      match s.get("kassets").get(kassetId) {
+                        Nil => { kassetState!(s) | ret!((false, "unknown kasset")) }
+                        kasset => {
+                          kassetState!(s.set("kassets",
+                            s.get("kassets").set(kassetId,
+                              kasset.set("status", "disputed")))) |
+                          ret!((true, Nil))
+                        }
+                      }
+                    }
+                  }
+                  _ => { ret!((false, "unknown case")) }
+                }
+              }
+            }
+          }
+          _ => { ret!((false, "unavailable", "component:oracle")) }
+        }
+      }
+    }
+  } |
+
+  contract KAssetBook(@"oracleApprove", @caseId, @kassetId, ret) = {
+    new oCh in {
+      resolveComponent!("component:oracle", *oCh) |
+      for (@or <- oCh) {
+        match or {
+          (true, OB) => {
+            new dCh in {
+              @OB!("decisionOf", caseId, *dCh) |
+              for (@d <- dCh) {
+                match d {
+                  (true, decision) => {
+                    if (decision.get("outcome") != "approve") {
+                      ret!((false, "not approved"))
+                    } else {
+                      for (@s <- kassetState) {
+                        match s.get("kassets").get(kassetId) {
+                          Nil => { kassetState!(s) | ret!((false, "unknown kasset")) }
+                          kasset => {
+                            kassetState!(s.set("kassets",
+                              s.get("kassets").set(kassetId,
+                                kasset.set("status", "approved")
+                                  .set("approver", decision.get("adjudicator"))))) |
+                            ret!((true, kassetId))
+                          }
+                        }
+                      }
+                    }
+                  }
+                  _ => { ret!((false, "not decided")) }
+                }
+              }
+            }
+          }
+          _ => { ret!((false, "unavailable", "component:oracle")) }
+        }
+      }
+    }
+  } |
+
+  contract KAssetBook(@"revoke", @caseId, @kassetId, ret) = {
+    new oCh, hCh in {
+      nowHeight!(*hCh) |
+      resolveComponent!("component:oracle", *oCh) |
+      for (@height <- hCh; @or <- oCh) {
+        match or {
+          (true, OB) => {
+            new dCh in {
+              @OB!("decisionOf", caseId, *dCh) |
+              for (@d <- dCh) {
+                match d {
+                  (true, decision) => {
+                    if (decision.get("outcome") != "reject"
+                        && decision.get("outcome") != "partial") {
+                      ret!((false, "not upheld"))
+                    } else {
+                      for (@s <- kassetState) {
+                        match s.get("kassets").get(kassetId) {
+                          Nil => { kassetState!(s) | ret!((false, "unknown kasset")) }
+                          kasset => {
+                            kassetState!(s.set("kassets",
+                              s.get("kassets").set(kassetId,
+                                kasset.set("status", "revoked")
+                                  .set("revokedAt", height)
+                                  .set("revocationCaseId", caseId)))) |
+                            ret!((true, kassetId))
+                          }
+                        }
+                      }
+                    }
+                  }
+                  _ => { ret!((false, "not decided")) }
+                }
+              }
+            }
+          }
+          _ => { ret!((false, "unavailable", "component:oracle")) }
+        }
+      }
+    }
+  } |
+
+  contract KAssetBook(@"revocation", @kassetId, ret) = {
+    for (@s <<- kassetState) {
+      match s.get("kassets").get(kassetId) {
+        Nil => { ret!((false, "unknown kasset")) }
+        kasset => {
+          if (kasset.get("status") != "revoked") {
+            ret!((false, "not revoked"))
+          } else {
+            ret!((true, {"claimant": kasset.get("claimant"),
+                         "validator": kasset.get("validator"),
+                         "caseId": kasset.get("revocationCaseId")}))
+          }
+        }
+      }
+    }
+  } |
+
+  contract KAssetBook(@"kasset", @kassetId, ret) = {
+    for (@s <<- kassetState) {
+      match s.get("kassets").get(kassetId) {
+        Nil => { ret!((false, "unknown kasset")) }
+        kasset => { ret!((true, kasset)) }
+      }
+    }
+  } |
+
+  contract KAssetBook(@"validation", @validationId, ret) = {
+    for (@s <<- kassetState) {
+      match s.get("validations").get(validationId) {
+        Nil => { ret!((false, "unknown validation")) }
+        v => { ret!((true, v)) }
+      }
+    }
+  } |
+
+  contract KAssetBook(@"approval", @approvalId, ret) = {
+    for (@s <<- kassetState) {
+      match s.get("approvals").get(approvalId) {
+        Nil => { ret!((false, "unknown approval")) }
+        a => { ret!((true, a)) }
+      }
+    }
+  } |
+
+  contract KAssetBook(@"kassetsOf", @subject, ret) = {
+    for (@s <<- kassetState) {
+      new iCh in {
+        indexValue!(s, "kassetsBySubject", subject, *iCh) |
+        for (@ids <- iCh) { ret!((true, ids)) }
+      }
+    }
+  } |
+
+  contract KAssetBook(@"validationsOf", @subject, ret) = {
+    for (@s <<- kassetState) {
+      new iCh in {
+        indexValue!(s, "validationsBySubject", subject, *iCh) |
+        for (@ids <- iCh) { ret!((true, ids)) }
+      }
+    }
+  } |
+
+  contract KAssetBook(@"admin", @nonce, @action, @args, @sigs, ret) = {
+    for (@s <- kassetState) {
+      if (nonce <= s.get("govNonce")) {
+        kassetState!(s) | ret!((false, "replay"))
+      } else {
+        new vCh in {
+          adminGuard!("kasset", nonce, action, args, sigs,
+                      s.get("admins"), s.get("threshold"), *vCh) |
+          for (@v <- vCh) {
+            match v {
+              (true, ok) => {
+                if (ok == false) {
+                  kassetState!(s) | ret!((false, "below threshold"))
+                } else {
+                  match action {
+                    "setParams" => {
+                      match args.nth(0) {
+                        params => {
+                          kassetState!(s.set("unitMint", params.get("unitMint"))
+                            .set("govNonce", nonce)) |
+                          ret!((true, Nil))
+                        }
+                      }
+                    }
+                    "setAdmins" => {
+                      match args.nth(0) {
+                        newAdmins => {
+                          match args.nth(1) {
+                            newThreshold => {
+                              if (newThreshold < 1 || newThreshold > newAdmins.length()) {
+                                kassetState!(s) | ret!((false, "threshold"))
+                              } else {
+                                kassetState!(s.set("admins", newAdmins)
+                                  .set("threshold", newThreshold)
+                                  .set("govNonce", nonce)) |
+                                ret!((true, Nil))
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    "setThreshold" => {
+                      match args.nth(0) {
+                        newThreshold => {
+                          if (newThreshold < 1 || newThreshold > s.get("admins").length()) {
+                            kassetState!(s) | ret!((false, "threshold"))
+                          } else {
+                            kassetState!(s.set("threshold", newThreshold)
+                              .set("govNonce", nonce)) |
+                            ret!((true, Nil))
+                          }
+                        }
+                      }
+                    }
+                    _ => { kassetState!(s) | ret!((false, "unknown action")) }
+                  }
+                }
+              }
+              _ => { kassetState!(s) | ret!((false, "below threshold")) }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  kassetState!({
+    "validations": {}, "kassets": {}, "approvals": {},
+    "byClaim": {}, "byValidation": {},
+    "claimsBySubject": {}, "validationsBySubject": {}, "kassetsBySubject": {},
+    "unitMint": 10000000000,
+    "admins": __ADMINS__, "threshold": __THRESHOLD__, "govNonce": 0
+  }) |
+
+  rl!(`__ROOT_URI__`, *rootCh) |
+  for (Root <- rootCh) {
+    rs!(bundle+{*KAssetBook}, *c) |
+    for (@uri <- c) {
+      Root!("register", "component:kasset-book", uri, 1, "kasset", *deployerId, *ack) |
+      for (@r <- ack) { deployId!([uri]) }
+    }
+  }
+}

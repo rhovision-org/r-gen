@@ -1,0 +1,60 @@
+// Integer-only KAT mint arithmetic. Amounts are 8-decimal base units.
+// quality has four dimensions, each 1..5, so the sum is 4..20.
+
+contract mintQuality(@quality, @verdict, ret) = {
+  match quality.get("completeness") + quality.get("correctness")
+        + quality.get("traceability") + quality.get("fitness") {
+    sum => {
+      if (sum < 4 || sum > 20) {
+        ret!((false, "quality"))
+      } else {
+        match sum * 100 / 20 {
+          pct => {
+            if (verdict == "partial") {
+              ret!((true, pct * 5000 / 10000))
+            } else {
+              ret!((true, pct))
+            }
+          }
+        }
+      }
+    }
+  }
+} |
+
+contract mintAmounts(@unitMint, @qualityPct, @repBps, ret) = {
+  if (unitMint < 1 || qualityPct < 0 || qualityPct > 100 || repBps < 10000 || repBps > 15000) {
+    ret!((false, "mint bounds"))
+  } else {
+    match unitMint * qualityPct / 100 {
+      total => {
+        match total * 5000 / 10000 {
+          claimant => {
+            match total - claimant {
+              validatorBase => {
+                match validatorBase * repBps / 10000 {
+                  validator => { ret!((true, claimant, validator, total)) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+} |
+
+contract reputationBps(@earned, ret) = {
+  match earned {
+    e => {
+      if (e < 10000000000) { ret!(10000) }
+      else {
+        if (e < 100000000000) { ret!(11000) }
+        else {
+          if (e < 1000000000000) { ret!(12500) }
+          else { ret!(15000) }
+        }
+      }
+    }
+  }
+} |

@@ -1,0 +1,21 @@
+{
+  "token": {
+    "name": "KAT",
+    "decimals": 8,
+    "unit_mint_kat": 100,
+    "claim_bps": 5000,
+    "validator_bps": 5000,
+    "max_validator_weight_bps": 15000,
+    "partial_quality_bps": 5000
+  },
+  "risk": {
+    "medium": 45,
+    "high": 70,
+    "extreme": 71
+  },
+  "oracle": {
+    "panel_size": 3,
+    "panel_threshold_bps": 6666,
+    "dispute_window_blocks": 1440
+  }
+}

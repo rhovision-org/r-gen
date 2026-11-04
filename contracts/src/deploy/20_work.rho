@@ -1,0 +1,376 @@
+// WorkBook: work elements and claims. The claim/validation/approval handshake starts here.
+// Placeholders: __ROOT_URI__, __ADMINS__, __THRESHOLD__.
+new
+  WorkBook, workState,
+  rl(`rho:registry:lookup`),
+  rs(`rho:registry:insertArbitrary`),
+  deployerId(`rho:rchain:deployerId`),
+  deployId(`rho:rchain:deployId`),
+  rootCh, c, ack,
+  adminGuard, resolveComponent, nowHeight,
+  authOwner, authSubject, authPubKey, authIsOwner,
+  indexValue
+in {
+  // @@INLINE:lib/Resolve.rho@@
+  // @@INLINE:lib/Auth.rho@@
+  // @@INLINE:lib/AdminGuard.rho@@
+  // @@INLINE:lib/Time.rho@@
+
+  contract indexValue(@s, @key, @owner, ret) = {
+    match s.get(key).get(owner) {
+      Nil => { ret!([]) }
+      ids => { ret!(ids) }
+    }
+  } |
+
+  contract WorkBook(@"openWork", dId, @work, ret) = {
+    new aCh, hCh in {
+      authSubject!(*dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, owner) <- aCh; @height <- hCh) {
+        for (@s <- workState) {
+          match work.get("titleHash") {
+            Nil => { workState!(s) | ret!((false, "title")) }
+            "" => { workState!(s) | ret!((false, "title")) }
+            titleHash => {
+              match work.get("discipline") {
+                Nil => { workState!(s) | ret!((false, "discipline")) }
+                "" => { workState!(s) | ret!((false, "discipline")) }
+                discipline => {
+                  match "wk:" ++ owner ++ ":" ++ s.get("nonce").toString() {
+                    workId => {
+                      new wc, wl in {
+                        indexValue!(s, "workIndex", owner, *wc) |
+                        indexValue!(s, "claimByWork", workId, *wl) |
+                        for (@works <- wc; @claims <- wl) {
+                          match s.set("works", s.get("works").set(workId, {
+                            "id": workId, "owner": owner, "titleHash": titleHash,
+                            "discipline": discipline,
+                            "jurisdiction": work.get("jurisdiction"),
+                            "projectRef": work.get("projectRef"),
+                            "createdAt": height, "status": "open" }))
+                            .set("workIndex", s.get("workIndex").set(owner, works ++ [workId]))
+                            .set("claimByWork", s.get("claimByWork").set(workId, claims))
+                            .set("nonce", s.get("nonce") + 1) {
+                            s2 => { workState!(s2) | ret!((true, workId)) }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract WorkBook(@"claim", dId, @workId, @claim, ret) = {
+    new aCh, hCh, iCh in {
+      authSubject!(*dId, *aCh) |
+      nowHeight!(*hCh) |
+      resolveComponent!("component:identity", *iCh) |
+      for (@(true, claimant) <- aCh; @height <- hCh; @ir <- iCh) {
+        match ir {
+          (true, IdentityBook) => {
+            new pCh in {
+              @IdentityBook!("profile", claimant, *pCh) |
+              for (@p <- pCh) {
+                match p {
+                  (true, _) => {
+                    for (@s <- workState) {
+                      match s.get("works").get(workId) {
+                        Nil => { workState!(s) | ret!((false, "unknown work")) }
+                        work => {
+                          if (work.get("status") != "open") {
+                            workState!(s) | ret!((false, "work closed"))
+                          } else {
+                            if (claim.get("statementHash") == "") {
+                              workState!(s) | ret!((false, "statement"))
+                            } else {
+                              if (claim.get("definitionHash") == "") {
+                                workState!(s) | ret!((false, "definition"))
+                              } else {
+                                match (claim.get("quantity").get("unit"),
+                                       claim.get("quantity").get("value")) {
+                                  (unit, value) => {
+                                    if (unit == "" || value < 0) {
+                                      workState!(s) | ret!((false, "quantity"))
+                                    } else {
+                                      match "cl:" ++ workId ++ ":" ++ s.get("nonce").toString() {
+                                        claimId => {
+                                          new cc, cw in {
+                                            indexValue!(s, "claimIndex", claimant, *cc) |
+                                            indexValue!(s, "claimByWork", workId, *cw) |
+                                            for (@claims <- cc; @forWork <- cw) {
+                                              match s.set("claims", s.get("claims").set(claimId, {
+                                                "id": claimId, "workId": workId,
+                                                "claimant": claimant,
+                                                "discipline": work.get("discipline"),
+                                                "jurisdiction": work.get("jurisdiction"),
+                                                "ctype": claim.get("ctype"),
+                                                "statementHash": claim.get("statementHash"),
+                                                "definitionHash": claim.get("definitionHash"),
+                                                "quantity": claim.get("quantity"),
+                                                "evidence": claim.get("evidence"),
+                                                "riskRef": claim.get("riskRef"),
+                                                "supersedes": claim.get("supersedes"),
+                                                "createdAt": height, "updatedAt": height,
+                                                "status": "open", "validationId": Nil,
+                                                "kassetId": Nil, "approvalId": Nil }))
+                                                .set("claimIndex",
+                                                  s.get("claimIndex").set(claimant,
+                                                    claims ++ [claimId]))
+                                                .set("claimByWork",
+                                                  s.get("claimByWork").set(workId,
+                                                    forWork ++ [claimId]))
+                                                .set("nonce", s.get("nonce") + 1) {
+                                                s2 => { workState!(s2) | ret!((true, claimId)) }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  _ => { ret!((false, "not registered")) }
+                }
+              }
+            }
+          }
+          _ => { ret!((false, "unavailable", "component:identity")) }
+        }
+      }
+    }
+  } |
+
+  contract WorkBook(@"amend", dId, @claimId, @patch, ret) = {
+    new aCh, hCh in {
+      authSubject!(*dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, who) <- aCh; @height <- hCh) {
+        for (@s <- workState) {
+          match s.get("claims").get(claimId) {
+            Nil => { workState!(s) | ret!((false, "unknown claim")) }
+            claim => {
+              if (claim.get("claimant") != who) {
+                workState!(s) | ret!((false, "not claimant"))
+              } else {
+                if (claim.get("status") != "open") {
+                  workState!(s) | ret!((false, "not open"))
+                } else {
+                  match claim.set("statementHash", patch.get("statementHash"))
+                              .set("definitionHash", patch.get("definitionHash"))
+                              .set("quantity", patch.get("quantity"))
+                              .set("evidence", patch.get("evidence"))
+                              .set("updatedAt", height) {
+                    claim2 => {
+                      workState!(s.set("claims", s.get("claims").set(claimId, claim2))) |
+                      ret!((true, Nil))
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract WorkBook(@"withdraw", dId, @claimId, ret) = {
+    new aCh, hCh in {
+      authSubject!(*dId, *aCh) |
+      nowHeight!(*hCh) |
+      for (@(true, who) <- aCh; @height <- hCh) {
+        for (@s <- workState) {
+          match s.get("claims").get(claimId) {
+            Nil => { workState!(s) | ret!((false, "unknown claim")) }
+            claim => {
+              if (claim.get("claimant") != who) {
+                workState!(s) | ret!((false, "not claimant"))
+              } else {
+                if (claim.get("status") != "open") {
+                  workState!(s) | ret!((false, "not open"))
+                } else {
+                  workState!(s.set("claims",
+                    s.get("claims").set(claimId,
+                      claim.set("status", "withdrawn").set("updatedAt", height)))) |
+                  ret!((true, Nil))
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  contract WorkBook(@"close", @claimId, @status, @kassetId, ret) = {
+    new kCh in {
+      resolveComponent!("component:kasset-book", *kCh) |
+      for (@r <- kCh) {
+        match r {
+          (true, KB) => {
+            new kkCh in {
+              @KB!("kasset", kassetId, *kkCh) |
+              for (@kk <- kkCh) {
+                match kk {
+                  (true, kasset) => {
+                    if (kasset.get("claimId") != claimId) {
+                      ret!((false, "claim mismatch"))
+                    } else {
+                      for (@s <- workState) {
+                        match s.get("claims").get(claimId) {
+                          Nil => { workState!(s) | ret!((false, "unknown claim")) }
+                          claim => {
+                            workState!(s.set("claims",
+                              s.get("claims").set(claimId,
+                                claim.set("status", status)
+                                  .set("kassetId", kassetId)
+                                  .set("validationId", kasset.get("validationId"))))) |
+                            ret!((true, Nil))
+                          }
+                        }
+                      }
+                    }
+                  }
+                  _ => { ret!((false, "unknown kasset")) }
+                }
+              }
+            }
+          }
+          _ => { ret!((false, "unavailable", "component:kasset-book")) }
+        }
+      }
+    }
+  } |
+
+  contract WorkBook(@"work", @workId, ret) = {
+    for (@s <<- workState) {
+      match s.get("works").get(workId) {
+        Nil => { ret!((false, "unknown work")) }
+        work => { ret!((true, work)) }
+      }
+    }
+  } |
+
+  contract WorkBook(@"claim", @claimId, ret) = {
+    for (@s <<- workState) {
+      match s.get("claims").get(claimId) {
+        Nil => { ret!((false, "unknown claim")) }
+        claim => { ret!((true, claim)) }
+      }
+    }
+  } |
+
+  contract WorkBook(@"worksOf", @owner, ret) = {
+    for (@s <<- workState) {
+      new iCh in {
+        indexValue!(s, "workIndex", owner, *iCh) |
+        for (@ids <- iCh) { ret!((true, ids)) }
+      }
+    }
+  } |
+
+  contract WorkBook(@"claimsOf", @claimant, ret) = {
+    for (@s <<- workState) {
+      new iCh in {
+        indexValue!(s, "claimIndex", claimant, *iCh) |
+        for (@ids <- iCh) { ret!((true, ids)) }
+      }
+    }
+  } |
+
+  contract WorkBook(@"claimsForWork", @workId, ret) = {
+    for (@s <<- workState) {
+      new iCh in {
+        indexValue!(s, "claimByWork", workId, *iCh) |
+        for (@ids <- iCh) { ret!((true, ids)) }
+      }
+    }
+  } |
+
+  contract WorkBook(@"admin", @nonce, @action, @args, @sigs, ret) = {
+    for (@s <- workState) {
+      if (nonce <= s.get("govNonce")) {
+        workState!(s) | ret!((false, "replay"))
+      } else {
+        new vCh in {
+          adminGuard!("work", nonce, action, args, sigs,
+                      s.get("admins"), s.get("threshold"), *vCh) |
+          for (@v <- vCh) {
+            match v {
+              (true, ok) => {
+                if (ok == false) {
+                  workState!(s) | ret!((false, "below threshold"))
+                } else {
+                  match action {
+                    "setAdmins" => {
+                      match args.nth(0) {
+                        newAdmins => {
+                          match args.nth(1) {
+                            newThreshold => {
+                              if (newThreshold < 1 || newThreshold > newAdmins.length()) {
+                                workState!(s) | ret!((false, "threshold"))
+                              } else {
+                                workState!(s.set("admins", newAdmins)
+                                  .set("threshold", newThreshold)
+                                  .set("govNonce", nonce)) |
+                                ret!((true, Nil))
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    "setThreshold" => {
+                      match args.nth(0) {
+                        newThreshold => {
+                          if (newThreshold < 1 || newThreshold > s.get("admins").length()) {
+                            workState!(s) | ret!((false, "threshold"))
+                          } else {
+                            workState!(s.set("threshold", newThreshold)
+                              .set("govNonce", nonce)) |
+                            ret!((true, Nil))
+                          }
+                        }
+                      }
+                    }
+                    _ => { workState!(s) | ret!((false, "unknown action")) }
+                  }
+                }
+              }
+              _ => { workState!(s) | ret!((false, "below threshold")) }
+            }
+          }
+        }
+      }
+    }
+  } |
+
+  workState!({
+    "works": {}, "claims": {}, "workIndex": {}, "claimIndex": {},
+    "claimByWork": {}, "nonce": 0,
+    "admins": __ADMINS__, "threshold": __THRESHOLD__, "govNonce": 0
+  }) |
+
+  rl!(`__ROOT_URI__`, *rootCh) |
+  for (Root <- rootCh) {
+    rs!(bundle+{*WorkBook}, *c) |
+    for (@uri <- c) {
+      Root!("register", "component:work-book", uri, 1, "work", *deployerId, *ack) |
+      for (@r <- ack) { deployId!([uri]) }
+    }
+  }
+}
