@@ -1,13 +1,20 @@
-# RGen — Pareto-efficient engineering-technology primitives
+# RGen — CoEngineers / Ingenesist contracts and proofs
 
 **Devnet-only, unaudited, no real value.**
 
+RGen is the first reasonably complete suite of Rholang contracts, paired with a Lean 4 model,
+for the **CoEngineers and Ingenesist Project** vision set out in Dan Robles' papers:
+engineering work becomes a claim, validation is its quality, the claim+validation pair is a
+K-Asset, and qualifications, adjudication, and provenance stay with the asset.
+
 **Documentation:** <https://rhovision-org.github.io/r-gen/>
 
-RGen is the Pareto-efficient core of the engineering-technology primitives suggested by the
-Dan Robles papers: it expresses **claims**, **validations**, **value propositions**,
-**K-Assets**, qualifications, adjudication, and asset-bound provenance. It deliberately does
-**not** tokenise, price, pay, score risk, run panels, or administer a governance layer.
+The suite expresses **claims**, **validations**, **value propositions**, **K-Assets**,
+qualifications, adjudication, and asset-bound provenance. The "Pareto" test is the internal
+design criterion for what stays in the core: remove a primitive and ask whether the remaining
+set can still express the papers' claim → validation → approval handshake and the K-Asset. It
+is not the public purpose of the repo. It deliberately does **not** tokenise, price, pay,
+score risk, run panels, or administer a governance layer.
 
 > The fundamental problem is that the value of engineering is invisible — there is little or
 > no accounting of 'true' engineering value in society because there are few tools that
