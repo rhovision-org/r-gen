@@ -1,0 +1,13 @@
+# kasset.conventions/v1 engineering-variance vectors
+# engineering_bps = (20 - quality_sum) * 500 + verdict_penalty
+# verdict_penalty: valid 0, partial 1000. An invalid verdict is rejected at mint
+# and is not eligible for automatic derivation.
+# liability shareBps is deliberately not an input to engineering_bps.
+quality_sum	verdict	engineering_bps
+20	valid	0
+19	valid	500
+18	valid	1000
+12	valid	4000
+12	partial	5000
+8	valid	6000
+4	partial	9000

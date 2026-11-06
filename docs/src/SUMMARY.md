@@ -23,6 +23,7 @@
 ## Reference
 
 - [Pareto ledger](reference/pareto-ledger.md)
+- [K-Asset conventions v1](reference/kasset-conventions.md)
 - [Paper-to-code matrix](reference/paper-to-code.md)
 - [Design rationale](reference/design-rationale.md)
 - [Formal model](reference/formal-model.md)

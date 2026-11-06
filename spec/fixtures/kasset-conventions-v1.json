@@ -1,0 +1,31 @@
+{
+  "convention": "kasset.conventions/v1",
+  "fixture": "quality-3-valid-approved",
+  "state": {
+    "quantity": { "unit": "inspections", "value": 12 },
+    "quality": {
+      "completeness": 3,
+      "correctness": 3,
+      "traceability": 3,
+      "fitness": 3
+    },
+    "verdict": "valid",
+    "status": "approved",
+    "approval": {
+      "decision": "approve",
+      "liability": {
+        "responsible": "actor:approver",
+        "shareBps": 10000,
+        "basisHash": "liability"
+      }
+    }
+  },
+  "expected": {
+    "qualitySum": 12,
+    "verdictPenalty": 0,
+    "engineeringBps": 4000,
+    "indemnityShareBps": 10000,
+    "liabilityUsedAsEngineeringSignal": false
+  },
+  "source": "harness/unit_kasset.py"
+}

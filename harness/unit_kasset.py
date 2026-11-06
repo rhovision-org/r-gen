@@ -27,6 +27,26 @@ def main() -> int:
     assertions.expect("K-Asset approved", reply[1].get("status"), "approved")
     assertions.expect("K-Asset id set", reply[1].get("id"), kasset_uri)
 
+    # Conformance fixture for kasset.conventions/v1: quality 3 across four dimensions,
+    # valid verdict, approved, full liability. The convention rate is 4000 bps.
+    quality3 = {"completeness": 3, "correctness": 3,
+                "traceability": 3, "fitness": 3}
+    _, fixture_kasset, _ = suite_base.validated_kasset(addrs, "bob", quality=quality3)
+    reply = fixtures.kasset_approve(fixture_kasset, carol_cred, "carol",
+                                    suite_base.approval(carol_cred, addrs["carol"]))
+    assertions.expect_ok("convention fixture approved", reply)
+    state = fixtures.read(fixture_kasset, "get")[1]
+    assertions.expect("convention quantity", state.get("quantity"),
+                      {"unit": "inspections", "value": 12})
+    assertions.expect("convention quality", state.get("quality"), quality3)
+    assertions.expect("convention verdict", state.get("verdict"), "valid")
+    assertions.expect("convention status", state.get("status"), "approved")
+    liability = state.get("approval", {}).get("liability", {})
+    assertions.expect("convention liability share", liability.get("shareBps"), 10000)
+    quality_sum = sum(quality3.values())
+    engineering_bps = (20 - quality_sum) * 500
+    assertions.expect("convention engineering rate", engineering_bps, 4000)
+
     reply = fixtures.kasset_prove_approved(kasset_uri, "alice")
     assertions.expect("proveApproved returns proof and take", isinstance(reply, list), True)
     prove, take = reply

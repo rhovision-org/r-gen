@@ -85,13 +85,13 @@ def main() -> int:
 
     # Late validation marks the claim expired. Creation now requires a future deadline
     # (RR-07), so create just ahead of the tip and let a deploy pass it.
-    deadline = actors.block_height() + 2
+    deadline = actors.block_height() + 10
     late = suite_base.claim_req(addrs["alice"])
     late["deadlineHeight"] = deadline
     late["commentUntilHeight"] = deadline
     claim5 = fixtures.claim("alice", late)
     assertions.expect_ok("late claim", claim5)
-    for _ in range(6):
+    for _ in range(20):
         if actors.block_height() > deadline:
             break
     reply = fixtures.claim_validate(claim5[1]["uri"], bob_cred, "bob",

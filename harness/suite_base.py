@@ -47,11 +47,12 @@ def requirement(ctype: str, role: str, discipline: str = "structural",
             "role": role, "minLevel": min_level}
 
 
-def validation(cred_uri: str, verdict: str = "valid") -> dict:
+def validation(cred_uri: str, verdict: str = "valid",
+               quality: dict | None = None) -> dict:
     return {
         "verdict": verdict,
-        "quality": {"completeness": 5, "correctness": 5,
-                    "traceability": 5, "fitness": 5},
+        "quality": quality or {"completeness": 5, "correctness": 5,
+                               "traceability": 5, "fitness": 5},
         "credentialUri": cred_uri,
         "characteristicsHash": "chars",
         "commentHash": "comments",
@@ -79,21 +80,24 @@ def claim_req(claimant: str, vp_uri: str | None = None) -> dict:
 
 
 def validated_kasset(addrs: dict[str, str], validator: str, claimant: str = "alice",
-                     vp_uri: str | None = None) -> tuple[str, str, str]:
+                     vp_uri: str | None = None,
+                     quality: dict | None = None) -> tuple[str, str, str]:
     """Create a claim, validate it with `validator`, and return (claim, kasset, cred)."""
     validator_cred = issue(addrs, validator, "Validator", "validator")
     claim_reply = fixtures.claim(claimant, claim_req(addrs[claimant], vp_uri))
     assertions.expect_ok("claim created", claim_reply)
     claim_uri = claim_reply[1]["uri"]
     reply = fixtures.claim_validate(claim_uri, validator_cred, validator,
-                                    validation(validator_cred))
+                                    validation(validator_cred, quality=quality))
     assertions.expect_ok("claim validated", reply)
     return claim_uri, reply[1]["uri"], validator_cred
 
 
 def approved_kasset(addrs: dict[str, str], validator: str = "bob",
-                    approver: str = "carol", vp_uri: str | None = None) -> tuple[str, str]:
-    claim_uri, kasset_uri, _ = validated_kasset(addrs, validator, vp_uri=vp_uri)
+                    approver: str = "carol", vp_uri: str | None = None,
+                    quality: dict | None = None) -> tuple[str, str]:
+    claim_uri, kasset_uri, _ = validated_kasset(addrs, validator, vp_uri=vp_uri,
+                                                quality=quality)
     approver_cred = issue(addrs, approver, "Approver", "approver")
     reply = fixtures.kasset_approve(kasset_uri, approver_cred, approver,
                                     approval(approver_cred, addrs[approver]))
