@@ -14,7 +14,11 @@ new
   rootCh, cfCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
   listHas, listHasId, listHasAny, listHas3,
-  CredentialFactory, openCaseCheck, caseReqOk, outcomeStatus, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
+  listHasEq, listHasIdEq, listHasAnyEq, listHas3Eq,
+  CredentialFactory, openCaseCheck, caseReqOk, outcomeStatus,
+  checkCredentialProof, proveAndCheck, checkValidatedProof, proveValidatedAndCheck,
+  proveAndCheckCall, proveAndCheckReply, proveTakeAndCheck,
+  proveValidatedCall, proveValidatedReply, proveValidatedTake
 in {
 // Deployer identity helpers. The REV address is the subject id; the public key is stored
 // only where an identity profile needs it.
@@ -61,62 +65,70 @@ contract nowHeight(ret) = {
     for (@h, _, _ <- ch) { ret!(h) }
   }
 } |
-contract listHas(@list, @value, @i, ret) = {
-  if (i >= list.length()) { ret!(false) }
-  else {
-    match list.nth(i) {
-      x => {
-        if (x == value) { ret!(true) }
-        else { listHas!(list, value, i + 1, *ret) }
-      }
-    }
+// List traversal is pattern recursion, not index arithmetic. `match list { [] => ...;
+// [head, ...tail] => ... }` is the only list walk; `...tail` binds the positional suffix.
+// The predicate helpers keep each body at dispatch depth <= 2 and return the bare boolean
+// the callers already expect.
+
+contract listHas(@list, @value, ret) = {
+  match list {
+    [] => { ret!(false) }
+    [head, ...tail] => { listHasEq!(head, value, tail, *ret) }
+    _ => { ret!(false) }
   }
 } |
 
-contract listHasId(@list, @id, @i, ret) = {
-  if (i >= list.length()) { ret!(false) }
-  else {
-    match list.nth(i) {
-      x => {
-        if (x.get("id") == id) { ret!(true) }
-        else { listHasId!(list, id, i + 1, *ret) }
-      }
-    }
+contract listHasEq(@head, @value, @tail, ret) = {
+  if (head == value) { ret!(true) }
+  else { listHas!(tail, value, *ret) }
+} |
+
+contract listHasId(@list, @id, ret) = {
+  match list {
+    [] => { ret!(false) }
+    [head, ...tail] => { listHasIdEq!(head, id, tail, *ret) }
+    _ => { ret!(false) }
   }
 } |
 
-contract listHasAny(@list, @a, @b, @i, ret) = {
-  if (i >= list.length()) { ret!(false) }
-  else {
-    match list.nth(i) {
-      x => {
-        if (x == a || x == b) { ret!(true) }
-        else { listHasAny!(list, a, b, i + 1, *ret) }
-      }
-    }
+contract listHasIdEq(@head, @id, @tail, ret) = {
+  if (head.get("id") == id) { ret!(true) }
+  else { listHasId!(tail, id, *ret) }
+} |
+
+contract listHasAny(@list, @a, @b, ret) = {
+  match list {
+    [] => { ret!(false) }
+    [head, ...tail] => { listHasAnyEq!(head, a, b, tail, *ret) }
+    _ => { ret!(false) }
   }
 } |
 
-contract listHas3(@list, @a, @b, @c, @i, ret) = {
-  if (i >= list.length()) { ret!(false) }
-  else {
-    match list.nth(i) {
-      x => {
-        if (x == a || x == b || x == c) { ret!(true) }
-        else { listHas3!(list, a, b, c, i + 1, *ret) }
-      }
-    }
+contract listHasAnyEq(@head, @a, @b, @tail, ret) = {
+  if (head == a || head == b) { ret!(true) }
+  else { listHasAny!(tail, a, b, *ret) }
+} |
+
+contract listHas3(@list, @a, @b, @c, ret) = {
+  match list {
+    [] => { ret!(false) }
+    [head, ...tail] => { listHas3Eq!(head, a, b, c, tail, *ret) }
+    _ => { ret!(false) }
   }
+} |
+
+contract listHas3Eq(@head, @a, @b, @c, @tail, ret) = {
+  if (head == a || head == b || head == c) { ret!(true) }
+  else { listHas3!(tail, a, b, c, *ret) }
 } |
 // One-shot proof helpers. A credential or value proposition `prove` arm returns a private
 // `Proof` capability on a caller-supplied channel; every `prove` variant sends
-// `bundle+{*Proof}` on that channel and returns `(true, Nil)`. The proof is never inserted into
-// the registry, so there is no discoverable proof URI for a third party to burn. `take` yields
-// `(true, data)` once and `(false, "used")` after that.
+// `bundle+{*Proof}` on that channel and returns `(true, Nil)`. The proof is never inserted
+// into the registry, so there is no discoverable proof URI for a third party to burn.
+// `take` yields `(true, data)` once and `(false, "used")` after that.
 //
-// These helpers resolve the credential or value proposition by its registry URI, receive the
-// private proof capability, take it, and check the fields the caller binds. The capability is
-// bound directly in a receive pattern; it is never passed through a data tuple.
+// Each check is a flat helper: one `for`, one `match`, and a direct boolean return. No
+// nested match/if chain.
 
 contract checkCredentialProof(Proof, @validator, @credentialUri, @height, ret) = {
   new tCh in {
@@ -124,10 +136,9 @@ contract checkCredentialProof(Proof, @validator, @credentialUri, @height, ret) =
     for (@t <- tCh) {
       match t {
         (true, data) => {
-          if (data.get("subject") == validator
-              && data.get("credentialUri") == credentialUri
-              && data.get("atHeight") == height) { ret!(true) }
-          else { ret!(false) }
+          ret!(data.get("subject") == validator
+            && data.get("credentialUri") == credentialUri
+            && data.get("atHeight") == height)
         }
         _ => { ret!(false) }
       }
@@ -136,23 +147,35 @@ contract checkCredentialProof(Proof, @validator, @credentialUri, @height, ret) =
 } |
 
 contract proveAndCheck(@credentialUri, dId, @rq, @validator, @height, ret) = {
-  new credCh, proofCh, okCh in {
+  new credCh in {
     rl!(credentialUri, *credCh) |
     for (Credential <- credCh) {
-      new statusCh in {
-        Credential!("prove", *dId, rq, *statusCh, *proofCh) |
-        for (@s <- statusCh) {
-          match s {
-            (true, _) => {
-              for (Proof <- proofCh) {
-                checkCredentialProof!(*Proof, validator, credentialUri, height, *okCh) |
-                for (@ok <- okCh) { ret!(ok) }
-              }
-            }
-            _ => { ret!(false) }
-          }
-        }
-      }
+      proveAndCheckCall!(*Credential, credentialUri, *dId, rq, validator, height, *ret)
+    }
+  }
+} |
+
+contract proveAndCheckCall(Credential, @credentialUri, dId, @rq, @validator, @height, ret) = {
+  new statusCh, proofCh in {
+    Credential!("prove", *dId, rq, *statusCh, *proofCh) |
+    for (@s <- statusCh) {
+      proveAndCheckReply!(s, *proofCh, validator, credentialUri, height, *ret)
+    }
+  }
+} |
+
+contract proveAndCheckReply(@s, proofCh, @validator, @credentialUri, @height, ret) = {
+  match s {
+    (true, _) => { proveTakeAndCheck!(*proofCh, validator, credentialUri, height, *ret) }
+    _ => { ret!(false) }
+  }
+} |
+
+contract proveTakeAndCheck(proofCh, @validator, @credentialUri, @height, ret) = {
+  new okCh in {
+    for (Proof <- proofCh) {
+      checkCredentialProof!(*Proof, validator, credentialUri, height, *okCh) |
+      for (@ok <- okCh) { ret!(ok) }
     }
   }
 } |
@@ -163,9 +186,7 @@ contract checkValidatedProof(Proof, @caller, @atHeight, ret) = {
     for (@t <- tCh) {
       match t {
         (true, data) => {
-          if (data.get("caller") == caller && data.get("atHeight") == atHeight) {
-            ret!(true)
-          } else { ret!(false) }
+          ret!(data.get("caller") == caller && data.get("atHeight") == atHeight)
         }
         _ => { ret!(false) }
       }
@@ -174,23 +195,33 @@ contract checkValidatedProof(Proof, @caller, @atHeight, ret) = {
 } |
 
 contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
-  new vpc, proofCh, okCh in {
+  new vpc in {
     rl!(vpUri, *vpc) |
-    for (VP <- vpc) {
-      new statusCh in {
-        VP!("proveValidated", *dId, atHeight, *statusCh, *proofCh) |
-        for (@s <- statusCh) {
-          match s {
-            (true, _) => {
-              for (Proof <- proofCh) {
-                checkValidatedProof!(*Proof, caller, atHeight, *okCh) |
-                for (@ok <- okCh) { ret!(ok) }
-              }
-            }
-            _ => { ret!(false) }
-          }
-        }
-      }
+    for (VP <- vpc) { proveValidatedCall!(*VP, vpUri, *dId, caller, atHeight, *ret) }
+  }
+} |
+
+contract proveValidatedCall(VP, @vpUri, dId, @caller, @atHeight, ret) = {
+  new statusCh, proofCh in {
+    VP!("proveValidated", *dId, atHeight, *statusCh, *proofCh) |
+    for (@s <- statusCh) {
+      proveValidatedReply!(s, *proofCh, caller, atHeight, *ret)
+    }
+  }
+} |
+
+contract proveValidatedReply(@s, proofCh, @caller, @atHeight, ret) = {
+  match s {
+    (true, _) => { proveValidatedTake!(*proofCh, caller, atHeight, *ret) }
+    _ => { ret!(false) }
+  }
+} |
+
+contract proveValidatedTake(proofCh, @caller, @atHeight, ret) = {
+  new okCh in {
+    for (Proof <- proofCh) {
+      checkValidatedProof!(*Proof, caller, atHeight, *okCh) |
+      for (@ok <- okCh) { ret!(ok) }
     }
   }
 } |
@@ -224,8 +255,7 @@ contract outcomeStatus(@outcome, ret) = {
                       for (@g <- gCh) {
                         match g {
                           (true, cred) => {
-                            if (cred.get("subject") == caseReq.get("adjudicator")) { ret!(true) }
-                            else { ret!(false) }
+                            ret!(cred.get("subject") == caseReq.get("adjudicator"))
                           }
                           _ => { ret!(false) }
                         }
@@ -249,11 +279,10 @@ contract outcomeStatus(@outcome, ret) = {
                   || kind == Nil || kind == ""
                   || parties == Nil || parties.length() == 0) { ret!(false) }
               else {
-                listHas!(parties, opener, 0, *pCh) |
-                listHas!(parties, adjudicator, 0, *aCh) |
+                listHas!(parties, opener, *pCh) |
+                listHas!(parties, adjudicator, *aCh) |
                 for (@isParty <- pCh; @isAdj <- aCh) {
-                  if (not isParty || isAdj) { ret!(false) }
-                  else { ret!(true) }
+                  ret!(isParty && not isAdj)
                 }
               }
             }
@@ -267,15 +296,15 @@ contract outcomeStatus(@outcome, ret) = {
         openCaseCheck!(caseReq, *okCh) |
         nowHeight!(*hCh) |
         for (@(true, opener) <- aCh; @ok <- okCh; @now <- hCh) {
-        if (opener != caseReq.get("openedBy")) { ret!((false, "not opener")) }
-        else if (subjectRef == Nil) { ret!((false, "case fields")) }
-        else {
         new ckCh in {
         caseReqOk!(caseReq, opener, now, *ckCh) |
         for (@caseOk <- ckCh) {
-        if (not caseOk) { ret!((false, "case fields")) }
-        else if (not ok) { ret!((false, "adjudicator credential")) }
-        else {
+        match (opener == caseReq.get("openedBy"), subjectRef != Nil, caseOk, ok) {
+        (false, _, _, _) => { ret!((false, "not opener")) }
+        (true, false, _, _) => { ret!((false, "case fields")) }
+        (true, true, false, _) => { ret!((false, "case fields")) }
+        (true, true, true, false) => { ret!((false, "adjudicator credential")) }
+        (true, true, true, true) => {
         new caseState, OracleCase, selfDecide, commitExecution, uriCh in {
           caseState!({
             "uri": "",
@@ -309,7 +338,7 @@ contract outcomeStatus(@outcome, ret) = {
                     caseState!(s) | ret2!((false, "not open"))
                   } else {
                     new partyCh in {
-                      listHas!(s.get("parties"), who, 0, *partyCh) |
+                      listHas!(s.get("parties"), who, *partyCh) |
                       for (@party <- partyCh) {
                         if ((not party) && who != s.get("adjudicator")) {
                           caseState!(s) | ret2!((false, "not a party"))
@@ -460,6 +489,7 @@ contract outcomeStatus(@outcome, ret) = {
           }
         }
         }
+        _ => { ret!((false, "not opener")) }
         }
         }
         }

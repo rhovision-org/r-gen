@@ -1,5 +1,7 @@
 // Scope matching for credentials and issuers. The papers require that validators are
 // themselves validated; the scope is the concrete form of "qualified for this event".
+// Nil levels are a value case in the tuple pattern, not a nested if; the issuer coverage
+// boolean is returned directly.
 
 contract minLevelOf(@req, ret) = {
   match req.get("minLevel") {
@@ -11,37 +13,35 @@ contract minLevelOf(@req, ret) = {
 contract scopeMatches(@cred, @req, ret) = {
   new mlCh in {
     minLevelOf!(req, *mlCh) |
-    for (@ml <- mlCh) {
-      match (cred.get("ctype"), cred.get("discipline"), cred.get("jurisdiction"),
-             cred.get("role"), cred.get("level")) {
-        (ctype, discipline, jurisdiction, role, level) => {
-          match level {
-            Nil => { ret!(false) }
-            l => {
-              ret!((ctype == req.get("ctype") || ctype == "*")
-                && (discipline == req.get("discipline") || discipline == "*")
-                && (jurisdiction == req.get("jurisdiction")
-                    || jurisdiction == "global" || jurisdiction == "*")
-                && (role == req.get("role") || role == "*")
-                && l >= ml)
-            }
-          }
-        }
-      }
+    for (@ml <- mlCh) { scopeMatchesLevel!(cred, req, ml, *ret) }
+  }
+} |
+
+contract scopeMatchesLevel(@cred, @req, @ml, ret) = {
+  match (cred.get("ctype"), cred.get("discipline"), cred.get("jurisdiction"),
+         cred.get("role"), cred.get("level")) {
+    (ctype, discipline, jurisdiction, role, Nil) => { ret!(false) }
+    (ctype, discipline, jurisdiction, role, l) => {
+      ret!((ctype == req.get("ctype") || ctype == "*")
+        && (discipline == req.get("discipline") || discipline == "*")
+        && (jurisdiction == req.get("jurisdiction")
+            || jurisdiction == "global" || jurisdiction == "*")
+        && (role == req.get("role") || role == "*")
+        && l >= ml)
     }
+    _ => { ret!(false) }
   }
 } |
 
 contract issuerCovers(@issuer, @req, ret) = {
   new tCh, dCh, jCh, rCh, mlCh in {
-    listHasAny!(issuer.get("types"), req.get("ctype"), "*", 0, *tCh) |
-    listHasAny!(issuer.get("disciplines"), req.get("discipline"), "*", 0, *dCh) |
-    listHas3!(issuer.get("jurisdictions"), req.get("jurisdiction"), "global", "*", 0, *jCh) |
-    listHasAny!(issuer.get("roles"), req.get("role"), "*", 0, *rCh) |
+    listHasAny!(issuer.get("types"), req.get("ctype"), "*", *tCh) |
+    listHasAny!(issuer.get("disciplines"), req.get("discipline"), "*", *dCh) |
+    listHas3!(issuer.get("jurisdictions"), req.get("jurisdiction"), "global", "*", *jCh) |
+    listHasAny!(issuer.get("roles"), req.get("role"), "*", *rCh) |
     minLevelOf!(req, *mlCh) |
     for (@t <- tCh; @d <- dCh; @j <- jCh; @r <- rCh; @ml <- mlCh) {
-      if (t && d && j && r && ml <= issuer.get("maxLevel")) { ret!(true) }
-      else { ret!(false) }
+      ret!(t && d && j && r && ml <= issuer.get("maxLevel"))
     }
   }
 } |

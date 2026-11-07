@@ -1,19 +1,19 @@
 {
   "schema": "rgen.deploy-semantics/v1",
-  "measured_at": "2026-11-07T12:07:52.039558+00:00",
+  "measured_at": "2026-11-07T12:47:38.679441+00:00",
   "node": {
     "node": "RChain Node 0.1.0 (e2d073dcd02f1e560ccb84749937138a1e184b0b)",
     "network_id": "testnet",
     "shard_id": "/root",
-    "height": 1850,
+    "height": 3485,
     "phlo_price": 1
   },
-  "store_uri": "rho:id:fo14s8xxoipdcf7y7yytfszqfxedphgxo6whrnrbfy4xk6koj7by",
+  "store_uri": "rho:id:6munz88k8rm9ixjczgk39qjxnq549yzgt6gkz5bytajf6eypbr7o",
   "probes": {
     "initial_read": {
       "value": 0,
       "probe": {
-        "deploy_id": "304402205cdf340e5f0ecce493326d2729c5f3cecc4ed6c967d3ad8fbf02e68d0d61097002200bf5b388425a022a61abb62d6914e944a1aa9ad116c9dd39a12e8e9020cdf8ef",
+        "deploy_id": "3045022100a6f5103daacde8318d487315b3c370ee88a77f52fac2620ecbec2e10cb525e260220470a09df51c3d0b6ac42180b1771f6864e0ed6c5fe2fef97d9b4d41d066f961c",
         "variant": "processedwithsuccess",
         "deploy_error": null,
         "result": [
@@ -23,7 +23,7 @@
     },
     "write_before_error": {
       "write": {
-        "deploy_id": "3044022042bf77d2a994dda992fa60cc86ce754f0dd6a8550df14bea48e8a6cc70f96fc2022053356ac174188aca5e5f2d1727d716c16f3347f17f14b555b15f0e28045df99d",
+        "deploy_id": "3045022100b858304e63859e53f14a1e1668e383a0e95a2cd6ed4916fc03af59efe8a7cc4d022034daf09fe7d34892227db0a44acd7a30098b203bc0beb3203d6d75d2edcda9f8",
         "variant": "processedwithsuccess",
         "deploy_error": null,
         "result": [
@@ -32,7 +32,7 @@
       },
       "value_after_write": 42,
       "read": {
-        "deploy_id": "3044022079af98c7b7c99e60e71563f6dd9482985e29c50a71236d21ffb43b2a5e74d41102200ab70621f1310ddcc64252a770e63009bd5c992690935ddfa7b95579a5054243",
+        "deploy_id": "304402203fddf6654650ffe80fb518a77d40efef7fa22e40abaffd0d41f27913b0f8b3ac022070471410189321e59939d6bfb72c216c1b3c77465de1b85e0db402b8ad21b17e",
         "variant": "processedwithsuccess",
         "deploy_error": null,
         "result": [
@@ -42,14 +42,14 @@
     },
     "reduction_error_after_write": {
       "deploy": {
-        "deploy_id": "3045022100b28d72ca5748c2a3ba54b36ec7de5402c50630fc731deb278cbbeb554d9148700220071659be7c2152d65de20de96fac481707f017e13a7459075442de2217262379",
+        "deploy_id": "3045022100834d7234678aadf45b0125f04fe4be7e2da26ad6890d5ac985168abe2cf6a3fa02205594f77a92129b8cc80c29844ade4863726243ab2121270837ef85b333cfd50c",
         "variant": "processedwitherror",
         "deploy_error": "Expected a single expression",
         "result": null
       },
       "value_after_error": 42,
       "read": {
-        "deploy_id": "30450221008287a428364e9bef660da8d2648c8539b359280cfc1e2db8a64788801c57a55e022073488c4bd2f1b85481e8524ac73d270a4dfeb14f54ea04225e9c9fde73f98f4b",
+        "deploy_id": "3045022100aa5e527424b70f5b69cdeb46cbf9c3b4d005e6d80eda532f3b125ddd5cd739b90220520010bbfe48cf434375b2cc121dd4d769a0aa885c1f8c3208c5ee65b4a87075",
         "variant": "processedwithsuccess",
         "deploy_error": null,
         "result": [
@@ -60,13 +60,13 @@
     },
     "blocked_continuation_after_consume": {
       "deploy": {
-        "deploy_id": "3044022028920f8d902f0d7d06bb1dd1580e6014ecc09b0593428b482f27ea522a56fa3a0220469983409cf7c7c1572c5b1d556124a434b916c84547810f41376bda041cb333",
+        "deploy_id": "30450221009959ade57b373a7168ff52aad6689faf8ae2621d0dfc98b845e31b5fe28b02c402203ce21886dccb518c86e6bc876c717dec517c1be88289b8a8ebff287fb906544b",
         "variant": "processedwithsuccess",
         "deploy_error": null,
         "result": []
       },
       "read_after_loss": {
-        "deploy_id": "3045022100c809c274fd2acbafa656b239431933fadb4edda238393db8ff0ce74b402845a202205bae92e6b09948ce8501453ddee246d9f462f0256e346c1d835e0b863f6ef642",
+        "deploy_id": "3045022100c55cf54205eef604e4275f8c840be090d8bdfc07f13d9ff17642fe0dbf2280b902200862b023a27f2737030b47aeee0731d0a4b95704fbe9841683982721020e2f7a",
         "variant": "processedwithsuccess",
         "deploy_error": null,
         "result": []
@@ -76,13 +76,13 @@
     },
     "natural_claim_nil_comment": {
       "created": true,
-      "claim_uri": "rho:id:iq38hkkpfhka5t4ewdbe36dowhd5onoqwbpih14ichiioghmz69o",
+      "claim_uri": "rho:id:puqmbiywo6sxqsmyuws9swawxukriam3kmszf3qjk4r8szxcheoy",
       "before": [
         true,
         {
           "claimant": "11112VYAt8rUGNRRZX3eJdgagaAhtWTK8Js7F7X5iqddMVqyDTtYau",
           "comments": [],
-          "createdAt": 1862,
+          "createdAt": 3496,
           "deadlineHeight": 1000000,
           "definitionHash": "twelve inspections",
           "evidence": [
@@ -105,8 +105,8 @@
           "selectionCriteriaHash": "sc",
           "statementHash": "deck inspected",
           "status": "open",
-          "updatedAt": 1862,
-          "uri": "rho:id:iq38hkkpfhka5t4ewdbe36dowhd5onoqwbpih14ichiioghmz69o",
+          "updatedAt": 3496,
+          "uri": "rho:id:puqmbiywo6sxqsmyuws9swawxukriam3kmszf3qjk4r8szxcheoy",
           "version": 1,
           "work": {
             "discipline": "structural",
@@ -117,7 +117,7 @@
         }
       ],
       "comment": {
-        "deploy_id": "3045022100e2108df2f3aba2318ad528f1a4caa8c66fb4c6898ce8fd47d8f87076d2f4dfac02202a4225d5fa8027191ca34b4d8977de3a3c72254c9265a5d1881dee5b681c445d",
+        "deploy_id": "3044022025e38e95206355761a93ee00bf9c44680ae1b50e85714efb4703133b42ccd13b02203b99c650e7ecd23eb2bcc529aea794a374b91308ae0de7dd8232658faa76dff7",
         "variant": "processedwithsuccess",
         "deploy_error": null,
         "result": [
@@ -132,13 +132,13 @@
           "claimant": "11112VYAt8rUGNRRZX3eJdgagaAhtWTK8Js7F7X5iqddMVqyDTtYau",
           "comments": [
             {
-              "at": 1865,
+              "at": 3499,
               "by": "11112VYAt8rUGNRRZX3eJdgagaAhtWTK8Js7F7X5iqddMVqyDTtYau",
               "hash": "semantics-probe",
-              "id": "cm:11112VYAt8rUGNRRZX3eJdgagaAhtWTK8Js7F7X5iqddMVqyDTtYau:1865"
+              "id": "cm:11112VYAt8rUGNRRZX3eJdgagaAhtWTK8Js7F7X5iqddMVqyDTtYau:3499"
             }
           ],
-          "createdAt": 1862,
+          "createdAt": 3496,
           "deadlineHeight": 1000000,
           "definitionHash": "twelve inspections",
           "evidence": [
@@ -161,8 +161,8 @@
           "selectionCriteriaHash": "sc",
           "statementHash": "deck inspected",
           "status": "open",
-          "updatedAt": 1865,
-          "uri": "rho:id:iq38hkkpfhka5t4ewdbe36dowhd5onoqwbpih14ichiioghmz69o",
+          "updatedAt": 3499,
+          "uri": "rho:id:puqmbiywo6sxqsmyuws9swawxukriam3kmszf3qjk4r8szxcheoy",
           "version": 2,
           "work": {
             "discipline": "structural",

@@ -14,7 +14,11 @@ new
   rootCh, cfCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
   listHas, listHasId, listHasAny, listHas3,
-  CredentialFactory, openCaseCheck, caseReqOk, outcomeStatus, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
+  listHasEq, listHasIdEq, listHasAnyEq, listHas3Eq,
+  CredentialFactory, openCaseCheck, caseReqOk, outcomeStatus,
+  checkCredentialProof, proveAndCheck, checkValidatedProof, proveValidatedAndCheck,
+  proveAndCheckCall, proveAndCheckReply, proveTakeAndCheck,
+  proveValidatedCall, proveValidatedReply, proveValidatedTake
 in {
   // @@INLINE:lib/Auth.rho@@
   // @@INLINE:lib/Time.rho@@
@@ -39,8 +43,7 @@ in {
                       for (@g <- gCh) {
                         match g {
                           (true, cred) => {
-                            if (cred.get("subject") == caseReq.get("adjudicator")) { ret!(true) }
-                            else { ret!(false) }
+                            ret!(cred.get("subject") == caseReq.get("adjudicator"))
                           }
                           _ => { ret!(false) }
                         }
@@ -64,11 +67,10 @@ in {
                   || kind == Nil || kind == ""
                   || parties == Nil || parties.length() == 0) { ret!(false) }
               else {
-                listHas!(parties, opener, 0, *pCh) |
-                listHas!(parties, adjudicator, 0, *aCh) |
+                listHas!(parties, opener, *pCh) |
+                listHas!(parties, adjudicator, *aCh) |
                 for (@isParty <- pCh; @isAdj <- aCh) {
-                  if (not isParty || isAdj) { ret!(false) }
-                  else { ret!(true) }
+                  ret!(isParty && not isAdj)
                 }
               }
             }
@@ -82,15 +84,15 @@ in {
         openCaseCheck!(caseReq, *okCh) |
         nowHeight!(*hCh) |
         for (@(true, opener) <- aCh; @ok <- okCh; @now <- hCh) {
-        if (opener != caseReq.get("openedBy")) { ret!((false, "not opener")) }
-        else if (subjectRef == Nil) { ret!((false, "case fields")) }
-        else {
         new ckCh in {
         caseReqOk!(caseReq, opener, now, *ckCh) |
         for (@caseOk <- ckCh) {
-        if (not caseOk) { ret!((false, "case fields")) }
-        else if (not ok) { ret!((false, "adjudicator credential")) }
-        else {
+        match (opener == caseReq.get("openedBy"), subjectRef != Nil, caseOk, ok) {
+        (false, _, _, _) => { ret!((false, "not opener")) }
+        (true, false, _, _) => { ret!((false, "case fields")) }
+        (true, true, false, _) => { ret!((false, "case fields")) }
+        (true, true, true, false) => { ret!((false, "adjudicator credential")) }
+        (true, true, true, true) => {
         new caseState, OracleCase, selfDecide, commitExecution, uriCh in {
           caseState!({
             "uri": "",
@@ -124,7 +126,7 @@ in {
                     caseState!(s) | ret2!((false, "not open"))
                   } else {
                     new partyCh in {
-                      listHas!(s.get("parties"), who, 0, *partyCh) |
+                      listHas!(s.get("parties"), who, *partyCh) |
                       for (@party <- partyCh) {
                         if ((not party) && who != s.get("adjudicator")) {
                           caseState!(s) | ret2!((false, "not a party"))
@@ -275,6 +277,7 @@ in {
           }
         }
         }
+        _ => { ret!((false, "not opener")) }
         }
         }
         }

@@ -14,7 +14,8 @@ new
   deployId(`rho:rchain:deployId`),
   rootCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
-  listHas, listHasId, listHasAny, listHas3
+  listHas, listHasId, listHasAny, listHas3,
+  listHasEq, listHasIdEq, listHasAnyEq, listHas3Eq
 in {
   // @@INLINE:lib/Auth.rho@@
   // @@INLINE:lib/Time.rho@@
@@ -53,7 +54,7 @@ in {
           for (@(true, who) <- aCh; @now <- hCh) {
             for (@s <- pState) {
               new wCh in {
-                listHas!(s.get("writers"), who, 0, *wCh) |
+                listHas!(s.get("writers"), who, *wCh) |
                 for (@writer <- wCh) {
                   match (writer, doc) {
                     (false, _) => { pState!(s) | ret2!((false, "not writer")) }
@@ -62,7 +63,7 @@ in {
                         pState!(s) | ret2!((false, "hash"))
                       } else {
                         new dupCh in {
-                          listHasId!(s.get("anchors"), hash, 0, *dupCh) |
+                          listHasId!(s.get("anchors"), hash, *dupCh) |
                           for (@dup <- dupCh) {
                             if (dup) {
                               pState!(s) | ret2!((false, "duplicate"))
@@ -96,7 +97,7 @@ in {
           for (@(true, who) <- aCh; @now <- hCh) {
             for (@s <- pState) {
               new wCh in {
-                listHas!(s.get("writers"), who, 0, *wCh) |
+                listHas!(s.get("writers"), who, *wCh) |
                 for (@writer <- wCh) {
                   if (not writer) {
                     pState!(s) | ret2!((false, "not writer"))
@@ -117,7 +118,7 @@ in {
       contract Provenance(@"verify", @hash, ret2) = {
         for (@s <<- pState) {
           new ch in {
-            listHasId!(s.get("anchors"), hash, 0, *ch) |
+            listHasId!(s.get("anchors"), hash, *ch) |
             for (@found <- ch) { ret2!((true, found)) }
           }
         }

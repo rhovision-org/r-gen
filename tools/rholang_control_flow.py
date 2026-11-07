@@ -123,7 +123,7 @@ def lexical_depth(stack: list[str]) -> int:
     for index, label in enumerate(stack):
         if label == "contract":
             start = index + 1
-    return sum(1 for label in stack[start:] if label in ("if", "match", "for"))
+    return sum(1 for label in stack[start:] if label in ("if", "match"))
 
 
 def scan_file(path: Path) -> tuple[list[Construct], int, int]:

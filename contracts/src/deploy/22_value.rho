@@ -14,7 +14,10 @@ new
   rootCh, cfCh, ofCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
   CredentialFactory, OracleFactory,
-  vpReqOk, outcomeStatus, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
+  vpReqOk, outcomeStatus,
+  checkCredentialProof, proveAndCheck, checkValidatedProof, proveValidatedAndCheck,
+  proveAndCheckCall, proveAndCheckReply, proveTakeAndCheck,
+  proveValidatedCall, proveValidatedReply, proveValidatedTake
 in {
   // @@INLINE:lib/Auth.rho@@
   // @@INLINE:lib/Time.rho@@
@@ -64,7 +67,8 @@ in {
                 if (not ok) {
                   ret!((false, "fields"))
                 } else {
-                  new vpState, ValueProposition, Apply, openVpDispute, uriCh in {
+                  new vpState, ValueProposition, Apply, openVpDispute,
+                      vpApplyGate, vpApplyOutcome, uriCh in {
                     vpState!({
                       "uri": "",
                       "proposer": proposer,
@@ -189,11 +193,10 @@ in {
                         nowHeight!(*h2) |
                         for (@(true, who) <- a2; @now <- h2) {
                           for (@s <- vpState) {
-                            if (s.get("status") != "validated") {
-                              vpState!(s) | ret2!((false, "not validated"))
-                            } else if (atHeight != now) {
-                              vpState!(s) | ret2!((false, "height"))
-                            } else {
+                            match (s.get("status") == "validated", atHeight == now) {
+                              (false, _) => { vpState!(s) | ret2!((false, "not validated")) }
+                              (true, false) => { vpState!(s) | ret2!((false, "height")) }
+                              (true, true) => {
                               new proofState, Proof in {
                                 proofState!({
                                   "data": {
@@ -217,6 +220,8 @@ in {
                                 proofCh!(bundle+{*Proof}) |
                                 ret2!((true, Nil))
                               }
+                              }
+                              _ => { vpState!(s) | ret2!((false, "not validated")) }
                             }
                           }
                         }
@@ -289,34 +294,37 @@ in {
                       for (@s <<- vpState) { ret2!((true, s.get("revocation"))) }
                     } |
 
+                    contract vpApplyGate(@s, @d, @caseId, @decision, ret2) = {
+                      match (d.get("id") == caseId, s.get("status") == "disputed") {
+                        (false, _) => { vpState!(s) | ret2!((false, "case mismatch")) }
+                        (true, false) => { vpState!(s) | ret2!((false, "not disputed")) }
+                        (true, true) => { vpApplyOutcome!(s, decision, *ret2) }
+                        _ => { vpState!(s) | ret2!((false, "case mismatch")) }
+                      }
+                    } |
+
+                    contract vpApplyOutcome(@s, @decision, ret2) = {
+                      new osCh in {
+                        outcomeStatus!(decision.get("outcome"), *osCh) |
+                        for (@status <- osCh) {
+                          match status {
+                            Nil => { vpState!(s) | ret2!((false, "outcome")) }
+                            target => {
+                              vpState!(s.set("status", target)
+                                        .set("revocation", decision)
+                                        .set("version", s.get("version") + 1)) |
+                              ret2!((true, target))
+                            }
+                          }
+                        }
+                      }
+                    } |
+
                     contract Apply(@"applyDecision", @caseId, @decision, ret2) = {
                       for (@s <- vpState) {
                         match s.get("dispute") {
                           Nil => { vpState!(s) | ret2!((false, "no dispute")) }
-                          d => {
-                            if (d.get("id") != caseId) {
-                              vpState!(s) | ret2!((false, "case mismatch"))
-                            } else {
-                              if (s.get("status") != "disputed") {
-                                vpState!(s) | ret2!((false, "not disputed"))
-                              } else {
-                                new osCh in {
-                                  outcomeStatus!(decision.get("outcome"), *osCh) |
-                                  for (@status <- osCh) {
-                                    match status {
-                                      Nil => { vpState!(s) | ret2!((false, "outcome")) }
-                                      target => {
-                                        vpState!(s.set("status", target)
-                                                  .set("revocation", decision)
-                                                  .set("version", s.get("version") + 1)) |
-                                        ret2!((true, target))
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
+                          d => { vpApplyGate!(s, d, caseId, decision, *ret2) }
                         }
                       }
                     } |

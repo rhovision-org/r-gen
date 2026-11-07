@@ -22,10 +22,11 @@
   worksheet remains 146 rows.
 - Guard bridge: 16 changed arms; source atoms and flow entries agree; six `owed` guard_eq
   warnings.
-- Rholang control-flow audit: 88 `if` / 99 `match` after the refactor (from 107 / 92); guard
-  staircases flattened, verdict/outcome tables centralized, provenance map patterns added.
-  `make style-check` has no hard failures; 14 deep-nesting warnings remain, mostly in
-  `KAsset.nest`. The inventory is `spec/audit/rholang-control-flow.yaml`.
+- Rholang control-flow audit: 68 `if` / 102 `match`, **0 errors**, `passes: true`. Every
+  `else if`, branch-only boolean channel, index-recursive list walk and match deeper than
+  dispatch depth 2 is gone. `List.rho` is list-pattern recursion; `KAsset.rho` is fully flat
+  helper chains; the strict gate is `make style-check`. The inventory is
+  `spec/audit/rholang-control-flow.yaml`.
 
 ## Verified on 2026-11-04
 

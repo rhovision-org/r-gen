@@ -16,7 +16,8 @@ new
   deployerId(`rho:rchain:deployerId`),
   deployId(`rho:rchain:deployId`),
   rootCh, c1, c2, ack1, ack2, ack3,
-  authOwner, authSubject, authPubKey, nowHeight, mintIdentity, patchOr
+  authOwner, authSubject, authPubKey, nowHeight, mintIdentity, patchOr,
+  activateMint, resumeMint, resumeReserving
 in {
 // Deployer identity helpers. The REV address is the subject id; the public key is stored
 // only where an identity profile needs it.
@@ -143,30 +144,35 @@ contract nowHeight(ret) = {
             p => {
               match p.get("status") {
                 "reserving" => {
-                  directoryState!(s.set("pending", s.get("pending").set(subject, {
-                    "status": "minted", "uri": uri, "expiresAt": p.get("expiresAt")}))
-                    .set("version", s.get("version") + 1)) |
-                  for (@s2 <- directoryState) {
-                    match (s2.get("byAddress").get(subject), s2.get("pending").get(subject)) {
-                      (Nil, p2) => {
-                        if (p2.get("uri") == uri) {
-                          directoryState!(s2.set("byAddress",
-                                                 s2.get("byAddress").set(subject, uri))
-                            .set("pending", s2.get("pending").set(subject, {
-                              "status": "active", "uri": uri, "expiresAt": 0}))
-                            .set("version", s2.get("version") + 1)) |
-                          ret!((true, uri))
-                        } else { directoryState!(s2) | ret!((false, "superseded")) }
-                      }
-                      (u, _) => { directoryState!(s2) | ret!((false, "duplicate")) }
-                    }
-                  }
+                  activateMint!(s, subject, uri, *ret)
                 }
                 _ => { directoryState!(s) | ret!((false, "superseded")) }
               }
             }
           }
         }
+      }
+    }
+  } |
+
+  contract activateMint(@s, @subject, @uri, ret) = {
+    directoryState!(s.set("pending", s.get("pending").set(subject, {
+      "status": "minted", "uri": uri,
+      "expiresAt": s.get("pending").get(subject).get("expiresAt")}))
+      .set("version", s.get("version") + 1)) |
+    for (@s2 <- directoryState) {
+      match (s2.get("byAddress").get(subject), s2.get("pending").get(subject)) {
+        (Nil, p2) => {
+          if (p2.get("uri") == uri) {
+            directoryState!(s2.set("byAddress",
+                                   s2.get("byAddress").set(subject, uri))
+              .set("pending", s2.get("pending").set(subject, {
+                "status": "active", "uri": uri, "expiresAt": 0}))
+              .set("version", s2.get("version") + 1)) |
+            ret!((true, uri))
+          } else { directoryState!(s2) | ret!((false, "superseded")) }
+        }
+        (u, _) => { directoryState!(s2) | ret!((false, "duplicate")) }
       }
     }
   } |
@@ -221,26 +227,10 @@ contract nowHeight(ret) = {
                 match p.get("status") {
                   "active" => { directoryState!(s) | ret3!((true, p.get("uri"))) }
                   "minted" => {
-                    match uri {
-                      Nil => {
-                        directoryState!(s.set("byAddress",
-                                              s.get("byAddress").set(subject, p.get("uri")))
-                          .set("pending", s.get("pending").set(subject, {
-                            "status": "active", "uri": p.get("uri"), "expiresAt": 0}))
-                          .set("version", s.get("version") + 1)) |
-                        ret3!((true, p.get("uri")))
-                      }
-                      existing => { directoryState!(s) | ret3!((true, existing)) }
-                    }
+                    resumeMint!(s, uri, p, subject, *ret3)
                   }
                   "reserving" => {
-                    if (p.get("expiresAt") > now) {
-                      directoryState!(s) | ret3!((false, "in progress"))
-                    } else {
-                      directoryState!(s.set("pending", s.get("pending").set(subject, Nil))
-                        .set("version", s.get("version") + 1)) |
-                      ret3!((false, "expired reservation; retry create"))
-                    }
+                    resumeReserving!(s, p, subject, now, *ret3)
                   }
                   _ => { directoryState!(s) | ret3!((false, "no pending")) }
                 }
@@ -250,6 +240,30 @@ contract nowHeight(ret) = {
           }
         }
       }
+    }
+  } |
+
+  contract resumeMint(@s, @uri, @p, @subject, ret3) = {
+    match uri {
+      Nil => {
+        directoryState!(s.set("byAddress",
+                              s.get("byAddress").set(subject, p.get("uri")))
+          .set("pending", s.get("pending").set(subject, {
+            "status": "active", "uri": p.get("uri"), "expiresAt": 0}))
+          .set("version", s.get("version") + 1)) |
+        ret3!((true, p.get("uri")))
+      }
+      existing => { directoryState!(s) | ret3!((true, existing)) }
+    }
+  } |
+
+  contract resumeReserving(@s, @p, @subject, @now, ret3) = {
+    if (p.get("expiresAt") > now) {
+      directoryState!(s) | ret3!((false, "in progress"))
+    } else {
+      directoryState!(s.set("pending", s.get("pending").set(subject, Nil))
+        .set("version", s.get("version") + 1)) |
+      ret3!((false, "expired reservation; retry create"))
     }
   } |
 

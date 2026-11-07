@@ -20,6 +20,8 @@ ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "spec" / "flows" / "core.yaml"
 LEAN_DIR = ROOT / "spec" / "lean" / "RGen"
 CONTRACT = re.compile(r'contract\s+([A-Za-z0-9_]+)\s*\(\s*@"([A-Za-z0-9_]+)"')
+CONTRACT_ANY = re.compile(r'contract\s+([A-Za-z0-9_]+)\s*\(')
+CALL = re.compile(r"\b([A-Za-z0-9_]+)!\(")
 CELLS = {
     "rootState", "directoryState", "identityState", "issuerState", "factoryState",
     "credState", "caseState", "pState", "vpState", "claimState", "kState",
@@ -73,6 +75,42 @@ def lean_decls() -> set[str]:
     return names
 
 
+def direct_consumed(block: str) -> set[str]:
+    return {cell for cell in CELLS
+            if re.search(rf"(?<!<)<-\s*{cell}\b", block)}
+
+
+def helper_blocks(text: str) -> dict[str, str]:
+    """Collect non-arm contract bodies so an arm's consumed cell can be found through
+    a flat helper chain (for example KAsset.nest -> nestGate -> nestPhase3 -> kState)."""
+    out: dict[str, str] = {}
+    for match in CONTRACT_ANY.finditer(text):
+        end = block_end(text, match.start())
+        if end is None:
+            continue
+        paren = text.find("(", match.start())
+        if text[paren + 1:].lstrip().startswith('@"'):
+            continue
+        block = text[match.start():end]
+        name = match.group(1)
+        out[name] = out.get(name, "") + block
+    return out
+
+
+def transitive_consumed(name: str, helpers: dict[str, str],
+                        visiting: set[str] | None = None) -> set[str]:
+    if visiting is None:
+        visiting = set()
+    if name in visiting or name not in helpers:
+        return set()
+    visiting.add(name)
+    block = helpers[name]
+    cells = direct_consumed(block)
+    for call in CALL.findall(block):
+        cells |= transitive_consumed(call, helpers, visiting)
+    return cells
+
+
 def main() -> int:
     entries = parse_manifest(MANIFEST)
     index = {(e.get("file"), e.get("contract"), e.get("arm")): e for e in entries}
@@ -83,14 +121,17 @@ def main() -> int:
     for path in sorted((ROOT / "contracts" / "src").rglob("*.rho")):
         text = path.read_text()
         rel = str(path.relative_to(ROOT))
+        helpers = helper_blocks(text)
         for match in CONTRACT.finditer(text):
             end = block_end(text, match.start())
             if end is None:
                 errors.append(f"{rel}: unterminated {match.group(1)}")
                 continue
             block = text[match.start():end]
-            consumed = [cell for cell in CELLS
-                        if re.search(rf"(?<!<)<-\s*{cell}\b", block)]
+            consumed = direct_consumed(block)
+            if not consumed:
+                for call in CALL.findall(block):
+                    consumed |= transitive_consumed(call, helpers)
             if not consumed:
                 continue
             key = (rel, match.group(1), match.group(2))

@@ -1,37 +1,51 @@
-schema: rgen.rholang-control-flow/v1
-method: heuristic brace/token scan; not a parser
-total_if: 88
-total_match: 99
+schema: rgen.rholang-control-flow/v2
+method: heuristic brace/token scan; strict gate in tools/check_rholang_style.py
+total_if: 68
+total_match: 102
+passes: true
+violations: []
 files:
 - path: contracts/src/deploy/00_root.rho
   if_count: 0
   match_count: 3
-  max_depth: 2
+  else_if_count: 0
+  branch_only_channel_count: 0
+  recursor_count: 0
+  max_dispatch_depth: 0
   constructs:
   - line: 19
     kind: match
     arm: contract GenRoot(@"resolve", @key, ret) = {
-    depth: 1
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - e
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
   - line: 28
     kind: match
     arm: contract GenRoot(@"get", @key, ret) = {
-    depth: 1
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - e
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
   - line: 44
     kind: match
     arm: contract GenRoot(@"register", @key, @uri, @version, @kind, dId, ret) = {
-    depth: 2
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (false, _, _)
     - (true, false, _)
@@ -41,73 +55,102 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
 - path: contracts/src/deploy/10_identity.rho
   if_count: 5
   match_count: 10
-  max_depth: 6
+  else_if_count: 0
+  branch_only_channel_count: 0
+  recursor_count: 0
+  max_dispatch_depth: 2
   constructs:
-  - line: 26
+  - line: 27
     kind: match
     arm: contract IdentityDirectory(@"lookup", @address, ret) = {
-    depth: 1
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - uri
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 40
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 41
     kind: match
     arm: contract patchOr(@newValue, @oldValue, ret) = {
     depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - value
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 72
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 73
     kind: if
     arm: contract Identity(@"update", dId2, @patch, ret2) = {
-    depth: 2
-  - line: 98
+    depth: 0
+    dispatch_depth: 0
+  - line: 99
     kind: match
     arm: contract Identity(@"update", dId2, @patch, ret2) = {
-    depth: 2
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - p
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 101
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 102
     kind: match
     arm: contract Identity(@"update", dId2, @patch, ret2) = {
-    depth: 3
+    depth: 1
+    dispatch_depth: 1
     patterns:
     - '"reserving"'
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 107
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 121
     kind: match
-    arm: contract Identity(@"update", dId2, @patch, ret2) = {
-    depth: 5
+    arm: contract activateMint(@s, @subject, @uri, ret) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (Nil, p2)
     - (u, _)
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 109
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 123
     kind: if
-    arm: contract Identity(@"update", dId2, @patch, ret2) = {
-    depth: 6
-  - line: 137
+    arm: contract activateMint(@s, @subject, @uri, ret) = {
+    depth: 1
+    dispatch_depth: 1
+  - line: 143
     kind: match
     arm: contract IdentityFactory(@"create", dId, @profile, ret) = {
-    depth: 2
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (Nil, Nil)
     - (Nil, p)
@@ -115,28 +158,38 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 145
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 151
     kind: match
     arm: contract IdentityFactory(@"create", dId, @profile, ret) = {
-    depth: 3
+    depth: 1
+    dispatch_depth: 1
     patterns:
     - '"reserving"'
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 147
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 153
     kind: if
     arm: contract IdentityFactory(@"create", dId, @profile, ret) = {
-    depth: 4
-  - line: 171
+    depth: 2
+    dispatch_depth: 2
+  - line: 177
     kind: if
     arm: contract IdentityFactory(@"resume", dId3, @subject, ret3) = {
-    depth: 1
-  - line: 175
+    depth: 0
+    dispatch_depth: 0
+  - line: 181
     kind: match
     arm: contract IdentityFactory(@"resume", dId3, @subject, ret3) = {
-    depth: 3
+    depth: 1
+    dispatch_depth: 1
     patterns:
     - (_, Nil)
     - (uri, p)
@@ -144,10 +197,14 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 178
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 184
     kind: match
     arm: contract IdentityFactory(@"resume", dId3, @subject, ret3) = {
-    depth: 4
+    depth: 2
+    dispatch_depth: 2
     patterns:
     - '"active"'
     - '"minted"'
@@ -156,42 +213,59 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 181
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 204
     kind: match
-    arm: contract IdentityFactory(@"resume", dId3, @subject, ret3) = {
-    depth: 5
+    arm: contract resumeMint(@s, @uri, @p, @subject, ret3) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - existing
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 194
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 218
     kind: if
-    arm: contract IdentityFactory(@"resume", dId3, @subject, ret3) = {
-    depth: 5
+    arm: contract resumeReserving(@s, @p, @subject, @now, ret3) = {
+    depth: 0
+    dispatch_depth: 0
 - path: contracts/src/deploy/11_credentials.rho
   if_count: 14
   match_count: 11
-  max_depth: 6
+  else_if_count: 0
+  branch_only_channel_count: 0
+  recursor_count: 0
+  max_dispatch_depth: 2
   constructs:
-  - line: 28
+  - line: 30
     kind: match
     arm: contract credentialReqOk(@req, ret) = {
     depth: 0
+    dispatch_depth: 0
     patterns:
     - (subject, ctype, discipline, jurisdiction, role, level, expiresAt)
     catch_all: true
     mutating: false
     map_pattern_without_rest: false
-  - line: 32
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 34
     kind: if
     arm: contract credentialReqOk(@req, ret) = {
     depth: 0
-  - line: 69
+    dispatch_depth: 0
+  - line: 71
     kind: match
     arm: contract Issuer(@"authorize", @caller, @req, @atHeight, ret) = {
-    depth: 1
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (false, _, _)
     - (true, false, _)
@@ -201,56 +275,76 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 78
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 80
     kind: match
     arm: contract Issuer(@"authorize", @caller, @req, @atHeight, ret) = {
-    depth: 2
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - 'true'
     - 'false'
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 92
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 94
+    kind: if
+    arm: contract Issuer(@"covers", @req, @atHeight, ret) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 97
     kind: if
     arm: contract Issuer(@"covers", @req, @atHeight, ret) = {
     depth: 1
-  - line: 95
-    kind: if
-    arm: contract Issuer(@"covers", @req, @atHeight, ret) = {
-    depth: 2
-  - line: 109
+    dispatch_depth: 1
+  - line: 111
     kind: match
     arm: contract CredentialFactory(@"verify", @uri, ret) = {
-    depth: 1
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - rec
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 128
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 130
     kind: if
     arm: contract CredentialFactory(@"issue", dId, @req, ret) = {
-    depth: 2
-  - line: 134
+    depth: 0
+    dispatch_depth: 0
+  - line: 136
     kind: match
     arm: contract CredentialFactory(@"issue", dId, @req, ret) = {
-    depth: 4
+    depth: 1
+    dispatch_depth: 1
     patterns:
     - (true, true)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 137
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 139
     kind: if
     arm: contract CredentialFactory(@"issue", dId, @req, ret) = {
-    depth: 6
-  - line: 166
+    depth: 2
+    dispatch_depth: 2
+  - line: 168
     kind: match
     arm: contract Credential(@"check", @caller, @rq, @atHeight, ret2) = {
-    depth: 1
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (false, _)
     - (true, false)
@@ -259,34 +353,47 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 170
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 172
     kind: if
     arm: contract Credential(@"check", @caller, @rq, @atHeight, ret2) = {
-    depth: 2
-  - line: 176
-    kind: match
-    arm: contract Credential(@"check", @caller, @rq, @atHeight, ret2) = {
-    depth: 3
-    patterns:
-    - (_, (true, true))
-    - _
-    catch_all: true
-    mutating: true
-    map_pattern_without_rest: false
+    depth: 1
+    dispatch_depth: 1
   - line: 178
     kind: match
     arm: contract Credential(@"check", @caller, @rq, @atHeight, ret2) = {
-    depth: 4
+    depth: 1
+    dispatch_depth: 1
+    patterns:
+    - (_, (true, true))
+    - _
+    catch_all: true
+    mutating: true
+    map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 180
+    kind: match
+    arm: contract Credential(@"check", @caller, @rq, @atHeight, ret2) = {
+    depth: 2
+    dispatch_depth: 2
     patterns:
     - 'true'
     - 'false'
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 199
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 201
     kind: match
     arm: contract Credential(@"prove", dId2, @rq, ret2, proofCh) = {
-    depth: 2
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (false, _)
     - (true, false)
@@ -295,140 +402,171 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 203
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 205
     kind: if
     arm: contract Credential(@"prove", dId2, @rq, ret2, proofCh) = {
-    depth: 3
-  - line: 209
+    depth: 1
+    dispatch_depth: 1
+  - line: 211
     kind: match
     arm: contract Credential(@"prove", dId2, @rq, ret2, proofCh) = {
-    depth: 4
+    depth: 1
+    dispatch_depth: 1
     patterns:
     - (_, (true, true))
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 211
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 213
     kind: match
     arm: contract Credential(@"prove", dId2, @rq, ret2, proofCh) = {
-    depth: 5
+    depth: 2
+    dispatch_depth: 2
     patterns:
     - 'true'
     - 'false'
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 227
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 229
     kind: if
     arm: contract Proof(@"take", ret3) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 264
+    kind: if
+    arm: contract Credential(@"revoke", dId2, @reason, ret2) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 267
+    kind: if
+    arm: contract Credential(@"revoke", dId2, @reason, ret2) = {
     depth: 1
-  - line: 262
-    kind: if
-    arm: contract Credential(@"revoke", dId2, @reason, ret2) = {
-    depth: 2
-  - line: 265
-    kind: if
-    arm: contract Credential(@"revoke", dId2, @reason, ret2) = {
-    depth: 3
-  - line: 285
+    dispatch_depth: 1
+  - line: 287
     kind: if
     arm: contract Credential(@"renew", dId2, @expiresAt, @evidenceHash, ret2) = {
-    depth: 2
-  - line: 288
+    depth: 0
+    dispatch_depth: 0
+  - line: 290
     kind: if
     arm: contract Credential(@"renew", dId2, @expiresAt, @evidenceHash, ret2) = {
-    depth: 3
-  - line: 309
+    depth: 1
+    dispatch_depth: 1
+  - line: 311
     kind: if
     arm: contract Credential(@"attest", dId2, @hash, ret2) = {
-    depth: 2
-  - line: 315
+    depth: 0
+    dispatch_depth: 0
+  - line: 317
     kind: if
     arm: contract Credential(@"attest", dId2, @hash, ret2) = {
-    depth: 4
+    depth: 1
+    dispatch_depth: 1
 - path: contracts/src/deploy/20_claim.rho
-  if_count: 15
-  match_count: 15
-  max_depth: 6
+  if_count: 14
+  match_count: 14
+  else_if_count: 0
+  branch_only_channel_count: 0
+  recursor_count: 0
+  max_dispatch_depth: 2
   constructs:
-  - line: 33
+  - line: 37
     kind: match
     arm: contract claimReqOk(@req, @height, ret) = {
     depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
-    - sr
-    catch_all: true
-    mutating: true
-    map_pattern_without_rest: false
-  - line: 36
-    kind: match
-    arm: contract claimReqOk(@req, @height, ret) = {
-    depth: 1
-    patterns:
-    - '{"uri": uri}'
+    - '{"uri": uri, ..._}'
     - _
     catch_all: true
     mutating: true
-    map_pattern_without_rest: true
-  - line: 38
-    kind: if
-    arm: contract claimReqOk(@req, @height, ret) = {
-    depth: 2
-  - line: 46
+    map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 40
     kind: if
     arm: contract claimReqOk(@req, @height, ret) = {
     depth: 1
-  - line: 49
+    dispatch_depth: 1
+  - line: 48
     kind: match
-    arm: contract claimReqOk(@req, @height, ret) = {
-    depth: 2
+    arm: contract claimWorkGate(@req, @height, ret) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - work
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 52
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 55
     kind: match
-    arm: contract claimReqOk(@req, @height, ret) = {
-    depth: 3
+    arm: contract claimFieldsGate(@work, @req, @height, ret) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (s, d, di, j, sc, q)
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 56
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 63
     kind: if
-    arm: contract claimReqOk(@req, @height, ret) = {
-    depth: 3
-  - line: 61
+    arm: contract claimFieldsOk(@s, @d, @di, @j, @sc, @q, @req, @height, ret) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 71
     kind: if
-    arm: contract claimReqOk(@req, @height, ret) = {
-    depth: 3
-  - line: 86
+    arm: contract claimWindowOk(@req, ret) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 88
     kind: match
     arm: contract ClaimFactory(@"verify", @uri, ret) = {
-    depth: 1
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - rec
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 101
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 103
     kind: if
     arm: contract ClaimFactory(@"create", dId, @req, ret) = {
-    depth: 2
-  - line: 153
+    depth: 0
+    dispatch_depth: 0
+  - line: 155
     kind: if
     arm: contract Claim(@"comment", dId2, @comment, ret2) = {
-    depth: 2
-  - line: 156
+    depth: 0
+    dispatch_depth: 0
+  - line: 158
     kind: match
     arm: contract Claim(@"comment", dId2, @comment, ret2) = {
-    depth: 3
+    depth: 1
+    dispatch_depth: 1
     patterns:
     - Nil
     - until
@@ -436,54 +574,72 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 158
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 160
     kind: if
     arm: contract Claim(@"comment", dId2, @comment, ret2) = {
-    depth: 4
-  - line: 163
+    depth: 2
+    dispatch_depth: 2
+  - line: 165
     kind: if
     arm: contract Claim(@"comment", dId2, @comment, ret2) = {
-    depth: 4
-  - line: 181
+    depth: 2
+    dispatch_depth: 2
+  - line: 183
     kind: if
     arm: contract Claim(@"withdraw", dId2, ret2) = {
-    depth: 2
-  - line: 184
+    depth: 0
+    dispatch_depth: 0
+  - line: 186
     kind: if
     arm: contract Claim(@"withdraw", dId2, ret2) = {
-    depth: 3
-  - line: 203
+    depth: 1
+    dispatch_depth: 1
+  - line: 205
     kind: if
     arm: contract Claim(@"expire", ret2) = {
-    depth: 2
-  - line: 206
+    depth: 0
+    dispatch_depth: 0
+  - line: 208
     kind: if
     arm: contract Claim(@"expire", ret2) = {
-    depth: 3
-  - line: 258
+    depth: 1
+    dispatch_depth: 1
+  - line: 260
     kind: match
     arm: contract finalizeWith(@claimSt, @kassetSt, @s, @validator, @height,
-    depth: 4
+    depth: 1
+    dispatch_depth: 1
     patterns:
     - (true, _, kassetUri)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 261
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 263
     kind: match
     arm: contract finalizeWith(@claimSt, @kassetSt, @s, @validator, @height,
-    depth: 6
+    depth: 2
+    dispatch_depth: 2
     patterns:
     - '"validating"'
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 287
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 289
     kind: match
     arm: contract finalizeValidation(@s, @validator, @height, @credentialUri,
-    depth: 3
+    depth: 1
+    dispatch_depth: 1
     patterns:
     - '"valid"'
     - '"partial"'
@@ -492,34 +648,47 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 308
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 310
     kind: if
     arm: contract resumeFinalize(@s, @r, @validator, @who, ret3) = {
     depth: 0
-  - line: 311
+    dispatch_depth: 0
+  - line: 313
     kind: match
     arm: contract resumeFinalize(@s, @r, @validator, @who, ret3) = {
     depth: 1
+    dispatch_depth: 1
     patterns:
     - Nil
     - kr
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 313
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 315
     kind: match
     arm: contract resumeFinalize(@s, @r, @validator, @who, ret3) = {
     depth: 2
+    dispatch_depth: 2
     patterns:
     - Nil
     - validation
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 339
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 341
     kind: match
     arm: contract Claim(@"validate", dId2, @credentialUri, @validation, ret2) = {
-    depth: 2
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - ("open", false, false)
     - ("open", true, _)
@@ -528,38 +697,52 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 345
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 347
     kind: match
     arm: contract Claim(@"validate", dId2, @credentialUri, @validation, ret2) = {
-    depth: 3
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, _)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 350
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 352
     kind: if
     arm: contract Claim(@"validate", dId2, @credentialUri, @validation, ret2) = {
-    depth: 5
-  - line: 379
+    depth: 1
+    dispatch_depth: 1
+  - line: 381
     kind: match
     arm: contract Claim(@"resume", dId3, ret3) = {
-    depth: 2
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - ("validating", r)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 381
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 383
     kind: if
     arm: contract Claim(@"resume", dId3, ret3) = {
-    depth: 3
-  - line: 384
+    depth: 1
+    dispatch_depth: 1
+  - line: 386
     kind: match
     arm: contract Claim(@"resume", dId3, ret3) = {
-    depth: 4
+    depth: 2
+    dispatch_depth: 2
     patterns:
     - '(Nil, {"validator": v, ..._})'
     - (v, _)
@@ -567,69 +750,94 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
 - path: contracts/src/deploy/22_value.rho
-  if_count: 12
-  match_count: 10
-  max_depth: 5
+  if_count: 8
+  match_count: 12
+  else_if_count: 0
+  branch_only_channel_count: 0
+  recursor_count: 0
+  max_dispatch_depth: 1
   constructs:
-  - line: 25
+  - line: 28
     kind: match
     arm: contract vpReqOk(@req, @height, ret) = {
     depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - sr
     catch_all: true
     mutating: false
     map_pattern_without_rest: false
-  - line: 28
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 31
     kind: match
     arm: contract vpReqOk(@req, @height, ret) = {
     depth: 1
+    dispatch_depth: 1
     patterns:
     - (s, t, sc, d)
     catch_all: true
     mutating: false
     map_pattern_without_rest: false
-  - line: 31
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 34
     kind: if
     arm: contract vpReqOk(@req, @height, ret) = {
     depth: 1
-  - line: 49
+    dispatch_depth: 1
+  - line: 52
     kind: match
     arm: contract ValuePropositionFactory(@"verify", @uri, ret) = {
-    depth: 1
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - rec
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 64
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 67
     kind: if
     arm: contract ValuePropositionFactory(@"propose", dId, @req, ret) = {
-    depth: 2
-  - line: 102
+    depth: 0
+    dispatch_depth: 0
+  - line: 106
     kind: if
     arm: contract ValueProposition(@"comment", dId2, @comment, ret2) = {
-    depth: 2
-  - line: 105
+    depth: 0
+    dispatch_depth: 0
+  - line: 109
     kind: if
     arm: contract ValueProposition(@"comment", dId2, @comment, ret2) = {
-    depth: 3
-  - line: 126
+    depth: 1
+    dispatch_depth: 1
+  - line: 130
     kind: if
     arm: contract ValueProposition(@"withdraw", dId2, ret2) = {
-    depth: 2
-  - line: 129
+    depth: 0
+    dispatch_depth: 0
+  - line: 133
     kind: if
     arm: contract ValueProposition(@"withdraw", dId2, ret2) = {
-    depth: 3
-  - line: 148
+    depth: 1
+    dispatch_depth: 1
+  - line: 152
     kind: match
     arm: contract ValueProposition(@"validate", dId2, @credentialUri, @validation,
       ret2) = {
-    depth: 2
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - ("proposed", false, false)
     - ("proposed", true, _)
@@ -638,50 +846,71 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 154
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 158
     kind: match
     arm: contract ValueProposition(@"validate", dId2, @credentialUri, @validation,
       ret2) = {
-    depth: 3
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, _)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 159
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 163
     kind: if
     arm: contract ValueProposition(@"validate", dId2, @credentialUri, @validation,
       ret2) = {
-    depth: 5
-  - line: 192
-    kind: if
+    depth: 1
+    dispatch_depth: 1
+  - line: 196
+    kind: match
     arm: contract ValueProposition(@"proveValidated", dId2, @atHeight, ret2, proofCh)
       = {
-    depth: 2
-  - line: 194
-    kind: if
-    arm: contract ValueProposition(@"proveValidated", dId2, @atHeight, ret2, proofCh)
-      = {
-    depth: 3
-  - line: 208
+    depth: 0
+    dispatch_depth: 0
+    patterns:
+    - (false, _)
+    - (true, false)
+    - (true, true)
+    - _
+    catch_all: true
+    mutating: true
+    map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 211
     kind: if
     arm: contract Proof(@"take", ret3) = {
-    depth: 1
-  - line: 242
+    depth: 0
+    dispatch_depth: 0
+  - line: 247
     kind: match
     arm: contract openVpDispute(@s, @who, @parties, @caseReq, dId, ret2) = {
-    depth: 1
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, caseRef)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 260
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 265
     kind: match
     arm: contract ValueProposition(@"openDispute", dId2, @caseReq, ret2) = {
-    depth: 2
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (false, _, _)
     - (true, false, _)
@@ -691,122 +920,155 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 267
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 272
     kind: match
     arm: contract ValueProposition(@"openDispute", dId2, @caseReq, ret2) = {
-    depth: 2
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - v
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 294
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 298
     kind: match
-    arm: contract Apply(@"applyDecision", @caseId, @decision, ret2) = {
-    depth: 1
+    arm: contract vpApplyGate(@s, @d, @caseId, @decision, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
-    - Nil
-    - d
+    - (false, _)
+    - (true, false)
+    - (true, true)
+    - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 297
-    kind: if
-    arm: contract Apply(@"applyDecision", @caseId, @decision, ret2) = {
-    depth: 2
-  - line: 300
-    kind: if
-    arm: contract Apply(@"applyDecision", @caseId, @decision, ret2) = {
-    depth: 3
-  - line: 306
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 310
     kind: match
-    arm: contract Apply(@"applyDecision", @caseId, @decision, ret2) = {
-    depth: 5
+    arm: contract vpApplyOutcome(@s, @decision, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - target
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 325
+    kind: match
+    arm: contract Apply(@"applyDecision", @caseId, @decision, ret2) = {
+    depth: 0
+    dispatch_depth: 0
+    patterns:
+    - Nil
+    - d
+    catch_all: true
+    mutating: true
+    map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
 - path: contracts/src/deploy/30_oracle.rho
-  if_count: 14
-  match_count: 6
-  max_depth: 5
+  if_count: 8
+  match_count: 7
+  else_if_count: 0
+  branch_only_channel_count: 0
+  recursor_count: 0
+  max_dispatch_depth: 2
   constructs:
-  - line: 32
+  - line: 36
     kind: match
     arm: contract openCaseCheck(@caseReq, ret) = {
-    depth: 1
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, _)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 40
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 44
     kind: match
     arm: contract openCaseCheck(@caseReq, ret) = {
-    depth: 4
+    depth: 1
+    dispatch_depth: 1
     patterns:
     - (true, cred)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 42
-    kind: if
-    arm: contract openCaseCheck(@caseReq, ret) = {
-    depth: 5
-  - line: 60
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 63
     kind: match
     arm: contract caseReqOk(@caseReq, @opener, @now, ret) = {
     depth: 0
+    dispatch_depth: 0
     patterns:
     - (deadline, kind, parties, adjudicator)
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 63
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 66
     kind: if
     arm: contract caseReqOk(@caseReq, @opener, @now, ret) = {
     depth: 0
-  - line: 70
-    kind: if
-    arm: contract caseReqOk(@caseReq, @opener, @now, ret) = {
-    depth: 1
-  - line: 85
-    kind: if
+    dispatch_depth: 0
+  - line: 90
+    kind: match
     arm: contract OracleFactory(@"open", dId, @subjectRef, @caseReq, subjectApply,
       ret) = {
-    depth: 1
-  - line: 86
-    kind: if
-    arm: contract OracleFactory(@"open", dId, @subjectRef, @caseReq, subjectApply,
-      ret) = {
-    depth: 1
-  - line: 91
-    kind: if
-    arm: contract OracleFactory(@"open", dId, @subjectRef, @caseReq, subjectApply,
-      ret) = {
-    depth: 2
-  - line: 92
-    kind: if
-    arm: contract OracleFactory(@"open", dId, @subjectRef, @caseReq, subjectApply,
-      ret) = {
-    depth: 2
-  - line: 123
+    depth: 0
+    dispatch_depth: 0
+    patterns:
+    - (false, _, _, _)
+    - (true, false, _, _)
+    - (true, true, false, _)
+    - (true, true, true, false)
+    - (true, true, true, true)
+    - _
+    catch_all: true
+    mutating: true
+    map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 125
     kind: if
     arm: contract OracleCase(@"evidence", dId, @ev, ret2) = {
-    depth: 2
-  - line: 129
+    depth: 0
+    dispatch_depth: 0
+  - line: 131
     kind: if
     arm: contract OracleCase(@"evidence", dId, @ev, ret2) = {
-    depth: 4
-  - line: 151
+    depth: 1
+    dispatch_depth: 1
+  - line: 153
     kind: match
     arm: contract OracleCase(@"decide", dId, @decision, ret2) = {
-    depth: 2
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, true, false)
     - (true, false, false)
@@ -816,10 +1078,14 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 160
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 162
     kind: match
     arm: contract OracleCase(@"decide", dId, @decision, ret2) = {
-    depth: 3
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, Nil)
     - (true, _)
@@ -828,18 +1094,24 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 203
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 205
+    kind: if
+    arm: contract OracleCase(@"execute", ret2) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 208
     kind: if
     arm: contract OracleCase(@"execute", ret2) = {
     depth: 1
-  - line: 206
-    kind: if
-    arm: contract OracleCase(@"execute", ret2) = {
-    depth: 2
-  - line: 217
+    dispatch_depth: 1
+  - line: 219
     kind: match
     arm: contract OracleCase(@"execute", ret2) = {
-    depth: 4
+    depth: 2
+    dispatch_depth: 2
     patterns:
     - (true, outcome)
     - (false, why)
@@ -847,40 +1119,55 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 243
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 245
     kind: if
     arm: contract OracleCase(@"expire", ret2) = {
-    depth: 2
-  - line: 246
+    depth: 0
+    dispatch_depth: 0
+  - line: 248
     kind: if
     arm: contract OracleCase(@"expire", ret2) = {
-    depth: 3
-  - line: 261
+    depth: 1
+    dispatch_depth: 1
+  - line: 263
     kind: if
     arm: contract OracleCase(@"close", ret2) = {
-    depth: 1
+    depth: 0
+    dispatch_depth: 0
 - path: contracts/src/deploy/40_provenance.rho
   if_count: 4
   match_count: 2
-  max_depth: 6
+  else_if_count: 0
+  branch_only_channel_count: 0
+  recursor_count: 0
+  max_dispatch_depth: 2
   constructs:
-  - line: 27
+  - line: 28
     kind: match
     arm: contract ProvenanceFactory(@"create", dId, @assetRef, @writers, ret) = {
-    depth: 1
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - _
     catch_all: true
     mutating: false
     map_pattern_without_rest: false
-  - line: 29
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 30
     kind: if
     arm: contract ProvenanceFactory(@"create", dId, @assetRef, @writers, ret) = {
-    depth: 2
-  - line: 58
+    depth: 1
+    dispatch_depth: 1
+  - line: 59
     kind: match
     arm: contract Provenance(@"anchor", dId, @doc, ret2) = {
-    depth: 3
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (false, _)
     - '(true, {"hash": hash, ..._})'
@@ -888,79 +1175,110 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 61
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 62
     kind: if
     arm: contract Provenance(@"anchor", dId, @doc, ret2) = {
-    depth: 4
-  - line: 67
+    depth: 1
+    dispatch_depth: 1
+  - line: 68
     kind: if
     arm: contract Provenance(@"anchor", dId, @doc, ret2) = {
-    depth: 6
-  - line: 101
+    depth: 2
+    dispatch_depth: 2
+  - line: 102
     kind: if
     arm: contract Provenance(@"comment", dId, @comment, ret2) = {
-    depth: 3
+    depth: 0
+    dispatch_depth: 0
 - path: contracts/src/lib/Auth.rho
   if_count: 0
   match_count: 2
-  max_depth: 1
+  else_if_count: 0
+  branch_only_channel_count: 0
+  recursor_count: 0
+  max_dispatch_depth: 0
   constructs:
   - line: 18
     kind: match
     arm: contract authSubject(dId, ret) = {
-    depth: 1
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, addr, _)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
   - line: 30
     kind: match
     arm: contract authPubKey(dId, ret) = {
-    depth: 1
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, _, pk)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
 - path: contracts/src/lib/KAsset.rho
-  if_count: 13
-  match_count: 28
-  max_depth: 9
+  if_count: 11
+  match_count: 30
+  else_if_count: 0
+  branch_only_channel_count: 0
+  recursor_count: 0
+  max_dispatch_depth: 0
   constructs:
-  - line: 35
+  - line: 52
     kind: match
     arm: contract checkApprovalVp(@s, dId, @approver, @height, @approval, ret2) =
       {
     depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - vpRef
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 41
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 70
     kind: match
-    arm: contract checkApprovalVp(@s, dId, @approver, @height, @approval, ret2) =
-      {
-    depth: 2
+    arm: contract proveVpThenDecide(@vf, @vpUri, dId, @approver, @height, @s, @approval,
+      ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, _)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 45
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 84
     kind: if
-    arm: contract checkApprovalVp(@s, dId, @approver, @height, @approval, ret2) =
-      {
-    depth: 4
-  - line: 67
+    arm: contract commitApprovalOrRefuse(@ok, @s, @approver, @height, @approval, ret2)
+      = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 105
     kind: match
-    arm: contract KAsset(@"approve", dId, @credentialUri, @approval, ret2) = {
-    depth: 2
+    arm: contract approveCheck(@s, dId, @approver, @credentialUri, @approval, @height,
+      ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, false)
     - (_, true)
@@ -968,24 +1286,35 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 73
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 120
     kind: match
-    arm: contract KAsset(@"approve", dId, @credentialUri, @approval, ret2) = {
-    depth: 3
+    arm: contract verifyApproverCredential(@s, dId, @approver, @credentialUri, @approval,
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, _)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 80
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 137
     kind: if
-    arm: contract KAsset(@"approve", dId, @credentialUri, @approval, ret2) = {
-    depth: 5
-  - line: 104
+    arm: contract proveApprover(@s, dId, @approver, @credentialUri, @approval, @height,
+      ret2) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 156
     kind: match
-    arm: contract KAsset(@"reject", dId, @credentialUri, @approval, ret2) = {
-    depth: 2
+    arm: contract rejectCheck(@s, dId, @approver, @credentialUri, @approval, @height,
+      ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, false)
     - (_, true)
@@ -993,102 +1322,142 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 110
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 171
     kind: match
-    arm: contract KAsset(@"reject", dId, @credentialUri, @approval, ret2) = {
-    depth: 3
+    arm: contract verifyRejectCredential(@s, dId, @approver, @credentialUri, @approval,
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, _)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 117
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 188
     kind: if
-    arm: contract KAsset(@"reject", dId, @credentialUri, @approval, ret2) = {
-    depth: 5
-  - line: 141
+    arm: contract proveRejecter(@s, dId, @approver, @credentialUri, @approval, @height,
+      ret2) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 204
     kind: match
-    arm: contract KAsset(@"proveApproved", ret2, proofCh) = {
-    depth: 1
+    arm: contract proveApprovedStatus(@s, ret2, proofCh) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - '"approved"'
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 143
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 211
     kind: match
-    arm: contract KAsset(@"proveApproved", ret2, proofCh) = {
-    depth: 2
+    arm: contract proveApprovedMint(@s, ret2, proofCh) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - approver
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 160
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 228
     kind: if
     arm: contract Proof(@"take", ret3) = {
-    depth: 1
-  - line: 181
+    depth: 0
+    dispatch_depth: 0
+  - line: 245
     kind: match
     arm: contract verifyChildClaim(@child, @ref, ret2) = {
     depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - claimRef
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 187
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 259
     kind: match
-    arm: contract verifyChildClaim(@child, @ref, ret2) = {
-    depth: 2
+    arm: contract childClaimFactoryReply(@vf, @child, @ref, @claimRef, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, _)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 195
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 280
     kind: match
-    arm: contract verifyChildClaim(@child, @ref, ret2) = {
-    depth: 5
+    arm: contract checkChildKasset(@cg, @child, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, claim)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 197
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 287
     kind: match
-    arm: contract verifyChildClaim(@child, @ref, ret2) = {
-    depth: 6
+    arm: contract checkChildKassetRef(@claim, @child, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - kr
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 200
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 294
     kind: if
-    arm: contract verifyChildClaim(@child, @ref, ret2) = {
-    depth: 7
-  - line: 228
+    arm: contract checkChildKassetUri(@kr, @child, ret2) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 313
     kind: match
-    arm: contract nestChildCheck(@ref, @parent, ret2) = {
-    depth: 2
+    arm: contract checkNestChild(@g, @ref, @parent, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, child)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 230
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 320
     kind: match
-    arm: contract nestChildCheck(@ref, @parent, ret2) = {
-    depth: 3
+    arm: contract checkNestChildGate(@child, @ref, @parent, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, true, true)
     - (false, _, _)
@@ -1097,70 +1466,115 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 252
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 335
     kind: if
     arm: contract nestOne(@ref, @parent, ret2) = {
-    depth: 1
-  - line: 259
-    kind: if
-    arm: contract nestCheck(@refs, @i, @parent, ret2) = {
     depth: 0
-  - line: 267
+    dispatch_depth: 0
+  - line: 342
     kind: match
-    arm: contract nestCheck(@refs, @i, @parent, ret2) = {
-    depth: 3
+    arm: contract nestCheck(@refs, @parent, ret2) = {
+    depth: 0
+    dispatch_depth: 0
+    patterns:
+    - '[]'
+    - '[ref, ...tail]'
+    - _
+    catch_all: true
+    mutating: true
+    map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 353
+    kind: match
+    arm: contract nestCheckOne(@ref, @tail, @parent, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, "ok")
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 278
-    kind: if
-    arm: contract nestProofs(@refs, @i, @prev, ret2) = {
-    depth: 0
-  - line: 290
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 362
     kind: match
-    arm: contract nestProofs(@refs, @i, @prev, ret2) = {
-    depth: 4
+    arm: contract nestProofs(@refs, @prev, ret2) = {
+    depth: 0
+    dispatch_depth: 0
+    patterns:
+    - '[]'
+    - '[ref, ...tail]'
+    - _
+    catch_all: true
+    mutating: true
+    map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 380
+    kind: match
+    arm: contract nestProofProve(Child, @ref, @tail, @prev, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, _)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 296
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 398
     kind: match
-    arm: contract nestProofs(@refs, @i, @prev, ret2) = {
-    depth: 7
+    arm: contract nestProofReply(@t, @ref, @tail, @prev, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, data)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 298
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 405
     kind: if
-    arm: contract nestProofs(@refs, @i, @prev, ret2) = {
-    depth: 8
-  - line: 300
+    arm: contract nestProofCheck(@data, @ref, @tail, @prev, ret2) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 411
     kind: match
-    arm: contract nestProofs(@refs, @i, @prev, ret2) = {
-    depth: 8
+    arm: contract nestProofOrder(@data, @tail, @prev, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - '"none"'
     - p
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 303
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 418
     kind: if
-    arm: contract nestProofs(@refs, @i, @prev, ret2) = {
-    depth: 9
-  - line: 332
+    arm: contract nestProofAfter(@data, @p, @tail, ret2) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 433
     kind: match
-    arm: contract KAsset(@"nest", dId, @childRefs, ret2) = {
-    depth: 2
+    arm: contract nestGate(@snap, @who, @childRefs, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, true, true)
     - (false, _, _)
@@ -1168,50 +1582,70 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 338
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 445
     kind: match
-    arm: contract KAsset(@"nest", dId, @childRefs, ret2) = {
-    depth: 3
+    arm: contract nestPhase1(@snap, @who, @childRefs, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, "ok")
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 343
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 457
     kind: match
-    arm: contract KAsset(@"nest", dId, @childRefs, ret2) = {
-    depth: 5
+    arm: contract nestPhase2(@who, @childRefs, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, "ok")
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 346
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 470
     kind: match
-    arm: contract KAsset(@"nest", dId, @childRefs, ret2) = {
-    depth: 7
+    arm: contract nestCommit(@s, @who, @childRefs, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, true, true, true)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 354
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 482
     kind: match
-    arm: contract KAsset(@"nest", dId, @childRefs, ret2) = {
-    depth: 8
+    arm: contract nestPhase3Check(@s, @childRefs, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, "ok")
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 393
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 504
     kind: match
-    arm: contract KAsset(@"openDispute", dId, @caseReq, ret2) = {
-    depth: 2
+    arm: contract openDisputeGate(@s, @who, @caseReq, dId, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, true)
     - (false, _)
@@ -1219,38 +1653,52 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 410
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 531
     kind: match
-    arm: contract KAsset(@"openDispute", dId, @caseReq, ret2) = {
-    depth: 3
+    arm: contract openDisputeReply(@o, @s, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, caseRef)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 440
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 555
     kind: match
-    arm: contract Apply(@"applyDecision", @caseId, @decision, ret2) = {
-    depth: 1
+    arm: contract applyDecisionDispute(@s, @caseId, @decision, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - d
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 443
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 562
     kind: if
-    arm: contract Apply(@"applyDecision", @caseId, @decision, ret2) = {
-    depth: 2
-  - line: 446
+    arm: contract applyDecisionCase(@s, @d, @caseId, @decision, ret2) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 567
     kind: if
-    arm: contract Apply(@"applyDecision", @caseId, @decision, ret2) = {
-    depth: 3
-  - line: 450
+    arm: contract applyDecisionStatus(@s, @decision, ret2) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 575
     kind: match
-    arm: contract Apply(@"applyDecision", @caseId, @decision, ret2) = {
-    depth: 5
+    arm: contract applyDecisionIdempotent(@s, @decision, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (Nil, _)
     - (t, current)
@@ -1258,196 +1706,232 @@ files:
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 453
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 585
     kind: if
-    arm: contract Apply(@"applyDecision", @caseId, @decision, ret2) = {
-    depth: 6
-  - line: 465
+    arm: contract alreadyAppliedCheck(@current, @t, @s, ret2) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 593
     kind: match
-    arm: contract Apply(@"applyDecision", @caseId, @decision, ret2) = {
-    depth: 5
+    arm: contract applyDecisionDo(@s, @decision, ret2) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - target
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
 - path: contracts/src/lib/List.rho
-  if_count: 8
+  if_count: 4
   match_count: 4
-  max_depth: 1
+  else_if_count: 0
+  branch_only_channel_count: 0
+  recursor_count: 0
+  max_dispatch_depth: 0
   constructs:
-  - line: 2
-    kind: if
-    arm: contract listHas(@list, @value, @i, ret) = {
-    depth: 0
-  - line: 4
+  - line: 7
     kind: match
-    arm: contract listHas(@list, @value, @i, ret) = {
+    arm: contract listHas(@list, @value, ret) = {
     depth: 0
+    dispatch_depth: 0
     patterns:
-    - x
+    - '[]'
+    - '[head, ...tail]'
+    - _
     catch_all: true
     mutating: false
     map_pattern_without_rest: false
-  - line: 6
-    kind: if
-    arm: contract listHas(@list, @value, @i, ret) = {
-    depth: 1
-  - line: 14
-    kind: if
-    arm: contract listHasId(@list, @id, @i, ret) = {
-    depth: 0
-  - line: 16
-    kind: match
-    arm: contract listHasId(@list, @id, @i, ret) = {
-    depth: 0
-    patterns:
-    - x
-    catch_all: true
-    mutating: false
-    map_pattern_without_rest: false
-  - line: 18
-    kind: if
-    arm: contract listHasId(@list, @id, @i, ret) = {
-    depth: 1
-  - line: 26
-    kind: if
-    arm: contract listHasAny(@list, @a, @b, @i, ret) = {
-    depth: 0
-  - line: 28
-    kind: match
-    arm: contract listHasAny(@list, @a, @b, @i, ret) = {
-    depth: 0
-    patterns:
-    - x
-    catch_all: true
-    mutating: false
-    map_pattern_without_rest: false
-  - line: 30
-    kind: if
-    arm: contract listHasAny(@list, @a, @b, @i, ret) = {
-    depth: 1
-  - line: 38
-    kind: if
-    arm: contract listHas3(@list, @a, @b, @c, @i, ret) = {
-    depth: 0
-  - line: 40
-    kind: match
-    arm: contract listHas3(@list, @a, @b, @c, @i, ret) = {
-    depth: 0
-    patterns:
-    - x
-    catch_all: true
-    mutating: false
-    map_pattern_without_rest: false
-  - line: 42
-    kind: if
-    arm: contract listHas3(@list, @a, @b, @c, @i, ret) = {
-    depth: 1
-- path: contracts/src/lib/Proof.rho
-  if_count: 2
-  match_count: 4
-  max_depth: 2
-  constructs:
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
   - line: 15
-    kind: match
-    arm: contract checkCredentialProof(Proof, @validator, @credentialUri, @height,
-      ret) = {
-    depth: 1
-    patterns:
-    - (true, data)
-    - _
-    catch_all: true
-    mutating: true
-    map_pattern_without_rest: false
-  - line: 17
     kind: if
-    arm: contract checkCredentialProof(Proof, @validator, @credentialUri, @height,
-      ret) = {
-    depth: 2
-  - line: 35
+    arm: contract listHasEq(@head, @value, @tail, ret) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 20
     kind: match
-    arm: contract proveAndCheck(@credentialUri, dId, @rq, @validator, @height, ret)
-      = {
-    depth: 2
+    arm: contract listHasId(@list, @id, ret) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
-    - (true, _)
+    - '[]'
+    - '[head, ...tail]'
     - _
     catch_all: true
-    mutating: true
+    mutating: false
     map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 28
+    kind: if
+    arm: contract listHasIdEq(@head, @id, @tail, ret) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 33
+    kind: match
+    arm: contract listHasAny(@list, @a, @b, ret) = {
+    depth: 0
+    dispatch_depth: 0
+    patterns:
+    - '[]'
+    - '[head, ...tail]'
+    - _
+    catch_all: true
+    mutating: false
+    map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 41
+    kind: if
+    arm: contract listHasAnyEq(@head, @a, @b, @tail, ret) = {
+    depth: 0
+    dispatch_depth: 0
+  - line: 46
+    kind: match
+    arm: contract listHas3(@list, @a, @b, @c, ret) = {
+    depth: 0
+    dispatch_depth: 0
+    patterns:
+    - '[]'
+    - '[head, ...tail]'
+    - _
+    catch_all: true
+    mutating: false
+    map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
   - line: 54
+    kind: if
+    arm: contract listHas3Eq(@head, @a, @b, @c, @tail, ret) = {
+    depth: 0
+    dispatch_depth: 0
+- path: contracts/src/lib/Proof.rho
+  if_count: 0
+  match_count: 4
+  else_if_count: 0
+  branch_only_channel_count: 0
+  recursor_count: 0
+  max_dispatch_depth: 0
+  constructs:
+  - line: 14
     kind: match
-    arm: contract checkValidatedProof(Proof, @caller, @atHeight, ret) = {
-    depth: 1
+    arm: contract checkCredentialProof(Proof, @validator, @credentialUri, @height,
+      ret) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, data)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 56
-    kind: if
-    arm: contract checkValidatedProof(Proof, @caller, @atHeight, ret) = {
-    depth: 2
-  - line: 73
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 45
     kind: match
-    arm: contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
-    depth: 2
+    arm: contract proveAndCheckReply(@s, proofCh, @validator, @credentialUri, @height,
+      ret) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
     - (true, _)
     - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 64
+    kind: match
+    arm: contract checkValidatedProof(Proof, @caller, @atHeight, ret) = {
+    depth: 0
+    dispatch_depth: 0
+    patterns:
+    - (true, data)
+    - _
+    catch_all: true
+    mutating: true
+    map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 91
+    kind: match
+    arm: contract proveValidatedReply(@s, proofCh, @caller, @atHeight, ret) = {
+    depth: 0
+    dispatch_depth: 0
+    patterns:
+    - (true, _)
+    - _
+    catch_all: true
+    mutating: true
+    map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
 - path: contracts/src/lib/Scope.rho
-  if_count: 1
-  match_count: 3
-  max_depth: 1
+  if_count: 0
+  match_count: 2
+  else_if_count: 0
+  branch_only_channel_count: 0
+  recursor_count: 0
+  max_dispatch_depth: 0
   constructs:
-  - line: 5
+  - line: 7
     kind: match
     arm: contract minLevelOf(@req, ret) = {
     depth: 0
+    dispatch_depth: 0
     patterns:
     - Nil
     - ml
     catch_all: true
     mutating: false
     map_pattern_without_rest: false
-  - line: 15
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
+  - line: 21
     kind: match
-    arm: contract scopeMatches(@cred, @req, ret) = {
-    depth: 1
+    arm: contract scopeMatchesLevel(@cred, @req, @ml, ret) = {
+    depth: 0
+    dispatch_depth: 0
     patterns:
-    - (ctype, discipline, jurisdiction, role, level)
+    - (ctype, discipline, jurisdiction, role, Nil)
+    - (ctype, discipline, jurisdiction, role, l)
+    - _
     catch_all: true
     mutating: true
     map_pattern_without_rest: false
-  - line: 18
-    kind: match
-    arm: contract scopeMatches(@cred, @req, ret) = {
-    depth: 1
-    patterns:
-    - Nil
-    - l
-    catch_all: true
-    mutating: true
-    map_pattern_without_rest: false
-  - line: 43
-    kind: if
-    arm: contract issuerCovers(@issuer, @req, ret) = {
-    depth: 1
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
 - path: contracts/src/lib/Status.rho
   if_count: 0
   match_count: 1
-  max_depth: 0
+  else_if_count: 0
+  branch_only_channel_count: 0
+  recursor_count: 0
+  max_dispatch_depth: 0
   constructs:
   - line: 6
     kind: match
     arm: contract outcomeStatus(@outcome, ret) = {
     depth: 0
+    dispatch_depth: 0
     patterns:
     - '"uphold"'
     - '"revoke"'
@@ -1456,9 +1940,15 @@ files:
     catch_all: true
     mutating: false
     map_pattern_without_rest: false
+    branch_only_channel: false
+    self_recursive: false
+    recursor_index_param: false
 - path: contracts/src/lib/Time.rho
   if_count: 0
   match_count: 0
-  max_depth: 0
+  else_if_count: 0
+  branch_only_channel_count: 0
+  recursor_count: 0
+  max_dispatch_depth: 0
   constructs: []
 

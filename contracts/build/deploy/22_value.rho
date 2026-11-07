@@ -14,7 +14,10 @@ new
   rootCh, cfCh, ofCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
   CredentialFactory, OracleFactory,
-  vpReqOk, outcomeStatus, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
+  vpReqOk, outcomeStatus,
+  checkCredentialProof, proveAndCheck, checkValidatedProof, proveValidatedAndCheck,
+  proveAndCheckCall, proveAndCheckReply, proveTakeAndCheck,
+  proveValidatedCall, proveValidatedReply, proveValidatedTake
 in {
 // Deployer identity helpers. The REV address is the subject id; the public key is stored
 // only where an identity profile needs it.
@@ -63,13 +66,12 @@ contract nowHeight(ret) = {
 } |
 // One-shot proof helpers. A credential or value proposition `prove` arm returns a private
 // `Proof` capability on a caller-supplied channel; every `prove` variant sends
-// `bundle+{*Proof}` on that channel and returns `(true, Nil)`. The proof is never inserted into
-// the registry, so there is no discoverable proof URI for a third party to burn. `take` yields
-// `(true, data)` once and `(false, "used")` after that.
+// `bundle+{*Proof}` on that channel and returns `(true, Nil)`. The proof is never inserted
+// into the registry, so there is no discoverable proof URI for a third party to burn.
+// `take` yields `(true, data)` once and `(false, "used")` after that.
 //
-// These helpers resolve the credential or value proposition by its registry URI, receive the
-// private proof capability, take it, and check the fields the caller binds. The capability is
-// bound directly in a receive pattern; it is never passed through a data tuple.
+// Each check is a flat helper: one `for`, one `match`, and a direct boolean return. No
+// nested match/if chain.
 
 contract checkCredentialProof(Proof, @validator, @credentialUri, @height, ret) = {
   new tCh in {
@@ -77,10 +79,9 @@ contract checkCredentialProof(Proof, @validator, @credentialUri, @height, ret) =
     for (@t <- tCh) {
       match t {
         (true, data) => {
-          if (data.get("subject") == validator
-              && data.get("credentialUri") == credentialUri
-              && data.get("atHeight") == height) { ret!(true) }
-          else { ret!(false) }
+          ret!(data.get("subject") == validator
+            && data.get("credentialUri") == credentialUri
+            && data.get("atHeight") == height)
         }
         _ => { ret!(false) }
       }
@@ -89,23 +90,35 @@ contract checkCredentialProof(Proof, @validator, @credentialUri, @height, ret) =
 } |
 
 contract proveAndCheck(@credentialUri, dId, @rq, @validator, @height, ret) = {
-  new credCh, proofCh, okCh in {
+  new credCh in {
     rl!(credentialUri, *credCh) |
     for (Credential <- credCh) {
-      new statusCh in {
-        Credential!("prove", *dId, rq, *statusCh, *proofCh) |
-        for (@s <- statusCh) {
-          match s {
-            (true, _) => {
-              for (Proof <- proofCh) {
-                checkCredentialProof!(*Proof, validator, credentialUri, height, *okCh) |
-                for (@ok <- okCh) { ret!(ok) }
-              }
-            }
-            _ => { ret!(false) }
-          }
-        }
-      }
+      proveAndCheckCall!(*Credential, credentialUri, *dId, rq, validator, height, *ret)
+    }
+  }
+} |
+
+contract proveAndCheckCall(Credential, @credentialUri, dId, @rq, @validator, @height, ret) = {
+  new statusCh, proofCh in {
+    Credential!("prove", *dId, rq, *statusCh, *proofCh) |
+    for (@s <- statusCh) {
+      proveAndCheckReply!(s, *proofCh, validator, credentialUri, height, *ret)
+    }
+  }
+} |
+
+contract proveAndCheckReply(@s, proofCh, @validator, @credentialUri, @height, ret) = {
+  match s {
+    (true, _) => { proveTakeAndCheck!(*proofCh, validator, credentialUri, height, *ret) }
+    _ => { ret!(false) }
+  }
+} |
+
+contract proveTakeAndCheck(proofCh, @validator, @credentialUri, @height, ret) = {
+  new okCh in {
+    for (Proof <- proofCh) {
+      checkCredentialProof!(*Proof, validator, credentialUri, height, *okCh) |
+      for (@ok <- okCh) { ret!(ok) }
     }
   }
 } |
@@ -116,9 +129,7 @@ contract checkValidatedProof(Proof, @caller, @atHeight, ret) = {
     for (@t <- tCh) {
       match t {
         (true, data) => {
-          if (data.get("caller") == caller && data.get("atHeight") == atHeight) {
-            ret!(true)
-          } else { ret!(false) }
+          ret!(data.get("caller") == caller && data.get("atHeight") == atHeight)
         }
         _ => { ret!(false) }
       }
@@ -127,23 +138,33 @@ contract checkValidatedProof(Proof, @caller, @atHeight, ret) = {
 } |
 
 contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
-  new vpc, proofCh, okCh in {
+  new vpc in {
     rl!(vpUri, *vpc) |
-    for (VP <- vpc) {
-      new statusCh in {
-        VP!("proveValidated", *dId, atHeight, *statusCh, *proofCh) |
-        for (@s <- statusCh) {
-          match s {
-            (true, _) => {
-              for (Proof <- proofCh) {
-                checkValidatedProof!(*Proof, caller, atHeight, *okCh) |
-                for (@ok <- okCh) { ret!(ok) }
-              }
-            }
-            _ => { ret!(false) }
-          }
-        }
-      }
+    for (VP <- vpc) { proveValidatedCall!(*VP, vpUri, *dId, caller, atHeight, *ret) }
+  }
+} |
+
+contract proveValidatedCall(VP, @vpUri, dId, @caller, @atHeight, ret) = {
+  new statusCh, proofCh in {
+    VP!("proveValidated", *dId, atHeight, *statusCh, *proofCh) |
+    for (@s <- statusCh) {
+      proveValidatedReply!(s, *proofCh, caller, atHeight, *ret)
+    }
+  }
+} |
+
+contract proveValidatedReply(@s, proofCh, @caller, @atHeight, ret) = {
+  match s {
+    (true, _) => { proveValidatedTake!(*proofCh, caller, atHeight, *ret) }
+    _ => { ret!(false) }
+  }
+} |
+
+contract proveValidatedTake(proofCh, @caller, @atHeight, ret) = {
+  new okCh in {
+    for (Proof <- proofCh) {
+      checkValidatedProof!(*Proof, caller, atHeight, *okCh) |
+      for (@ok <- okCh) { ret!(ok) }
     }
   }
 } |
@@ -203,7 +224,8 @@ contract outcomeStatus(@outcome, ret) = {
                 if (not ok) {
                   ret!((false, "fields"))
                 } else {
-                  new vpState, ValueProposition, Apply, openVpDispute, uriCh in {
+                  new vpState, ValueProposition, Apply, openVpDispute,
+                      vpApplyGate, vpApplyOutcome, uriCh in {
                     vpState!({
                       "uri": "",
                       "proposer": proposer,
@@ -328,11 +350,10 @@ contract outcomeStatus(@outcome, ret) = {
                         nowHeight!(*h2) |
                         for (@(true, who) <- a2; @now <- h2) {
                           for (@s <- vpState) {
-                            if (s.get("status") != "validated") {
-                              vpState!(s) | ret2!((false, "not validated"))
-                            } else if (atHeight != now) {
-                              vpState!(s) | ret2!((false, "height"))
-                            } else {
+                            match (s.get("status") == "validated", atHeight == now) {
+                              (false, _) => { vpState!(s) | ret2!((false, "not validated")) }
+                              (true, false) => { vpState!(s) | ret2!((false, "height")) }
+                              (true, true) => {
                               new proofState, Proof in {
                                 proofState!({
                                   "data": {
@@ -356,6 +377,8 @@ contract outcomeStatus(@outcome, ret) = {
                                 proofCh!(bundle+{*Proof}) |
                                 ret2!((true, Nil))
                               }
+                              }
+                              _ => { vpState!(s) | ret2!((false, "not validated")) }
                             }
                           }
                         }
@@ -428,34 +451,37 @@ contract outcomeStatus(@outcome, ret) = {
                       for (@s <<- vpState) { ret2!((true, s.get("revocation"))) }
                     } |
 
+                    contract vpApplyGate(@s, @d, @caseId, @decision, ret2) = {
+                      match (d.get("id") == caseId, s.get("status") == "disputed") {
+                        (false, _) => { vpState!(s) | ret2!((false, "case mismatch")) }
+                        (true, false) => { vpState!(s) | ret2!((false, "not disputed")) }
+                        (true, true) => { vpApplyOutcome!(s, decision, *ret2) }
+                        _ => { vpState!(s) | ret2!((false, "case mismatch")) }
+                      }
+                    } |
+
+                    contract vpApplyOutcome(@s, @decision, ret2) = {
+                      new osCh in {
+                        outcomeStatus!(decision.get("outcome"), *osCh) |
+                        for (@status <- osCh) {
+                          match status {
+                            Nil => { vpState!(s) | ret2!((false, "outcome")) }
+                            target => {
+                              vpState!(s.set("status", target)
+                                        .set("revocation", decision)
+                                        .set("version", s.get("version") + 1)) |
+                              ret2!((true, target))
+                            }
+                          }
+                        }
+                      }
+                    } |
+
                     contract Apply(@"applyDecision", @caseId, @decision, ret2) = {
                       for (@s <- vpState) {
                         match s.get("dispute") {
                           Nil => { vpState!(s) | ret2!((false, "no dispute")) }
-                          d => {
-                            if (d.get("id") != caseId) {
-                              vpState!(s) | ret2!((false, "case mismatch"))
-                            } else {
-                              if (s.get("status") != "disputed") {
-                                vpState!(s) | ret2!((false, "not disputed"))
-                              } else {
-                                new osCh in {
-                                  outcomeStatus!(decision.get("outcome"), *osCh) |
-                                  for (@status <- osCh) {
-                                    match status {
-                                      Nil => { vpState!(s) | ret2!((false, "outcome")) }
-                                      target => {
-                                        vpState!(s.set("status", target)
-                                                  .set("revocation", decision)
-                                                  .set("version", s.get("version") + 1)) |
-                                        ret2!((true, target))
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
+                          d => { vpApplyGate!(s, d, caseId, decision, *ret2) }
                         }
                       }
                     } |

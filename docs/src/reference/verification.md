@@ -93,9 +93,10 @@ proof: no mechanized Rholang semantics and no refinement theorem.
   removes the window.
 - `make guard-check`: 16 changed arms; source atoms and flow entries agree. Six arms have an
   `owed` guard_eq and are reported as warnings, not passes.
-- `make style-check`: 88 `if` / 99 `match`; no hard failures. Fourteen deep-nesting warnings
-  remain, mostly in `KAsset.nest`. The inventory is `spec/audit/rholang-control-flow.yaml`.
-  Guard staircases, the verdict/outcome tables and the provenance map patterns are refactored.
+- `make style-check`: 68 `if` / 102 `match`; 0 errors and `passes: true`. Every `else if`,
+  branch-only boolean channel, index-recursive list walk and match deeper than dispatch depth 2
+  is gone. `List.rho` is list-pattern recursion; `KAsset.rho` is fully flat helper chains. The
+  inventory is `spec/audit/rholang-control-flow.yaml`.
 
 ## Baseline
 

@@ -1,47 +1,56 @@
-contract listHas(@list, @value, @i, ret) = {
-  if (i >= list.length()) { ret!(false) }
-  else {
-    match list.nth(i) {
-      x => {
-        if (x == value) { ret!(true) }
-        else { listHas!(list, value, i + 1, *ret) }
-      }
-    }
+// List traversal is pattern recursion, not index arithmetic. `match list { [] => ...;
+// [head, ...tail] => ... }` is the only list walk; `...tail` binds the positional suffix.
+// The predicate helpers keep each body at dispatch depth <= 2 and return the bare boolean
+// the callers already expect.
+
+contract listHas(@list, @value, ret) = {
+  match list {
+    [] => { ret!(false) }
+    [head, ...tail] => { listHasEq!(head, value, tail, *ret) }
+    _ => { ret!(false) }
   }
 } |
 
-contract listHasId(@list, @id, @i, ret) = {
-  if (i >= list.length()) { ret!(false) }
-  else {
-    match list.nth(i) {
-      x => {
-        if (x.get("id") == id) { ret!(true) }
-        else { listHasId!(list, id, i + 1, *ret) }
-      }
-    }
+contract listHasEq(@head, @value, @tail, ret) = {
+  if (head == value) { ret!(true) }
+  else { listHas!(tail, value, *ret) }
+} |
+
+contract listHasId(@list, @id, ret) = {
+  match list {
+    [] => { ret!(false) }
+    [head, ...tail] => { listHasIdEq!(head, id, tail, *ret) }
+    _ => { ret!(false) }
   }
 } |
 
-contract listHasAny(@list, @a, @b, @i, ret) = {
-  if (i >= list.length()) { ret!(false) }
-  else {
-    match list.nth(i) {
-      x => {
-        if (x == a || x == b) { ret!(true) }
-        else { listHasAny!(list, a, b, i + 1, *ret) }
-      }
-    }
+contract listHasIdEq(@head, @id, @tail, ret) = {
+  if (head.get("id") == id) { ret!(true) }
+  else { listHasId!(tail, id, *ret) }
+} |
+
+contract listHasAny(@list, @a, @b, ret) = {
+  match list {
+    [] => { ret!(false) }
+    [head, ...tail] => { listHasAnyEq!(head, a, b, tail, *ret) }
+    _ => { ret!(false) }
   }
 } |
 
-contract listHas3(@list, @a, @b, @c, @i, ret) = {
-  if (i >= list.length()) { ret!(false) }
-  else {
-    match list.nth(i) {
-      x => {
-        if (x == a || x == b || x == c) { ret!(true) }
-        else { listHas3!(list, a, b, c, i + 1, *ret) }
-      }
-    }
+contract listHasAnyEq(@head, @a, @b, @tail, ret) = {
+  if (head == a || head == b) { ret!(true) }
+  else { listHasAny!(tail, a, b, *ret) }
+} |
+
+contract listHas3(@list, @a, @b, @c, ret) = {
+  match list {
+    [] => { ret!(false) }
+    [head, ...tail] => { listHas3Eq!(head, a, b, c, tail, *ret) }
+    _ => { ret!(false) }
   }
+} |
+
+contract listHas3Eq(@head, @a, @b, @c, @tail, ret) = {
+  if (head == a || head == b || head == c) { ret!(true) }
+  else { listHas3!(tail, a, b, c, *ret) }
 } |

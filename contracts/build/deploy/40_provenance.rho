@@ -14,7 +14,8 @@ new
   deployId(`rho:rchain:deployId`),
   rootCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
-  listHas, listHasId, listHasAny, listHas3
+  listHas, listHasId, listHasAny, listHas3,
+  listHasEq, listHasIdEq, listHasAnyEq, listHas3Eq
 in {
 // Deployer identity helpers. The REV address is the subject id; the public key is stored
 // only where an identity profile needs it.
@@ -61,52 +62,61 @@ contract nowHeight(ret) = {
     for (@h, _, _ <- ch) { ret!(h) }
   }
 } |
-contract listHas(@list, @value, @i, ret) = {
-  if (i >= list.length()) { ret!(false) }
-  else {
-    match list.nth(i) {
-      x => {
-        if (x == value) { ret!(true) }
-        else { listHas!(list, value, i + 1, *ret) }
-      }
-    }
+// List traversal is pattern recursion, not index arithmetic. `match list { [] => ...;
+// [head, ...tail] => ... }` is the only list walk; `...tail` binds the positional suffix.
+// The predicate helpers keep each body at dispatch depth <= 2 and return the bare boolean
+// the callers already expect.
+
+contract listHas(@list, @value, ret) = {
+  match list {
+    [] => { ret!(false) }
+    [head, ...tail] => { listHasEq!(head, value, tail, *ret) }
+    _ => { ret!(false) }
   }
 } |
 
-contract listHasId(@list, @id, @i, ret) = {
-  if (i >= list.length()) { ret!(false) }
-  else {
-    match list.nth(i) {
-      x => {
-        if (x.get("id") == id) { ret!(true) }
-        else { listHasId!(list, id, i + 1, *ret) }
-      }
-    }
+contract listHasEq(@head, @value, @tail, ret) = {
+  if (head == value) { ret!(true) }
+  else { listHas!(tail, value, *ret) }
+} |
+
+contract listHasId(@list, @id, ret) = {
+  match list {
+    [] => { ret!(false) }
+    [head, ...tail] => { listHasIdEq!(head, id, tail, *ret) }
+    _ => { ret!(false) }
   }
 } |
 
-contract listHasAny(@list, @a, @b, @i, ret) = {
-  if (i >= list.length()) { ret!(false) }
-  else {
-    match list.nth(i) {
-      x => {
-        if (x == a || x == b) { ret!(true) }
-        else { listHasAny!(list, a, b, i + 1, *ret) }
-      }
-    }
+contract listHasIdEq(@head, @id, @tail, ret) = {
+  if (head.get("id") == id) { ret!(true) }
+  else { listHasId!(tail, id, *ret) }
+} |
+
+contract listHasAny(@list, @a, @b, ret) = {
+  match list {
+    [] => { ret!(false) }
+    [head, ...tail] => { listHasAnyEq!(head, a, b, tail, *ret) }
+    _ => { ret!(false) }
   }
 } |
 
-contract listHas3(@list, @a, @b, @c, @i, ret) = {
-  if (i >= list.length()) { ret!(false) }
-  else {
-    match list.nth(i) {
-      x => {
-        if (x == a || x == b || x == c) { ret!(true) }
-        else { listHas3!(list, a, b, c, i + 1, *ret) }
-      }
-    }
+contract listHasAnyEq(@head, @a, @b, @tail, ret) = {
+  if (head == a || head == b) { ret!(true) }
+  else { listHasAny!(tail, a, b, *ret) }
+} |
+
+contract listHas3(@list, @a, @b, @c, ret) = {
+  match list {
+    [] => { ret!(false) }
+    [head, ...tail] => { listHas3Eq!(head, a, b, c, tail, *ret) }
+    _ => { ret!(false) }
   }
+} |
+
+contract listHas3Eq(@head, @a, @b, @c, @tail, ret) = {
+  if (head == a || head == b || head == c) { ret!(true) }
+  else { listHas3!(tail, a, b, c, *ret) }
 } |
 
   contract ProvenanceFactory(@"create", dId, @assetRef, @writers, ret) = {
@@ -142,7 +152,7 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
           for (@(true, who) <- aCh; @now <- hCh) {
             for (@s <- pState) {
               new wCh in {
-                listHas!(s.get("writers"), who, 0, *wCh) |
+                listHas!(s.get("writers"), who, *wCh) |
                 for (@writer <- wCh) {
                   match (writer, doc) {
                     (false, _) => { pState!(s) | ret2!((false, "not writer")) }
@@ -151,7 +161,7 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
                         pState!(s) | ret2!((false, "hash"))
                       } else {
                         new dupCh in {
-                          listHasId!(s.get("anchors"), hash, 0, *dupCh) |
+                          listHasId!(s.get("anchors"), hash, *dupCh) |
                           for (@dup <- dupCh) {
                             if (dup) {
                               pState!(s) | ret2!((false, "duplicate"))
@@ -185,7 +195,7 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
           for (@(true, who) <- aCh; @now <- hCh) {
             for (@s <- pState) {
               new wCh in {
-                listHas!(s.get("writers"), who, 0, *wCh) |
+                listHas!(s.get("writers"), who, *wCh) |
                 for (@writer <- wCh) {
                   if (not writer) {
                     pState!(s) | ret2!((false, "not writer"))
@@ -206,7 +216,7 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
       contract Provenance(@"verify", @hash, ret2) = {
         for (@s <<- pState) {
           new ch in {
-            listHasId!(s.get("anchors"), hash, 0, *ch) |
+            listHasId!(s.get("anchors"), hash, *ch) |
             for (@found <- ch) { ret2!((true, found)) }
           }
         }

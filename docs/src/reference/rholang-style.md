@@ -57,36 +57,44 @@ Verified against the pinned node (`e2d073d`) in `RNodeRust`:
 
 ## Gate
 
-`tools/check_rholang_style.py` is a heuristic brace/token scanner, not a parser. It hard-fails
-on:
+`tools/check_rholang_style.py` is a heuristic brace/token scanner, not a parser. Every rule is a
+hard failure:
 
-- a `match` in a mutating arm with no catch-all (`_`, a lone binder, or a total tuple bind);
+- dispatch depth > 2 (enclosing `if`/`match` inside the current contract);
+- any `else if` ladder;
+- a branch-only private channel that sends a boolean and branches on it;
+- a map pattern without `..._`;
+- a mutating `match` with no catch-all (`_`, a lone binder, or a total tuple bind);
 - `@` inside a match pattern;
-- a map pattern without `..._` when the match target is a `.get(...)` or state map.
+- a duplicate verdict or outcome table;
+- index recursion (`if (i >= ...length())`, `.nth(i)`).
 
-It warns on deep match nesting, `else if` chains, duplicate verdict/outcome tables, and files
-with many `if`s and no `match`. The behavioral suites and the red team remain the gate; a clean
+There is no warning channel. The behavioral suites and the red team remain the gate; a clean
 scanner is not a proof.
 
 ```bash
-make audit-control-flow   # regenerate spec/audit/rholang-control-flow.yaml
-make style-check          # enforce the hard rules, print warnings
+make audit-control-flow   # regenerate spec/audit/rholang-control-flow.yaml, exit 1 on any violation
+make style-check          # enforce the strict rules, exit 1 on any violation
 ```
 
 ## Audit result (2026-11-07)
 
-The heuristic inventory moved from 107 `if` / 92 `match` to 88 `if` / 99 `match` after the
-refactor. The guard staircases were flattened in `Scope.scopeMatches`, `Issuer.authorize`,
-`Credential.check`/`prove`, `GenRoot.register`, `IdentityFactory.resume` and `Claim.comment`.
-The verdict table is now one `match` in `finalizeValidation`; the outcome table is one helper in
-`contracts/src/lib/Status.rho`; provenance `create`/`anchor` use subset map patterns; the oracle
-`decide`/`execute` arms have explicit adjudicator/execution builders.
+The strict inventory is 68 `if` / 102 `match` with **0 errors** and `passes: true`. The helper
+chains removed every `else if`, every branch-only boolean channel, every index-recursive list
+walk, and every match deeper than dispatch depth 2.
 
-The style gate now reports no hard failures. The remaining 14 warnings are match-nesting depth
-5–8, mostly inside `KAsset.nest`/`nestProofs` and `verifyChildClaim`. Those are deferred
-state-shape/API refactors: collapsing the four `List.rho` recursors, a map-keyed anchor store,
-and merging `approve`/`reject` and `prove`/`proveValidated`. They are recorded in the inventory,
-not silently waived.
+- `List.rho` is list-pattern recursion (`[]` / `[head, ...tail]`) with predicate helpers.
+- `Scope.scopeMatches` is one five-tuple match with a `Nil` level arm; `issuerCovers` returns
+  the conjunction directly.
+- `Proof.rho` checks return the boolean expression; the prove pipelines are flat helper chains.
+- `KAsset.rho` is fully decomposed: approval/reject, proveApproved, verifyChildClaim,
+  nestChildCheck, nestCheck, nestProofs, nest, openDispute and applyDecision each use a flat
+  helper chain. Nesting is list-pattern recursion, not index arithmetic.
+- Identity reservation, claim gates, VP gates, oracle open/decide/execute and provenance
+  anchor/comment are flat helper chains with one match or one if per helper.
+
+`spec/audit/rholang-control-flow.yaml` is schema v2 and carries `passes: true` plus an empty
+`violations` list.
 
 ## Reviewer checklist
 
