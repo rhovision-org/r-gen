@@ -268,20 +268,19 @@ def claim_req(claimant: str, *, statement: str = "deck inspected",
 
 
 def cred_prove(cred_uri: str, subject_key: str, requirement: dict):
-    """Prove with a credential and take the one-shot proof once."""
+    """Prove with a credential and take the private one-shot proof once."""
     term = f"""
-new rl(`rho:registry:lookup`), c1, ret, pc, tCh,
+new rl(`rho:registry:lookup`), c1, ret, proofCh, tCh,
     dId(`rho:rchain:deployerId`), deployId(`rho:rchain:deployId`) in {{
   rl!(`{cred_uri}`, *c1) |
   for (Cred <- c1) {{
-    Cred!("prove", *dId, {enc(requirement)}, *ret) |
+    Cred!("prove", *dId, {enc(requirement)}, *ret, *proofCh) |
     for (@p <- ret) {{
       match p {{
-        (true, proofUri) => {{
-          rl!(proofUri, *pc) |
-          for (Proof <- pc) {{
+        (true, _) => {{
+          for (Proof <- proofCh) {{
             Proof!("take", *tCh) |
-            for (@t <- tCh) {{ deployId!([p, t]) }}
+            for (@t <- tCh) {{ deployId!([(true, "private"), t]) }}
           }}
         }}
         _ => {{ deployId!(p) }}
@@ -296,16 +295,15 @@ new rl(`rho:registry:lookup`), c1, ret, pc, tCh,
 def cred_prove_twice(cred_uri: str, subject_key: str, requirement: dict):
     """Prove once, then two takes in one deploy: exactly one must return the data."""
     term = f"""
-new rl(`rho:registry:lookup`), c1, ret, pc, t1, t2,
+new rl(`rho:registry:lookup`), c1, ret, proofCh, t1, t2,
     dId(`rho:rchain:deployerId`), deployId(`rho:rchain:deployId`) in {{
   rl!(`{cred_uri}`, *c1) |
   for (Cred <- c1) {{
-    Cred!("prove", *dId, {enc(requirement)}, *ret) |
+    Cred!("prove", *dId, {enc(requirement)}, *ret, *proofCh) |
     for (@p <- ret) {{
       match p {{
-        (true, proofUri) => {{
-          rl!(proofUri, *pc) |
-          for (Proof <- pc) {{
+        (true, _) => {{
+          for (Proof <- proofCh) {{
             Proof!("take", *t1) | Proof!("take", *t2) |
             for (@a <- t1; @b <- t2) {{ deployId!([a, b]) }}
           }}
@@ -325,19 +323,18 @@ def vp_prove_validated(vp_uri: str, caller: str, at_height: int | None = None):
     if at_height is None:
         height_setup = 'bd!(*hCh) | for (@height, @sender, @ts <- hCh) {'
     term = f"""
-new rl(`rho:registry:lookup`), c1, ret, pc, tCh, bd(`rho:block:data`), hCh,
+new rl(`rho:registry:lookup`), c1, ret, proofCh, tCh, bd(`rho:block:data`), hCh,
     dId(`rho:rchain:deployerId`), deployId(`rho:rchain:deployId`) in {{
   rl!(`{vp_uri}`, *c1) |
   {height_setup}
   for (VP <- c1) {{
-    VP!("proveValidated", *dId, {height_arg}, *ret) |
+    VP!("proveValidated", *dId, {height_arg}, *ret, *proofCh) |
     for (@p <- ret) {{
       match p {{
-        (true, proofUri) => {{
-          rl!(proofUri, *pc) |
-          for (Proof <- pc) {{
+        (true, _) => {{
+          for (Proof <- proofCh) {{
             Proof!("take", *tCh) |
-            for (@t <- tCh) {{ deployId!([p, t]) }}
+            for (@t <- tCh) {{ deployId!([(true, "private"), t]) }}
           }}
         }}
         _ => {{ deployId!(p) }}
@@ -352,18 +349,17 @@ new rl(`rho:registry:lookup`), c1, ret, pc, tCh, bd(`rho:block:data`), hCh,
 
 def kasset_prove_approved(kasset_uri: str, key: str):
     term = f"""
-new rl(`rho:registry:lookup`), c1, ret, pc, tCh,
+new rl(`rho:registry:lookup`), c1, ret, proofCh, tCh,
     deployId(`rho:rchain:deployId`) in {{
   rl!(`{kasset_uri}`, *c1) |
   for (KAsset <- c1) {{
-    KAsset!("proveApproved", *ret) |
+    KAsset!("proveApproved", *ret, *proofCh) |
     for (@p <- ret) {{
       match p {{
-        (true, proofUri) => {{
-          rl!(proofUri, *pc) |
-          for (Proof <- pc) {{
+        (true, _) => {{
+          for (Proof <- proofCh) {{
             Proof!("take", *tCh) |
-            for (@t <- tCh) {{ deployId!([p, t]) }}
+            for (@t <- tCh) {{ deployId!([(true, "private"), t]) }}
           }}
         }}
         _ => {{ deployId!(p) }}
@@ -428,19 +424,18 @@ def fake_uri(kind: str = "credential") -> str:
 def cred_prove_vs_revoke(cred_uri: str, subject_key: str, requirement: dict):
     """Prove and revoke the same credential in one deploy; returns [prove, revoke, take?]."""
     term = f"""
-new rl(`rho:registry:lookup`), c1, pRet, rRet, pc, tCh,
+new rl(`rho:registry:lookup`), c1, pRet, rRet, proofCh, tCh,
     dId(`rho:rchain:deployerId`), deployId(`rho:rchain:deployId`) in {{
   rl!(`{cred_uri}`, *c1) |
   for (Cred <- c1) {{
-    Cred!("prove", *dId, {enc(requirement)}, *pRet) |
+    Cred!("prove", *dId, {enc(requirement)}, *pRet, *proofCh) |
     Cred!("revoke", *dId, "race", *rRet) |
     for (@p <- pRet; @r <- rRet) {{
       match p {{
-        (true, proofUri) => {{
-          rl!(proofUri, *pc) |
-          for (Proof <- pc) {{
+        (true, _) => {{
+          for (Proof <- proofCh) {{
             Proof!("take", *tCh) |
-            for (@t <- tCh) {{ deployId!([p, r, t]) }}
+            for (@t <- tCh) {{ deployId!([(true, "private"), r, t]) }}
           }}
         }}
         _ => {{ deployId!([p, r, Nil]) }}
@@ -454,19 +449,18 @@ new rl(`rho:registry:lookup`), c1, pRet, rRet, pc, tCh,
 
 def vp_prove_vs_dispute(vp_uri: str, party: str, case_req: dict, at_height: int = 0):
     term = f"""
-new rl(`rho:registry:lookup`), c1, pRet, dRet, pc, tCh,
+new rl(`rho:registry:lookup`), c1, pRet, dRet, proofCh, tCh,
     dId(`rho:rchain:deployerId`), deployId(`rho:rchain:deployId`) in {{
   rl!(`{vp_uri}`, *c1) |
   for (VP <- c1) {{
-    VP!("proveValidated", *dId, {at_height}, *pRet) |
+    VP!("proveValidated", *dId, {at_height}, *pRet, *proofCh) |
     VP!("openDispute", *dId, {enc(case_req)}, *dRet) |
     for (@p <- pRet; @d <- dRet) {{
       match p {{
-        (true, proofUri) => {{
-          rl!(proofUri, *pc) |
-          for (Proof <- pc) {{
+        (true, _) => {{
+          for (Proof <- proofCh) {{
             Proof!("take", *tCh) |
-            for (@t <- tCh) {{ deployId!([p, d, t]) }}
+            for (@t <- tCh) {{ deployId!([(true, "private"), d, t]) }}
           }}
         }}
         _ => {{ deployId!([p, d, Nil]) }}

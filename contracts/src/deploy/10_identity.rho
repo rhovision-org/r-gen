@@ -4,6 +4,10 @@
 // r-gen decision: one directory cell is the only deliberate identity-creation serialization
 //      point; the hot-path claim/validation cells never touch it. No handles: a human-readable
 //      handle registry is an extension, because handle uniqueness is inherently global.
+//      Creation is a reservation followed by a mint and a two-step finalize, so a concurrent
+//      create sees "in progress" instead of a duplicate, and a blocked mint does not hold the
+//      directory cell. A stale reservation expires; an unreachable minted identity is never
+//      returned.
 // Placeholders: __ROOT_URI__.
 new
   IdentityFactory, IdentityDirectory, directoryState,
@@ -12,7 +16,7 @@ new
   deployerId(`rho:rchain:deployerId`),
   deployId(`rho:rchain:deployId`),
   rootCh, c1, c2, ack1, ack2, ack3,
-  authOwner, authSubject, authPubKey, nowHeight
+  authOwner, authSubject, authPubKey, nowHeight, mintIdentity, patchOr
 in {
   // @@INLINE:lib/Auth.rho@@
   // @@INLINE:lib/Time.rho@@
@@ -32,90 +36,174 @@ in {
     }
   } |
 
+  contract patchOr(@newValue, @oldValue, ret) = {
+    match newValue {
+      Nil => { ret!(oldValue) }
+      value => { ret!(value) }
+    }
+  } |
+
+  contract mintIdentity(@subject, @pk, @profile, @height, ret) = {
+    new identityState, Identity, uriCh in {
+      identityState!({
+        "uri": "",
+        "subject": subject,
+        "pubKey": pk,
+        "handle": profile.get("handle"),
+        "displayNameHash": profile.get("displayNameHash"),
+        "orgHash": profile.get("orgHash"),
+        "contactHash": profile.get("contactHash"),
+        "status": "active",
+        "createdAt": height,
+        "updatedAt": height,
+        "version": 1
+      }) |
+
+      contract Identity(@"get", ret2) = {
+        for (@i <<- identityState) { ret2!((true, i)) }
+      } |
+
+      contract Identity(@"update", dId2, @patch, ret2) = {
+        new a2, h2 in {
+          authSubject!(*dId2, *a2) |
+          nowHeight!(*h2) |
+          for (@(true, who) <- a2; @now <- h2) {
+            for (@i <- identityState) {
+              if (who != subject) {
+                identityState!(i) | ret2!((false, "not owner"))
+              } else {
+                new nCh, oCh, cCh in {
+                  patchOr!(patch.get("displayNameHash"), i.get("displayNameHash"), *nCh) |
+                  patchOr!(patch.get("orgHash"), i.get("orgHash"), *oCh) |
+                  patchOr!(patch.get("contactHash"), i.get("contactHash"), *cCh) |
+                  for (@displayName <- nCh; @org <- oCh; @contact <- cCh) {
+                    identityState!(i.set("displayNameHash", displayName)
+                                     .set("orgHash", org)
+                                     .set("contactHash", contact)
+                                     .set("updatedAt", now)
+                                     .set("version", i.get("version") + 1)) |
+                    ret2!((true, Nil))
+                  }
+                }
+              }
+            }
+          }
+        }
+      } |
+
+      rs!(bundle+{*Identity}, *uriCh) |
+      for (@uri <- uriCh) {
+        for (@i2 <- identityState) { identityState!(i2.set("uri", uri)) } |
+        for (@s <- directoryState) {
+          match s.get("pending").get(subject) {
+            Nil => { directoryState!(s) | ret!((false, "reservation lost")) }
+            p => {
+              match p.get("status") {
+                "reserving" => {
+                  directoryState!(s.set("pending", s.get("pending").set(subject, {
+                    "status": "minted", "uri": uri, "expiresAt": p.get("expiresAt")}))
+                    .set("version", s.get("version") + 1)) |
+                  for (@s2 <- directoryState) {
+                    match (s2.get("byAddress").get(subject), s2.get("pending").get(subject)) {
+                      (Nil, p2) => {
+                        if (p2.get("uri") == uri) {
+                          directoryState!(s2.set("byAddress",
+                                                 s2.get("byAddress").set(subject, uri))
+                            .set("pending", s2.get("pending").set(subject, {
+                              "status": "active", "uri": uri, "expiresAt": 0}))
+                            .set("version", s2.get("version") + 1)) |
+                          ret!((true, uri))
+                        } else { directoryState!(s2) | ret!((false, "superseded")) }
+                      }
+                      (u, _) => { directoryState!(s2) | ret!((false, "duplicate")) }
+                    }
+                  }
+                }
+                _ => { directoryState!(s) | ret!((false, "superseded")) }
+              }
+            }
+          }
+        }
+      }
+    }
+  } |
+
   contract IdentityFactory(@"create", dId, @profile, ret) = {
     new aCh, hCh in {
       authOwner!(*dId, *aCh) |
       nowHeight!(*hCh) |
       for (@(true, subject, pk) <- aCh; @height <- hCh) {
         for (@s <- directoryState) {
-          match s.get("byAddress").get(subject) {
-            Nil => {
-              new identityState, Identity, uriCh in {
-                identityState!({
-                  "uri": "",
-                  "subject": subject,
-                  "pubKey": pk,
-                  "handle": profile.get("handle"),
-                  "displayNameHash": profile.get("displayNameHash"),
-                  "orgHash": profile.get("orgHash"),
-                  "contactHash": profile.get("contactHash"),
-                  "status": "active",
-                  "createdAt": height,
-                  "updatedAt": height,
-                  "version": 1
-                }) |
-                contract IdentityFactory(@"resume", dId3, @subject, ret3) = {
-                  new a3 in {
-                    authSubject!(*dId3, *a3) |
-                    for (@(true, who) <- a3) {
-                      if (who != subject) {
-                        ret3!((false, "not subject"))
-                      } else {
-                        for (@s <- directoryState) {
-                          match s.get("pending").get(subject) {
-                            Nil => { directoryState!(s) | ret3!((false, "no pending")) }
-                            uri => {
-                              directoryState!(s.set("byAddress", s.get("byAddress").set(subject, uri))
-                                                .set("version", s.get("version") + 1)) |
-                              ret3!((true, uri))
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                } |
-
-                contract Identity(@"get", ret2) = {
-                  for (@i <<- identityState) { ret2!((true, i)) }
-                } |
-                contract Identity(@"update", dId2, @patch, ret2) = {
-                  new a2, h2 in {
-                    authSubject!(*dId2, *a2) |
-                    nowHeight!(*h2) |
-                    for (@(true, who) <- a2; @now <- h2) {
-                      for (@i <- identityState) {
-                        if (who != subject) {
-                          identityState!(i) | ret2!((false, "not owner"))
-                        } else {
-                          match i.set("displayNameHash", patch.get("displayNameHash"))
-                                   .set("orgHash", patch.get("orgHash"))
-                                   .set("contactHash", patch.get("contactHash"))
-                                   .set("updatedAt", now)
-                                   .set("version", i.get("version") + 1) {
-                            i2 => { identityState!(i2) | ret2!((true, Nil)) }
-                          }
-                        }
-                      }
-                    }
-                  }
-                } |
-                rs!(bundle+{*Identity}, *uriCh) |
-                for (@uri <- uriCh) {
-                  for (@i2 <- identityState) {
-                    identityState!(i2.set("uri", uri))
-                  } |
-                  directoryState!(s.set("pending", s.get("pending").set(subject, uri))
-                                   .set("version", s.get("version") + 1)) |
-                  for (@s2 <- directoryState) {
-                    directoryState!(s2.set("byAddress", s2.get("byAddress").set(subject, uri))
-                                      .set("version", s2.get("version") + 1)) |
-                    ret!((true, uri))
+          match (s.get("byAddress").get(subject), s.get("pending").get(subject)) {
+            (Nil, Nil) => {
+              directoryState!(s.set("pending", s.get("pending").set(subject, {
+                "status": "reserving", "uri": Nil, "expiresAt": height + 100}))
+                .set("version", s.get("version") + 1)) |
+              mintIdentity!(subject, pk, profile, height, *ret)
+            }
+            (Nil, p) => {
+              match p.get("status") {
+                "reserving" => {
+                  if (p.get("expiresAt") > height) {
+                    directoryState!(s) | ret!((false, "in progress"))
+                  } else {
+                    directoryState!(s.set("pending", s.get("pending").set(subject, {
+                      "status": "reserving", "uri": Nil, "expiresAt": height + 100}))
+                      .set("version", s.get("version") + 1)) |
+                    mintIdentity!(subject, pk, profile, height, *ret)
                   }
                 }
+                _ => { directoryState!(s) | ret!((false, "in progress")) }
               }
             }
-            uri => { directoryState!(s) | ret!((false, "duplicate")) }
+            (uri, _) => { directoryState!(s) | ret!((false, "duplicate")) }
+          }
+        }
+      }
+    }
+  } |
+
+  contract IdentityFactory(@"resume", dId3, @subject, ret3) = {
+    new a3, h3 in {
+      authSubject!(*dId3, *a3) |
+      nowHeight!(*h3) |
+      for (@(true, who) <- a3; @now <- h3) {
+        if (who != subject) {
+          ret3!((false, "not subject"))
+        } else {
+          for (@s <- directoryState) {
+            match (s.get("byAddress").get(subject), s.get("pending").get(subject)) {
+              (_, Nil) => { directoryState!(s) | ret3!((false, "no pending")) }
+              (uri, p) => {
+                match p.get("status") {
+                  "active" => { directoryState!(s) | ret3!((true, p.get("uri"))) }
+                  "minted" => {
+                    match uri {
+                      Nil => {
+                        directoryState!(s.set("byAddress",
+                                              s.get("byAddress").set(subject, p.get("uri")))
+                          .set("pending", s.get("pending").set(subject, {
+                            "status": "active", "uri": p.get("uri"), "expiresAt": 0}))
+                          .set("version", s.get("version") + 1)) |
+                        ret3!((true, p.get("uri")))
+                      }
+                      existing => { directoryState!(s) | ret3!((true, existing)) }
+                    }
+                  }
+                  "reserving" => {
+                    if (p.get("expiresAt") > now) {
+                      directoryState!(s) | ret3!((false, "in progress"))
+                    } else {
+                      directoryState!(s.set("pending", s.get("pending").set(subject, Nil))
+                        .set("version", s.get("version") + 1)) |
+                      ret3!((false, "expired reservation; retry create"))
+                    }
+                  }
+                  _ => { directoryState!(s) | ret3!((false, "no pending")) }
+                }
+              }
+              _ => { directoryState!(s) | ret3!((false, "no pending")) }
+            }
           }
         }
       }

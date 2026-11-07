@@ -1,6 +1,31 @@
 # Status and limits
 
-**Devnet-only, no real value. Phase 1 audit recorded; Phase 2 partial; Phase 3 pending; independent review pending.**
+**Devnet-only, no real value. Phase 1 audit recorded; Phase 2 and Phase 3 repair in progress; independent review pending.**
+
+## Verified on 2026-11-07
+
+- Contracts hardened for the workflow HAZOP: identity reservation and subject-only resume; claim
+  write-ahead validating receipt and resume; private proof capabilities; VP validator-dispute
+  auth; VP and oracle deadline guards; claim credential attribution; Nil comment window;
+  credential field validation; claim `subjectRef`; provenance creator-in-writers; identity
+  update preserves omitted fields; oracle `execute` retries an `executing` case.
+- Ten behavioural suites pass after reinstall: identity, credentials, claim, K-asset, value,
+  oracle, provenance, integration, vertical slice, and behavioural race regression.
+- Lean: 44 files, no `sorry`/axiom; 233 audited theorems axiom-clean; 123 Pareto checks covered;
+  the new identity, claim-mint, proof-capability, nest-crash, deadline and composed-system
+  modules build.
+- Deploy-semantics probe: reduction errors roll back; a blocked continuation commits the
+  consumed cell. Cross-cell fixes therefore release the cell before the callee.
+- Red team: RT-004/006/007/008/009/020/021/022/023 fixed; RT-011/012/013 accepted with reasons;
+  RT-001 not reproduced but removed by the reservation protocol.
+- Workflow HAZOP: 25 rows over 9 nodes; `tools/check_hazop_runs.py` passes. The contract-node
+  worksheet remains 146 rows.
+- Guard bridge: 16 changed arms; source atoms and flow entries agree; six `owed` guard_eq
+  warnings.
+- Rholang control-flow audit: 88 `if` / 99 `match` after the refactor (from 107 / 92); guard
+  staircases flattened, verdict/outcome tables centralized, provenance map patterns added.
+  `make style-check` has no hard failures; 14 deep-nesting warnings remain, mostly in
+  `KAsset.nest`. The inventory is `spec/audit/rholang-control-flow.yaml`.
 
 ## Verified on 2026-11-04
 

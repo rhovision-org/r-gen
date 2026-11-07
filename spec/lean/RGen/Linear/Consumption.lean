@@ -77,3 +77,64 @@ theorem core_proof_cells_consumed_before_commit {σ π : Type} {seen : List Cell
   Action.commit_requires_declared_proofs h
 
 end RGen
+
+namespace RGen
+
+/-- A proof token is a cell generation. Two arms that consume the same token are a reuse. -/
+structure ProofToken where
+  cell : CellId
+  gen : Nat
+  deriving DecidableEq, Repr
+
+inductive TokenAction where
+  | issue (t : ProofToken)
+  | consume (t : ProofToken)
+  | commit (t : ProofToken)
+
+/-- Issuance is unique; consumption requires an issued token and is unique; a commit
+requires the token to have been consumed. -/
+def TokenWellFormedFrom (issued consumed : List ProofToken) : List TokenAction → Prop
+  | [] => True
+  | .issue t :: rest => t ∉ issued ∧ TokenWellFormedFrom (t :: issued) consumed rest
+  | .consume t :: rest =>
+      t ∈ issued ∧ t ∉ consumed ∧ TokenWellFormedFrom issued (t :: consumed) rest
+  | .commit t :: rest => t ∈ consumed ∧ TokenWellFormedFrom issued consumed rest
+
+/-- No token is consumed twice in the suffix. -/
+def NoDoubleConsumeFrom (consumed : List ProofToken) : List TokenAction → Prop
+  | [] => True
+  | .consume t :: rest => t ∉ consumed ∧ NoDoubleConsumeFrom (t :: consumed) rest
+  | _ :: rest => NoDoubleConsumeFrom consumed rest
+
+theorem wf_no_double_consume {issued consumed : List ProofToken}
+    {trace : List TokenAction} (h : TokenWellFormedFrom issued consumed trace) :
+    NoDoubleConsumeFrom consumed trace := by
+  induction trace generalizing issued consumed with
+  | nil => simp [NoDoubleConsumeFrom]
+  | cons a rest ih =>
+      cases a with
+      | issue t =>
+          unfold TokenWellFormedFrom at h
+          exact ih h.2
+      | consume t =>
+          unfold TokenWellFormedFrom at h
+          exact ⟨h.2.1, ih h.2.2⟩
+      | commit t =>
+          unfold TokenWellFormedFrom at h
+          exact ih h.2
+
+/-- No proof token is consumed by two arms in one well-formed trace. -/
+theorem core_no_proof_reuse_across_arms {trace : List TokenAction}
+    (h : TokenWellFormedFrom [] [] trace) : NoDoubleConsumeFrom [] trace :=
+  wf_no_double_consume h
+
+theorem commit_requires_consumed {issued consumed : List ProofToken}
+    {t : ProofToken} {rest : List TokenAction}
+    (h : TokenWellFormedFrom issued consumed (.commit t :: rest)) : t ∈ consumed :=
+  h.1
+
+theorem core_proof_token_unique_in_trace {trace : List TokenAction}
+    (h : TokenWellFormedFrom [] [] trace) : NoDoubleConsumeFrom [] trace :=
+  core_no_proof_reuse_across_arms h
+
+end RGen

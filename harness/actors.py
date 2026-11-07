@@ -33,7 +33,8 @@ def invoke(uri: str, arm: str, args=None, key: str = "deployer",
 
 
 def resolve(component: str, key: str = "deployer"):
-    reply = invoke(root_uri(), "resolve", [component, 1], key=key)
+    root_key = component if component.startswith("component:") else f"component:{component}"
+    reply = invoke(root_uri(), "resolve", [root_key], key=key)
     if not (isinstance(reply, tuple) and reply[0] is True):
         raise AssertionError(f"resolve {component}: {reply!r}")
     return reply[1]

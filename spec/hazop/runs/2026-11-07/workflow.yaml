@@ -1,0 +1,454 @@
+schema: rgen.hazop-workflow/v1
+run_id: 2026-11-07
+scope: end-to-end workflow and cross-node interactions
+rows:
+  - id: WF-001
+    node: wf-onboard
+    guide_word: Reverse
+    parameter: identity create vs resume
+    deviation: create commits pending and byAddress in two directory consumes; resume is replayable
+    cause: the duplicate guard read only byAddress, and pending was never cleared
+    consequence: a concurrent create or a replay can diverge the pending and byAddress maps
+    safeguard: reservation + mint + two-step finalize; resume is subject-only and idempotent
+    safeguard_status: holds
+    severity: S3
+    likelihood: B
+    evidence: contracts/src/deploy/10_identity.rho:100-230
+    trigger: two creates for one address, or resume after a committed identity
+    falsifier: ReservedDirectory.at_most_one_identity_per_address and RT-001
+    confidence: high
+    authors: [analyst-identity-credentials, analyst-vp-provenance-workflow]
+    finding: RGA-031
+    disposition: fixed
+  - id: WF-002
+    node: wf-onboard
+    guide_word: Other than
+    parameter: credential issue subject
+    deviation: the generator can issue a credential to an address with no identity
+    cause: issue does not consult IdentityDirectory
+    consequence: credentials exist for subjects without a profile
+    safeguard: issuance is genesis-issuer only; identity is not a prerequisite by design
+    safeguard_status: partial
+    severity: S3
+    likelihood: C
+    evidence: contracts/src/deploy/11_credentials.rho:119-160
+    trigger: genesis issues to an unknown REV address
+    falsifier: unit_credentials; documented in RR-09
+    confidence: high
+    authors: [analyst-identity-credentials]
+    finding: RGA-028
+    disposition: accepted
+  - id: WF-003
+    node: wf-propose-claim
+    guide_word: No/Not
+    parameter: valuePropositionRef
+    deviation: claim create stores a VP reference without verifying it
+    cause: claimReqOk does not resolve the reference
+    consequence: a claim can reference a forged or disputed VP; approval later gates on a VP proof
+    safeguard: KAsset.checkApprovalVp verifies the VP and consumes a validated proof
+    safeguard_status: partial
+    severity: S2
+    likelihood: A
+    evidence: contracts/src/deploy/20_claim.rho:110-112
+    trigger: create a claim with valuePropositionRef to a fake URI, then validate
+    falsifier: unit_claim + KAsset approval with a VP proof
+    confidence: high
+    authors: [analyst-claim-kasset-oracle, analyst-vp-provenance-workflow]
+    finding: RGA-046
+    disposition: accepted
+  - id: WF-004
+    node: wf-propose-claim
+    guide_word: Other than
+    parameter: subjectRef
+    deviation: subjectRef was stored as an arbitrary value
+    cause: claimReqOk did not inspect the field
+    consequence: a client could receive a non-map subjectRef
+    safeguard: map pattern with a non-empty uri, or Nil
+    safeguard_status: holds
+    severity: S3
+    likelihood: A
+    evidence: contracts/src/deploy/20_claim.rho:30-55
+    trigger: create with subjectRef = "not-a-map"
+    falsifier: RT-007
+    confidence: high
+    authors: [analyst-claim-kasset-oracle]
+    finding: RT-007
+    disposition: fixed
+  - id: WF-005
+    node: wf-validate-mint
+    guide_word: Other than
+    parameter: VP status at validate
+    deviation: validation mints a K-Asset whose VP reference has not been checked
+    cause: validate checks the credential but not the VP
+    consequence: a K-Asset can exist in validated state with a disputed VP; approval then refuses
+    safeguard: checkApprovalVp requires a validated VP proof at approval
+    safeguard_status: partial
+    severity: S2
+    likelihood: A
+    evidence: contracts/src/deploy/20_claim.rho:230-330
+    trigger: validate a claim whose VP is disputed or never validated
+    falsifier: unit_claim + approval refusal
+    confidence: high
+    authors: [analyst-claim-kasset-oracle, analyst-vp-provenance-workflow]
+    finding: RGA-046
+    disposition: accepted
+  - id: WF-006
+    node: wf-validate-mint
+    guide_word: Other than
+    parameter: validation.credentialUri
+    deviation: the recorded validator credential came from the caller's map, not the proved URI
+    cause: finalizeValidation used validation.get("credentialUri")
+    consequence: fabricated validation provenance
+    safeguard: finalizeValidation receives the proved credentialUri and records it
+    safeguard_status: holds
+    severity: S2
+    likelihood: B
+    evidence: contracts/src/deploy/20_claim.rho:230-290
+    trigger: prove credential Y but pass validation.credentialUri = X
+    falsifier: RT-023
+    confidence: high
+    authors: [analyst-claim-kasset-oracle, redteam-operator]
+    finding: RT-023
+    disposition: fixed
+  - id: WF-007
+    node: wf-validate-mint
+    guide_word: Partial commit
+    parameter: claim write vs K-Asset mint
+    deviation: the old arm minted before the claim write and held the claim cell across the mint
+    cause: makeKAsset preceded the receipt write
+    consequence: a blocked mint could lose the claim cell or leave an orphan
+    safeguard: write-ahead validating receipt, release the cell, mint, commit; resume re-drives
+    safeguard_status: holds
+    severity: S2
+    likelihood: B
+    evidence: contracts/src/deploy/20_claim.rho:230-330
+    trigger: makeKAsset blocks after the claim guard
+    falsifier: ClaimMintState.at_most_one_reachable_kasset_per_claim and probe_deploy_semantics
+    confidence: high
+    authors: [analyst-claim-kasset-oracle, redteam-operator]
+    finding: RGA-032
+    disposition: fixed
+  - id: WF-008
+    node: wf-validate-mint
+    guide_word: Late
+    parameter: self-validation arm order
+    deviation: a late self-validation matches the self-validation arm before the expired arm
+    cause: "the (open, true, _) arm precedes (open, _, true)"
+    consequence: the claim stays open instead of expiring
+    safeguard: a later expire call; validation still refuses
+    safeguard_status: partial
+    severity: S4
+    likelihood: B
+    evidence: contracts/src/deploy/20_claim.rho:330-380
+    trigger: claimant calls validate after the deadline
+    falsifier: unit_claim late-claim
+    confidence: medium
+    authors: [analyst-claim-kasset-oracle]
+    finding: RGA-026
+    disposition: accepted
+  - id: WF-009
+    node: wf-dispute-decide-execute
+    guide_word: Reverse
+    parameter: VP dispute opener
+    deviation: openDispute passed *dId (proposer) instead of *dId2 (caller)
+    cause: copy of the K-Asset pattern with the outer proposer id
+    consequence: a validator could not open a VP dispute
+    safeguard: pass *dId2; parties excludes Nil
+    safeguard_status: holds
+    severity: S2
+    likelihood: A
+    evidence: contracts/src/deploy/22_value.rho:225-275
+    trigger: validator calls ValueProposition.openDispute
+    falsifier: RT-020
+    confidence: high
+    authors: [analyst-vp-provenance-workflow, redteam-operator]
+    finding: RT-020
+    disposition: fixed
+  - id: WF-010
+    node: wf-dispute-decide-execute
+    guide_word: Late
+    parameter: oracle decide deadline
+    deviation: decide had no now <= deadline guard
+    cause: the match tested status and adjudicator only
+    consequence: an overdue case remained decidable until expire was called
+    safeguard: decide refuses when now > deadlineHeight; expire remains available
+    safeguard_status: holds
+    severity: S2
+    likelihood: B
+    evidence: contracts/src/deploy/30_oracle.rho:118-150
+    trigger: adjudicator decides after the case deadline
+    falsifier: RT-022 and Deadline.deadline_boundary_deterministic
+    confidence: high
+    authors: [analyst-claim-kasset-oracle, redteam-operator]
+    finding: RT-022
+    disposition: fixed
+  - id: WF-011
+    node: wf-dispute-decide-execute
+    guide_word: More
+    parameter: execute retries
+    deviation: a failed apply resets to decided; attempts is hardcoded 1
+    cause: the failure branch does not increment attempts
+    consequence: a permanently failing apply can be retried forever and the receipt undercounts
+    safeguard: Apply.applyDecision is idempotent; execute now also retries an executing case
+    safeguard_status: partial
+    severity: S3
+    likelihood: B
+    evidence: contracts/src/deploy/30_oracle.rho:180-240
+    trigger: execute a case whose apply always fails
+    falsifier: unit_oracle execute retry
+    confidence: medium
+    authors: [analyst-claim-kasset-oracle]
+    finding: RGA-024
+    disposition: accepted
+  - id: WF-012
+    node: wf-dispute-decide-execute
+    guide_word: Where else
+    parameter: decided-but-unexecutable close
+    deviation: close requires executed or expired; a decided case with a failing apply cannot close
+    cause: no decided -> closed path
+    consequence: a decided case can be stuck
+    safeguard: execute is retryable; no terminal failure path
+    safeguard_status: partial
+    severity: S3
+    likelihood: B
+    evidence: contracts/src/deploy/30_oracle.rho:250-285
+    trigger: execute fails, then call close
+    falsifier: unit_oracle close refusal
+    confidence: high
+    authors: [analyst-claim-kasset-oracle]
+    finding: RGA-024
+    disposition: accepted
+  - id: WF-013
+    node: wf-closeout-provenance
+    guide_word: No/Not
+    parameter: assetRef
+    deviation: provenance accepts any assetRef.uri
+    cause: no registry cross-check
+    consequence: a provenance record can be created for a forged asset
+    safeguard: provenance is advisory and is not a commit authority in core
+    safeguard_status: partial
+    severity: S2
+    likelihood: A
+    evidence: contracts/src/deploy/40_provenance.rho:23-40
+    trigger: create provenance for rho:id:fake
+    falsifier: RT-011
+    confidence: high
+    authors: [analyst-vp-provenance-workflow, redteam-operator]
+    finding: RGA-022
+    disposition: accepted
+  - id: WF-014
+    node: wf-closeout-provenance
+    guide_word: More
+    parameter: one cell per asset
+    deviation: multiple provenance cells can exist for one assetRef
+    cause: no per-asset registry
+    consequence: parallel anchor chains
+    safeguard: provenance is advisory
+    safeguard_status: partial
+    severity: S2
+    likelihood: A
+    evidence: contracts/src/deploy/40_provenance.rho:23-40
+    trigger: create provenance twice for one asset
+    falsifier: unit_provenance
+    confidence: high
+    authors: [analyst-vp-provenance-workflow]
+    finding: RGA-022
+    disposition: accepted
+  - id: WF-015
+    node: wf-closeout-provenance
+    guide_word: Less
+    parameter: comment hash and parentHash
+    deviation: comment accepts an empty hash; parentHash may reference a future anchor
+    cause: comment has no hash guard; anchor does not resolve parentHash
+    consequence: empty comments and forward graph edges
+    safeguard: none
+    safeguard_status: none
+    severity: S3
+    likelihood: A
+    evidence: contracts/src/deploy/40_provenance.rho:89-121
+    trigger: comment with {} or anchor with a future parentHash
+    falsifier: unit_provenance
+    confidence: high
+    authors: [analyst-vp-provenance-workflow]
+    finding: RGA-022
+    disposition: open
+  - id: WF-016
+    node: wf-recovery
+    guide_word: Other than
+    parameter: Claim.resume caller
+    deviation: resume authenticated but ignored the caller
+    cause: who was bound but never compared
+    consequence: any deployer could finalize a validating claim
+    safeguard: claimant or receipt validator only
+    safeguard_status: holds
+    severity: S3
+    likelihood: B
+    evidence: contracts/src/deploy/20_claim.rho:370-430
+    trigger: an unrelated subject calls resume on a validating claim
+    falsifier: RT-005 (unreachable without a blocked mint); resume auth unit test
+    confidence: high
+    authors: [analyst-claim-kasset-oracle]
+    finding: RGA-036
+    disposition: fixed
+  - id: WF-017
+    node: wf-recovery
+    guide_word: Partial commit
+    parameter: nest proof burn
+    deviation: a failed final parent check consumes the child proofs
+    cause: proofs were taken before the parent commit was known to succeed
+    consequence: the nest attempt pays phlo and must re-mint; no third party can burn the proof
+    safeguard: private proof capability; proveApproved is read-only and re-mintable
+    safeguard_status: partial
+    severity: S3
+    likelihood: B
+    evidence: contracts/src/lib/KAsset.rho:279-330
+    trigger: a parent changes between the peek pre-pass and the final check
+    falsifier: NestCrash.crash_release_all and RT-003
+    confidence: high
+    authors: [analyst-claim-kasset-oracle, redteam-operator]
+    finding: RGA-033
+    disposition: accepted
+  - id: WF-018
+    node: xnode-authority
+    guide_word: Other than
+    parameter: openCaseCheck credential status
+    deviation: open checks the adjudicator subject but not revocation or expiry
+    cause: openCaseCheck reads Credential.get and compares subject only
+    consequence: a case can be opened with a revoked adjudicator; decide later refuses
+    safeguard: decide re-proves the credential
+    safeguard_status: partial
+    severity: S3
+    likelihood: B
+    evidence: contracts/src/deploy/30_oracle.rho:27-55
+    trigger: revoke the adjudicator credential then open a case
+    falsifier: unit_oracle forged adjudicator
+    confidence: high
+    authors: [analyst-claim-kasset-oracle]
+    finding: RGA-045
+    disposition: accepted
+  - id: WF-019
+    node: xnode-registry
+    guide_word: Other than
+    parameter: factory verify status
+    deviation: factory verify records do not carry status
+    cause: the registry is a static issuance index
+    consequence: a client gating on verify alone treats a revoked credential as valid
+    safeguard: core consumers use prove/check/get; verify is existence-only
+    safeguard_status: partial
+    severity: S3
+    likelihood: A
+    evidence: contracts/src/deploy/11_credentials.rho:88-99
+    trigger: revoke a credential then call CredentialFactory.verify
+    falsifier: unit_credentials registry verify
+    confidence: high
+    authors: [analyst-identity-credentials]
+    finding: RGA-027
+    disposition: accepted
+  - id: WF-020
+    node: xnode-time
+    guide_word: Late
+    parameter: proof snapshot vs revocation
+    deviation: a proof is a height-bound snapshot; revocation after the mint does not invalidate it
+    cause: checkCredentialProof compares subject, credentialUri and atHeight
+    consequence: a pre-revocation proof remains valid for that height
+    safeguard: every core consumer checks atHeight == now, so a proof cannot move to a later event
+    safeguard_status: holds
+    severity: S3
+    likelihood: B
+    evidence: contracts/src/lib/Proof.rho:1-40
+    trigger: mint a proof at H, revoke at H+1, try to use it at H+1
+    falsifier: concurrency_core prove-vs-revoke
+    confidence: high
+    authors: [analyst-identity-credentials]
+    finding: RGA-002
+    disposition: accepted
+  - id: WF-021
+    node: xnode-time
+    guide_word: Other than
+    parameter: oracle open parties
+    deviation: the public factory accepts caller-chosen parties and a free subjectRef
+    cause: open checks the opener, non-empty parties, and a future deadline, not registry-derived parties
+    consequence: a fake case can exist; its dummy Apply cannot touch a real subject
+    safeguard: opener must be in parties; adjudicator must not be a party; real disputes use the private Apply
+    safeguard_status: partial
+    severity: S3
+    likelihood: B
+    evidence: contracts/src/deploy/30_oracle.rho:55-120
+    trigger: open a case with a fake subjectRef and a dummy Apply
+    falsifier: RT-010
+    confidence: high
+    authors: [analyst-claim-kasset-oracle, analyst-vp-provenance-workflow]
+    finding: RGA-023
+    disposition: accepted
+  - id: WF-022
+    node: wf-onboard
+    guide_word: Less
+    parameter: identity update patch
+    deviation: omitting a profile field cleared it
+    cause: update wrote patch.get(...) verbatim
+    consequence: silent loss of displayNameHash/orgHash/contactHash
+    safeguard: patchOr keeps the old value when the patch field is Nil
+    safeguard_status: holds
+    severity: S2
+    likelihood: A
+    evidence: contracts/src/deploy/10_identity.rho:80-115
+    trigger: update with only orgHash
+    falsifier: unit_identity owner update
+    confidence: high
+    authors: [analyst-identity-credentials, analyst-vp-provenance-workflow]
+    finding: RGA-047
+    disposition: fixed
+  - id: WF-023
+    node: wf-onboard
+    guide_word: Less
+    parameter: credential request fields
+    deviation: issue accepted a missing level, making check/prove evaluate Nil < Int
+    cause: issue did not validate the request
+    consequence: an unprovable credential
+    safeguard: credentialReqOk; scopeMatches is total on Nil
+    safeguard_status: holds
+    severity: S2
+    likelihood: B
+    evidence: contracts/src/deploy/11_credentials.rho:26-45
+    trigger: issue without level, then prove
+    falsifier: RT-008
+    confidence: high
+    authors: [analyst-identity-credentials, redteam-operator]
+    finding: RT-008
+    disposition: fixed
+  - id: WF-024
+    node: wf-validate-mint
+    guide_word: Late
+    parameter: comment window
+    deviation: a Nil comment window reached Int > Nil and errored the deploy
+    cause: comment compared now with s.get("commentUntilHeight") directly
+    consequence: comment was unusable for that claim
+    safeguard: Nil window normalizes to the deadline; a legacy Nil refuses cleanly
+    safeguard_status: holds
+    severity: S3
+    likelihood: A
+    evidence: contracts/src/deploy/20_claim.rho:145-180
+    trigger: create with commentUntilHeight = Nil, then comment
+    falsifier: RT-006 and Deadline.nil_comment_window_total
+    confidence: high
+    authors: [analyst-claim-kasset-oracle, redteam-operator]
+    finding: RT-006
+    disposition: fixed
+  - id: WF-025
+    node: wf-dispute-decide-execute
+    guide_word: More
+    parameter: proof bearer token
+    deviation: a public proof URI could be taken by a third party
+    cause: prove inserted bundle+{*Proof} into the registry
+    consequence: a third party could burn an in-flight proof
+    safeguard: proofs are sent only on the caller's private channel; no registry insert
+    safeguard_status: holds
+    severity: S2
+    likelihood: B
+    evidence: contracts/src/lib/Proof.rho:1-35
+    trigger: resolve a proof URI and take it before the intended consumer
+    falsifier: RT-004 and ProofCap.private_capability_no_bearer_dos
+    confidence: high
+    authors: [analyst-claim-kasset-oracle, redteam-operator]
+    finding: RT-004
+    disposition: fixed

@@ -58,7 +58,7 @@ contract authPubKey(dId, ret) = {
 contract nowHeight(ret) = {
   new bd(`rho:block:data`), ch in {
     bd!(*ch) |
-    for (@h, @sender, @timestamp <- ch) { ret!(h) }
+    for (@h, _, _ <- ch) { ret!(h) }
   }
 } |
 contract listHas(@list, @value, @i, ret) = {
@@ -113,14 +113,15 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
     new aCh in {
     authOwner!(*dId, *aCh) |
     for (@(true, creator, pk) <- aCh) {
-      if (writers.length() == 0 || assetRef.get("uri") == Nil
-          || assetRef.get("uri") == "") { ret!((false, "writers or asset")) }
-      else {
+      match assetRef {
+        {"uri": uri, ..._} => {
+          if (writers.length() == 0 || uri == "") { ret!((false, "writers or asset")) }
+          else {
       new pState, Provenance, uriCh in {
       pState!({
         "uri": "",
         "assetRef": assetRef,
-        "writers": writers,
+        "writers": [creator] ++ writers,
         "anchors": [],
         "comments": [],
         "version": 1
@@ -143,30 +144,32 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
               new wCh in {
                 listHas!(s.get("writers"), who, 0, *wCh) |
                 for (@writer <- wCh) {
-                  if (not writer) {
-                    pState!(s) | ret2!((false, "not writer"))
-                  } else {
-                    if (doc.get("hash") == Nil || doc.get("hash") == "") {
-                      pState!(s) | ret2!((false, "hash"))
-                    } else {
-                      new dupCh in {
-                        listHasId!(s.get("anchors"), doc.get("hash"), 0, *dupCh) |
-                        for (@dup <- dupCh) {
-                          if (dup) {
-                            pState!(s) | ret2!((false, "duplicate"))
-                          } else {
-                            pState!(s.set("anchors", s.get("anchors") ++ [{
-                              "id": doc.get("hash"),
-                              "kind": doc.get("kind"),
-                              "hash": doc.get("hash"),
-                              "parentHash": doc.get("parentHash"),
-                              "by": who, "at": now}])
-                              .set("version", s.get("version") + 1)) |
-                            ret2!((true, Nil))
+                  match (writer, doc) {
+                    (false, _) => { pState!(s) | ret2!((false, "not writer")) }
+                    (true, {"hash": hash, ..._}) => {
+                      if (hash == Nil || hash == "") {
+                        pState!(s) | ret2!((false, "hash"))
+                      } else {
+                        new dupCh in {
+                          listHasId!(s.get("anchors"), hash, 0, *dupCh) |
+                          for (@dup <- dupCh) {
+                            if (dup) {
+                              pState!(s) | ret2!((false, "duplicate"))
+                            } else {
+                              pState!(s.set("anchors", s.get("anchors") ++ [{
+                                "id": hash,
+                                "kind": doc.get("kind"),
+                                "hash": hash,
+                                "parentHash": doc.get("parentHash"),
+                                "by": who, "at": now}])
+                                .set("version", s.get("version") + 1)) |
+                              ret2!((true, Nil))
+                            }
                           }
                         }
                       }
                     }
+                    _ => { pState!(s) | ret2!((false, "hash")) }
                   }
                 }
               }
@@ -215,6 +218,9 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
         ret!((true, {"id": uri, "uri": uri}))
       }
       }
+      }
+      }
+      _ => { ret!((false, "writers or asset")) }
       }
     }
     }

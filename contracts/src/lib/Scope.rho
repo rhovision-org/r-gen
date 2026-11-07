@@ -15,19 +15,15 @@ contract scopeMatches(@cred, @req, ret) = {
       match (cred.get("ctype"), cred.get("discipline"), cred.get("jurisdiction"),
              cred.get("role"), cred.get("level")) {
         (ctype, discipline, jurisdiction, role, level) => {
-          if (ctype != req.get("ctype") && ctype != "*") { ret!(false) }
-          else {
-            if (discipline != req.get("discipline") && discipline != "*") { ret!(false) }
-            else {
-              if (jurisdiction != req.get("jurisdiction")
-                  && jurisdiction != "global" && jurisdiction != "*") { ret!(false) }
-              else {
-                if (role != req.get("role") && role != "*") { ret!(false) }
-                else {
-                  if (level < ml) { ret!(false) }
-                  else { ret!(true) }
-                }
-              }
+          match level {
+            Nil => { ret!(false) }
+            l => {
+              ret!((ctype == req.get("ctype") || ctype == "*")
+                && (discipline == req.get("discipline") || discipline == "*")
+                && (jurisdiction == req.get("jurisdiction")
+                    || jurisdiction == "global" || jurisdiction == "*")
+                && (role == req.get("role") || role == "*")
+                && l >= ml)
             }
           }
         }

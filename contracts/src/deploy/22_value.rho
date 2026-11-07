@@ -14,11 +14,12 @@ new
   rootCh, cfCh, ofCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
   CredentialFactory, OracleFactory,
-  vpReqOk, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
+  vpReqOk, outcomeStatus, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
 in {
   // @@INLINE:lib/Auth.rho@@
   // @@INLINE:lib/Time.rho@@
   // @@INLINE:lib/Proof.rho@@
+  // @@INLINE:lib/Status.rho@@
 
   contract vpReqOk(@req, @height, ret) = {
     match req.get("subjectRef") {
@@ -63,7 +64,7 @@ in {
                 if (not ok) {
                   ret!((false, "fields"))
                 } else {
-                  new vpState, ValueProposition, Apply, uriCh in {
+                  new vpState, ValueProposition, Apply, openVpDispute, uriCh in {
                     vpState!({
                       "uri": "",
                       "proposer": proposer,
@@ -144,8 +145,9 @@ in {
                         nowHeight!(*h2) |
                         for (@(true, validator) <- a2; @height <- h2) {
                           for (@s <- vpState) {
-                            match (s.get("status"), validator == s.get("proposer")) {
-                              ("proposed", false) => {
+                            match (s.get("status"), validator == s.get("proposer"),
+                                   height > s.get("deadlineHeight")) {
+                              ("proposed", false, false) => {
                                 new vfCh, okCh in {
                                   CredentialFactory!("verify", credentialUri, *vfCh) |
                                   for (@vf <- vfCh) {
@@ -172,7 +174,8 @@ in {
                                   }
                                 }
                               }
-                              ("proposed", true) => { vpState!(s) | ret2!((false, "self validation")) }
+                              ("proposed", true, _) => { vpState!(s) | ret2!((false, "self validation")) }
+                              ("proposed", _, true) => { vpState!(s) | ret2!((false, "deadline")) }
                               _ => { vpState!(s) | ret2!((false, "not proposed")) }
                             }
                           }
@@ -180,7 +183,7 @@ in {
                       }
                     } |
 
-                    contract ValueProposition(@"proveValidated", dId2, @atHeight, ret2) = {
+                    contract ValueProposition(@"proveValidated", dId2, @atHeight, ret2, proofCh) = {
                       new a2, h2 in {
                         authSubject!(*dId2, *a2) |
                         nowHeight!(*h2) |
@@ -191,7 +194,7 @@ in {
                             } else if (atHeight != now) {
                               vpState!(s) | ret2!((false, "height"))
                             } else {
-                              new proofState, Proof, proofUriCh in {
+                              new proofState, Proof in {
                                 proofState!({
                                   "data": {
                                     "uri": s.get("uri"),
@@ -210,13 +213,40 @@ in {
                                     }
                                   }
                                 } |
-                                rs!(bundle+{*Proof}, *proofUriCh) |
-                                for (@proofUri <- proofUriCh) {
-                                  vpState!(s) |
-                                  ret2!((true, proofUri))
-                                }
+                                vpState!(s) |
+                                proofCh!(bundle+{*Proof}) |
+                                ret2!((true, Nil))
                               }
                             }
+                          }
+                        }
+                      }
+                    } |
+
+                    contract openVpDispute(@s, @who, @parties, @caseReq, dId, ret2) = {
+                      new oCh in {
+                        OracleFactory!("open", *dId, s.get("subjectRef"), {
+                          "kind": caseReq.get("kind"),
+                          "openedBy": who,
+                          "parties": parties,
+                          "groundsHash": caseReq.get("groundsHash"),
+                          "requirement": {"ctype": "Oracle",
+                                          "discipline": s.get("selectionCriteria").get("discipline"),
+                                          "jurisdiction": s.get("selectionCriteria").get("jurisdiction"),
+                                          "role": "oracle", "minLevel": 1},
+                          "adjudicator": caseReq.get("adjudicator"),
+                          "adjudicatorCredentialUri": caseReq.get("adjudicatorCredentialUri"),
+                          "deadlineHeight": caseReq.get("deadlineHeight")
+                        }, *Apply, *oCh) |
+                        for (@o <- oCh) {
+                          match o {
+                            (true, caseRef) => {
+                              vpState!(s.set("status", "disputed")
+                                         .set("dispute", caseRef)
+                                         .set("version", s.get("version") + 1)) |
+                              ret2!((true, caseRef))
+                            }
+                            _ => { vpState!(s) | ret2!(o) }
                           }
                         }
                       }
@@ -227,46 +257,28 @@ in {
                         authSubject!(*dId2, *a2) |
                         for (@(true, who) <- a2) {
                           for (@s <- vpState) {
-                            if (who != s.get("proposer")
-                                && who != s.get("validator")) {
-                              vpState!(s) | ret2!((false, "not a party"))
-                            } else {
-                              if (s.get("status") != "proposed"
-                                  && s.get("status") != "validated") {
-                                vpState!(s) | ret2!((false, "not disputable"))
-                              } else {
-                                match s.get("dispute") {
+                            match (who == s.get("proposer") || who == s.get("validator"),
+                                   s.get("status") == "proposed"
+                                     || s.get("status") == "validated",
+                                   s.get("dispute")) {
+                              (false, _, _) => { vpState!(s) | ret2!((false, "not a party")) }
+                              (true, false, _) => { vpState!(s) | ret2!((false, "not disputable")) }
+                              (true, true, Nil) => {
+                                match s.get("validator") {
                                   Nil => {
-                                    new oCh in {
-                                      OracleFactory!("open", *dId, s.get("subjectRef"), {
-                                        "kind": caseReq.get("kind"),
-                                        "openedBy": who,
-                                        "parties": [s.get("proposer"), s.get("validator")],
-                                        "groundsHash": caseReq.get("groundsHash"),
-                                        "requirement": {"ctype": "Oracle",
-                                                        "discipline": s.get("selectionCriteria").get("discipline"),
-                                                        "jurisdiction": s.get("selectionCriteria").get("jurisdiction"),
-                                                        "role": "oracle", "minLevel": 1},
-                                        "adjudicator": caseReq.get("adjudicator"),
-                                        "adjudicatorCredentialUri": caseReq.get("adjudicatorCredentialUri"),
-                                        "deadlineHeight": caseReq.get("deadlineHeight")
-                                      }, *Apply, *oCh) |
-                                      for (@o <- oCh) {
-                                        match o {
-                                          (true, caseRef) => {
-                                            vpState!(s.set("status", "disputed")
-                                                       .set("dispute", caseRef)
-                                                       .set("version", s.get("version") + 1)) |
-                                            ret2!((true, caseRef))
-                                          }
-                                          _ => { vpState!(s) | ret2!(o) }
-                                        }
-                                      }
-                                    }
+                                    openVpDispute!(s, who, [s.get("proposer")], caseReq,
+                                                   *dId2, *ret2)
                                   }
-                                  _ => { vpState!(s) | ret2!((false, "already disputed")) }
+                                  v => {
+                                    openVpDispute!(s, who, [s.get("proposer"), v], caseReq,
+                                                   *dId2, *ret2)
+                                  }
                                 }
                               }
+                              (true, true, _) => {
+                                vpState!(s) | ret2!((false, "already disputed"))
+                              }
+                              _ => { vpState!(s) | ret2!((false, "not a party")) }
                             }
                           }
                         }
@@ -288,26 +300,19 @@ in {
                               if (s.get("status") != "disputed") {
                                 vpState!(s) | ret2!((false, "not disputed"))
                               } else {
-                                match decision.get("outcome") {
-                                  "uphold" => {
-                                    vpState!(s.set("status", "upheld")
-                                              .set("revocation", decision)
-                                              .set("version", s.get("version") + 1)) |
-                                    ret2!((true, "upheld"))
+                                new osCh in {
+                                  outcomeStatus!(decision.get("outcome"), *osCh) |
+                                  for (@status <- osCh) {
+                                    match status {
+                                      Nil => { vpState!(s) | ret2!((false, "outcome")) }
+                                      target => {
+                                        vpState!(s.set("status", target)
+                                                  .set("revocation", decision)
+                                                  .set("version", s.get("version") + 1)) |
+                                        ret2!((true, target))
+                                      }
+                                    }
                                   }
-                                  "revoke" => {
-                                    vpState!(s.set("status", "revoked")
-                                              .set("revocation", decision)
-                                              .set("version", s.get("version") + 1)) |
-                                    ret2!((true, "revoked"))
-                                  }
-                                  "partial" => {
-                                    vpState!(s.set("status", "partially_revoked")
-                                              .set("revocation", decision)
-                                              .set("version", s.get("version") + 1)) |
-                                    ret2!((true, "partially_revoked"))
-                                  }
-                                  _ => { vpState!(s) | ret2!((false, "outcome")) }
                                 }
                               }
                             }

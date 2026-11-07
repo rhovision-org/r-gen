@@ -408,3 +408,19 @@ theorem runExec_append {α : Type} (w : VWorld α) (es1 es2 : List (Event α)) :
           exact ih w1
 
 end RGen
+
+namespace RGen
+
+/-- An accepted or rejected event never changes a different cell (no lost update). -/
+theorem runExec_no_lost_update {α : Type} {w : VWorld α} {es : List (Event α)}
+    {w' : VWorld α} (h : runExec w es = some w') (d : CellId)
+    (hd : d ∉ es.map Event.cell) : w'.cell d = w.cell d :=
+  runExec_frame h d hd
+
+/-- One accepted event per (cell, expected generation). -/
+theorem runExec_unique_accepted_per_generation {α : Type} {w : VWorld α}
+    {es : List (Event α)} {w' : VWorld α} (h : runExec w es = some w') (c : CellId) :
+    NoTwoSameExpected c es :=
+  runExec_no_same_expected h c
+
+end RGen

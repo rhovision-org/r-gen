@@ -76,21 +76,17 @@ contract authPubKey(dId, ret) = {
       new aCh in {
         authSubject!(*dId, *aCh) |
         for (@(true, who) <- aCh) {
-          if (who != s.get("installer")) {
-            rootState!(s) | ret!((false, "not installer"))
-          } else {
-            if (version < 1) {
-              rootState!(s) | ret!((false, "bad version"))
-            } else {
-              match s.get("entries").get(key) {
-                Nil => {
-                  rootState!(s.set("entries", s.get("entries").set(key, {
-                    "uri": uri, "version": version, "kind": kind }))) |
-                  ret!((true, Nil))
-                }
-                _ => { rootState!(s) | ret!((false, "duplicate")) }
-              }
+          match (who == s.get("installer"), version >= 1,
+                 s.get("entries").get(key)) {
+            (false, _, _) => { rootState!(s) | ret!((false, "not installer")) }
+            (true, false, _) => { rootState!(s) | ret!((false, "bad version")) }
+            (true, true, Nil) => {
+              rootState!(s.set("entries", s.get("entries").set(key, {
+                "uri": uri, "version": version, "kind": kind }))) |
+              ret!((true, Nil))
             }
+            (true, true, _) => { rootState!(s) | ret!((false, "duplicate")) }
+            _ => { rootState!(s) | ret!((false, "not installer")) }
           }
         }
       }

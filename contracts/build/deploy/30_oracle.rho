@@ -14,7 +14,7 @@ new
   rootCh, cfCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
   listHas, listHasId, listHasAny, listHas3,
-  CredentialFactory, openCaseCheck, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
+  CredentialFactory, openCaseCheck, caseReqOk, outcomeStatus, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
 in {
 // Deployer identity helpers. The REV address is the subject id; the public key is stored
 // only where an identity profile needs it.
@@ -58,7 +58,7 @@ contract authPubKey(dId, ret) = {
 contract nowHeight(ret) = {
   new bd(`rho:block:data`), ch in {
     bd!(*ch) |
-    for (@h, @sender, @timestamp <- ch) { ret!(h) }
+    for (@h, _, _ <- ch) { ret!(h) }
   }
 } |
 contract listHas(@list, @value, @i, ret) = {
@@ -109,27 +109,17 @@ contract listHas3(@list, @a, @b, @c, @i, ret) = {
   }
 } |
 // One-shot proof helpers. A credential or value proposition `prove` arm returns a private
-// `Proof` capability whose `take` arm yields `(true, data)` once and `(false, "used")` after
-// that. These helpers resolve the credential by its registry URI, obtain a proof, take it, and
-// check the fields the caller binds. Extracting them keeps the consuming arms within the
-// parser's nesting limit.
+// `Proof` capability on a caller-supplied channel; every `prove` variant sends
+// `bundle+{*Proof}` on that channel and returns `(true, Nil)`. The proof is never inserted into
+// the registry, so there is no discoverable proof URI for a third party to burn. `take` yields
+// `(true, data)` once and `(false, "used")` after that.
+//
+// These helpers resolve the credential or value proposition by its registry URI, receive the
+// private proof capability, take it, and check the fields the caller binds. The capability is
+// bound directly in a receive pattern; it is never passed through a data tuple.
 
-contract resolveAndProve(@credentialUri, dId, @rq, ret) = {
-  new credCh in {
-    rl!(credentialUri, *credCh) |
-    for (Credential <- credCh) {
-      new pCh in {
-        Credential!("prove", *dId, rq, *pCh) |
-        for (@p <- pCh) { ret!(p) }
-      }
-    }
-  }
-} |
-
-contract checkCredentialProof(@proofUri, @validator, @credentialUri, @height, ret) = {
-  new pc, tCh in {
-    rl!(proofUri, *pc) |
-    for (Proof <- pc) {
+contract checkCredentialProof(Proof, @validator, @credentialUri, @height, ret) = {
+  new tCh in {
     Proof!("take", *tCh) |
     for (@t <- tCh) {
       match t {
@@ -142,29 +132,33 @@ contract checkCredentialProof(@proofUri, @validator, @credentialUri, @height, re
         _ => { ret!(false) }
       }
     }
-    }
   }
 } |
 
 contract proveAndCheck(@credentialUri, dId, @rq, @validator, @height, ret) = {
-  new pCh, okCh in {
-    resolveAndProve!(credentialUri, *dId, rq, *pCh) |
-    for (@pr <- pCh) {
-      match pr {
-        (true, proofUri) => {
-          checkCredentialProof!(proofUri, validator, credentialUri, height, *okCh) |
-          for (@ok <- okCh) { ret!(ok) }
+  new credCh, proofCh, okCh in {
+    rl!(credentialUri, *credCh) |
+    for (Credential <- credCh) {
+      new statusCh in {
+        Credential!("prove", *dId, rq, *statusCh, *proofCh) |
+        for (@s <- statusCh) {
+          match s {
+            (true, _) => {
+              for (Proof <- proofCh) {
+                checkCredentialProof!(*Proof, validator, credentialUri, height, *okCh) |
+                for (@ok <- okCh) { ret!(ok) }
+              }
+            }
+            _ => { ret!(false) }
+          }
         }
-        _ => { ret!(false) }
       }
     }
   }
 } |
 
-contract checkValidatedProof(@proofUri, @caller, @atHeight, ret) = {
-  new pc, tCh in {
-    rl!(proofUri, *pc) |
-    for (Proof <- pc) {
+contract checkValidatedProof(Proof, @caller, @atHeight, ret) = {
+  new tCh in {
     Proof!("take", *tCh) |
     for (@t <- tCh) {
       match t {
@@ -176,34 +170,40 @@ contract checkValidatedProof(@proofUri, @caller, @atHeight, ret) = {
         _ => { ret!(false) }
       }
     }
-    }
-  }
-} |
-
-contract resolveProveValidated(@vpUri, dId, @atHeight, ret) = {
-  new vpc in {
-    rl!(vpUri, *vpc) |
-    for (VP <- vpc) {
-      new pCh in {
-        VP!("proveValidated", *dId, atHeight, *pCh) |
-        for (@p <- pCh) { ret!(p) }
-      }
-    }
   }
 } |
 
 contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
-  new pCh, okCh in {
-    resolveProveValidated!(vpUri, *dId, atHeight, *pCh) |
-    for (@pr <- pCh) {
-      match pr {
-        (true, proofUri) => {
-          checkValidatedProof!(proofUri, caller, atHeight, *okCh) |
-          for (@ok <- okCh) { ret!(ok) }
+  new vpc, proofCh, okCh in {
+    rl!(vpUri, *vpc) |
+    for (VP <- vpc) {
+      new statusCh in {
+        VP!("proveValidated", *dId, atHeight, *statusCh, *proofCh) |
+        for (@s <- statusCh) {
+          match s {
+            (true, _) => {
+              for (Proof <- proofCh) {
+                checkValidatedProof!(*Proof, caller, atHeight, *okCh) |
+                for (@ok <- okCh) { ret!(ok) }
+              }
+            }
+            _ => { ret!(false) }
+          }
         }
-        _ => { ret!(false) }
       }
     }
+  }
+} |
+// One outcome-to-status table. The K-Asset and value-proposition applyDecision arms use the
+// same mapping; keeping it in one helper stops the two copies from drifting. An unknown
+// outcome returns Nil, which the caller turns into an explicit refusal.
+
+contract outcomeStatus(@outcome, ret) = {
+  match outcome {
+    "uphold" => { ret!("upheld") }
+    "revoke" => { ret!("revoked") }
+    "partial" => { ret!("partially_revoked") }
+    _ => { ret!(Nil) }
   }
 } |
 
@@ -240,17 +240,43 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
         }
       } |
 
+      contract caseReqOk(@caseReq, @opener, @now, ret) = {
+        new pCh, aCh in {
+          match (caseReq.get("deadlineHeight"), caseReq.get("kind"),
+                 caseReq.get("parties"), caseReq.get("adjudicator")) {
+            (deadline, kind, parties, adjudicator) => {
+              if (deadline == Nil || deadline <= now
+                  || kind == Nil || kind == ""
+                  || parties == Nil || parties.length() == 0) { ret!(false) }
+              else {
+                listHas!(parties, opener, 0, *pCh) |
+                listHas!(parties, adjudicator, 0, *aCh) |
+                for (@isParty <- pCh; @isAdj <- aCh) {
+                  if (not isParty || isAdj) { ret!(false) }
+                  else { ret!(true) }
+                }
+              }
+            }
+          }
+        }
+      } |
+
       contract OracleFactory(@"open", dId, @subjectRef, @caseReq, subjectApply, ret) = {
-        new aCh, okCh in {
+        new aCh, okCh, hCh in {
         authSubject!(*dId, *aCh) |
         openCaseCheck!(caseReq, *okCh) |
-        for (@(true, opener) <- aCh; @ok <- okCh) {
+        nowHeight!(*hCh) |
+        for (@(true, opener) <- aCh; @ok <- okCh; @now <- hCh) {
         if (opener != caseReq.get("openedBy")) { ret!((false, "not opener")) }
-        else if (subjectRef == Nil || caseReq.get("parties") == Nil
-                 || caseReq.get("deadlineHeight") == Nil) { ret!((false, "case fields")) }
+        else if (subjectRef == Nil) { ret!((false, "case fields")) }
+        else {
+        new ckCh in {
+        caseReqOk!(caseReq, opener, now, *ckCh) |
+        for (@caseOk <- ckCh) {
+        if (not caseOk) { ret!((false, "case fields")) }
         else if (not ok) { ret!((false, "adjudicator credential")) }
         else {
-        new caseState, OracleCase, selfDecide, uriCh in {
+        new caseState, OracleCase, selfDecide, commitExecution, uriCh in {
           caseState!({
             "uri": "",
             "kind": caseReq.get("kind"),
@@ -307,24 +333,28 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
               nowHeight!(*hCh) |
               for (@(true, who) <- aCh; @now <- hCh) {
                 for (@s <- caseState) {
-                  match (s.get("status") == "open", who == s.get("adjudicator")) {
-                    (true, true) => {
+                  match (s.get("status") == "open", who == s.get("adjudicator"),
+                         now > s.get("deadlineHeight")) {
+                    (true, true, false) => {
                       new okCh in {
                         proveAndCheck!(s.get("adjudicatorCredentialUri"), *dId,
                           s.get("requirement"), who, now, *okCh) |
-                        for (@ok <- okCh) {
-                          if (ok) {
-                            match decision.get("outcome") {
-                              "uphold" => { selfDecide!(s, decision, now, *ret2) }
-                              "revoke" => { selfDecide!(s, decision, now, *ret2) }
-                              "partial" => { selfDecide!(s, decision, now, *ret2) }
+                        new osCh in {
+                          outcomeStatus!(decision.get("outcome"), *osCh) |
+                          for (@ok <- okCh; @target <- osCh) {
+                            match (ok, target) {
+                              (true, Nil) => { caseState!(s) | ret2!((false, "outcome")) }
+                              (true, _) => { selfDecide!(s, decision, now, *ret2) }
+                              (false, _) => { caseState!(s) | ret2!((false, "not qualified")) }
                               _ => { caseState!(s) | ret2!((false, "outcome")) }
                             }
-                          } else { caseState!(s) | ret2!((false, "not qualified")) }
+                          }
                         }
                       }
                     }
-                    (false, _) => { caseState!(s) | ret2!((false, "not open")) }
+                    (true, false, false) => { caseState!(s) | ret2!((false, "not adjudicator")) }
+                    (true, _, true) => { caseState!(s) | ret2!((false, "expired")) }
+                    (false, _, _) => { caseState!(s) | ret2!((false, "not open")) }
                     _ => { caseState!(s) | ret2!((false, "not adjudicator")) }
                   }
                 }
@@ -339,12 +369,26 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
             ret2!((true, Nil))
           } |
 
+          contract commitExecution(@s, @status, @execStatus, @lastError, @outcome,
+                                   @reply, ret2) = {
+            for (@s2 <- caseState) {
+              caseState!(s2.set("status", status)
+                           .set("execution", {"attempts": 1,
+                                              "lastError": lastError,
+                                              "status": execStatus,
+                                              "caseId": s.get("uri"),
+                                              "decision": s.get("decision"),
+                                              "outcome": outcome}))
+            } |
+            ret2!(reply)
+          } |
+
           contract OracleCase(@"execute", ret2) = {
             for (@s <- caseState) {
               if (s.get("status") == "executed") {
                 caseState!(s) | ret2!((true, "already executed"))
               } else {
-                if (s.get("status") != "decided") {
+                if (s.get("status") != "decided" && s.get("status") != "executing") {
                   caseState!(s) | ret2!((false, "not decided"))
                 } else {
                   caseState!(s.set("status", "executing")
@@ -357,38 +401,16 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
                     for (@a <- aCh) {
                       match a {
                         (true, outcome) => {
-                          for (@s2 <- caseState) {
-                            caseState!(s2.set("status", "executed")
-                                         .set("execution", {"attempts": 1,
-                                                            "lastError": Nil,
-                                                            "status": "applied",
-                                                            "caseId": s.get("uri"),
-                                                            "decision": s.get("decision"),
-                                                            "outcome": outcome}))
-                          } |
-                          ret2!((true, outcome))
+                          commitExecution!(s, "executed", "applied", Nil, outcome,
+                                           (true, outcome), *ret2)
                         }
                         (false, why) => {
-                          for (@s2 <- caseState) {
-                            caseState!(s2.set("status", "decided")
-                                         .set("execution", {"attempts": 1,
-                                                            "lastError": why,
-                                                            "status": "failed",
-                                                            "caseId": s.get("uri"),
-                                                            "decision": s.get("decision")}))
-                          } |
-                          ret2!((false, why))
+                          commitExecution!(s, "decided", "failed", why, Nil,
+                                           (false, why), *ret2)
                         }
                         _ => {
-                          for (@s2 <- caseState) {
-                            caseState!(s2.set("status", "decided")
-                                         .set("execution", {"attempts": 1,
-                                                            "lastError": "apply",
-                                                            "status": "failed",
-                                                            "caseId": s.get("uri"),
-                                                            "decision": s.get("decision")}))
-                          } |
-                          ret2!((false, "apply"))
+                          commitExecution!(s, "decided", "failed", "apply", Nil,
+                                           (false, "apply"), *ret2)
                         }
                       }
                     }
@@ -436,6 +458,9 @@ contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
             for (@s2 <- caseState) { caseState!(s2.set("uri", uri)) } |
             ret!((true, {"id": uri, "uri": uri}))
           }
+        }
+        }
+        }
         }
         }
         }

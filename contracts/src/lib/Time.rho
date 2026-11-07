@@ -4,6 +4,6 @@
 contract nowHeight(ret) = {
   new bd(`rho:block:data`), ch in {
     bd!(*ch) |
-    for (@h, @sender, @timestamp <- ch) { ret!(h) }
+    for (@h, _, _ <- ch) { ret!(h) }
   }
 } |

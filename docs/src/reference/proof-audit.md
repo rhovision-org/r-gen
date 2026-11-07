@@ -109,7 +109,7 @@ The owner authorized Phase 2 with the independence limitation recorded. Since th
 - `VWorld.set_commute`, `VWorld.commit_commute`, `Event.apply_commute_distinct`, and
   `core_independent_arms_commute` connect the versioned layer to independence (LR-02, LR-04).
 - `check_lean.py --audit-coverage` requires every Pareto `#check` in `Audit.lean`; 64 Pareto checks
-  and 173 axiom checks pass (LR-07).
+  and 233 axiom checks pass (LR-07).
 - The model-only finish/execute race row is removed and provenance anchor/comment is added; the matrix is 32 rows (LR-05 partial).
 - Claim and K-Asset verdict mappings now agree for `valid`, `partial`, `invalid`, and unknown
   verdicts; claim deadline presence and comment-window ordering are checked at creation (RR-04,

@@ -37,15 +37,27 @@
   K-Asset/VP dispute arms never set. It now checks the `subjectRef` argument. This restored
   the dispute path that `unit_core` exercises.
 
-## Lean model (2026-11-04)
+## Lean model (2026-11-07)
 
-- `cd spec/lean && lake build`: 36 Lean files build on Lean `v4.12.0`, no Mathlib.
-- `tools/check_lean.py`: 37 files, no `sorry`, `admit`, `native_decide`, or declared
+- `cd spec/lean && lake build`: 44 Lean files build on Lean `v4.12.0`, no Mathlib.
+- `tools/check_lean.py`: 44 files, no `sorry`, `admit`, `native_decide`, or declared
   axioms.
-- `tools/check_lean.py --audit`: the 196 theorems listed in `RGen/Audit.lean`, only
+- `tools/check_lean.py --audit`: the 233 theorems listed in `RGen/Audit.lean`, only
   `propext` and `Quot.sound`; no `Classical.choice` use in the audited set. The list is
   hand-maintained (RGA-006).
+- `tools/check_lean.py --audit-coverage`: 123 Pareto theorem checks are covered by
+  `Audit.lean`.
 - `tools/check_core_vectors.py`: 46 emitted rows match `spec/vectors/core.tsv`.
+- New composed results: `RGen/Model/IdentityReservation.lean`,
+  `RGen/Model/ClaimMint.lean`, `RGen/Model/ProofCapability.lean`,
+  `RGen/Model/NestCrash.lean`, `RGen/Deadline.lean`, `RGen/System.lean`, plus the
+  proof-token extension in `Linear/Consumption.lean` and the run-framing aliases in
+  `Linear/Exec.lean`. The headline theorems are
+  `ReservedDirectory.at_most_one_identity_per_address`,
+  `ClaimMintState.at_most_one_reachable_kasset_per_claim`,
+  `ProofCap.private_capability_no_bearer_dos`, `crash_release_all`,
+  `deadline_boundary_deterministic`, `system_safety`, and
+  `core_no_proof_reuse_across_arms`.
 - `tools/check_flows.py`: 67 deployed arms mapped — 0 `proved-model`, 35
   `proved-conformance`, 32 `owed` (read-only arms, creation registries, and extensions).
   The former phantom `Issuer.revoke` entry is removed. `Identity.update`,
@@ -63,6 +75,27 @@ generation theorem `core_races_not_representable`, the arm authority theorem
 `core_arm_authority`, and the 32-pair race matrix in `spec/flows/races.yaml`. The
 behavioural race suite is regression evidence only; it is not the proof. It is a model
 proof: no mechanized Rholang semantics and no refinement theorem.
+
+## HAZOP, red team and deploy semantics (2026-11-07)
+
+- Blind multi-agent workflow HAZOP: 25 rows over 9 workflow/cross-node nodes; every S1/S2 row
+  has two authors or an adjudication decision. `tools/check_hazop_runs.py` passes. The 146-row
+  contract worksheet remains the prior register; the new run is in
+  `spec/hazop/runs/2026-11-07/`.
+- `harness/probe_deploy_semantics.py`: a reduction error rolls back; a blocked continuation
+  commits the consumed cell. The reachable partial-commit path is a non-replying callee, not an
+  erroring deploy.
+- `harness/redteam_core.py`: RT-004 proof-URI theft, RT-006 Nil comment, RT-007 subjectRef,
+  RT-008 credential fields, RT-009 oracle past deadline, RT-020 VP validator dispute, RT-021 VP
+  late validation, RT-022 oracle late decision, and RT-023 credential attribution are fixed.
+  RT-011 provenance spoofing, RT-012 execute crank, and RT-013 permissionless proof minting are
+  accepted with reasons. RT-001 duplicate identity was not reproduced; the reservation protocol
+  removes the window.
+- `make guard-check`: 16 changed arms; source atoms and flow entries agree. Six arms have an
+  `owed` guard_eq and are reported as warnings, not passes.
+- `make style-check`: 88 `if` / 99 `match`; no hard failures. Fourteen deep-nesting warnings
+  remain, mostly in `KAsset.nest`. The inventory is `spec/audit/rholang-control-flow.yaml`.
+  Guard staircases, the verdict/outcome tables and the provenance map patterns are refactored.
 
 ## Baseline
 

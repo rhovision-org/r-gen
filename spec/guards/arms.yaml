@@ -1,0 +1,143 @@
+schema: rgen.guards/v1
+scope: changed mutating arms in the 2026-11 HAZOP repair
+method: >-
+  For each arm, the source atoms are the guard/refusal strings the deployed
+  Rholang must contain. The bridge checks those atoms against the source and
+  checks that the flow manifest still names a guard_eq theorem. It is a
+  decision-table drift check, not a semantics-preserving extraction.
+arms:
+  - id: identity.create
+    source: contracts/src/deploy/10_identity.rho
+    flow: {file: contracts/src/deploy/10_identity.rho, contract: IdentityFactory, arm: create}
+    guard_eq: RGen.identityCreate_guard_eq
+    atoms:
+      - 's.get("byAddress").get(subject)'
+      - 's.get("pending").get(subject)'
+      - '"reserving"'
+      - '"minted"'
+      - '"active"'
+      - '"in progress"'
+      - '"duplicate"'
+  - id: identity.resume
+    source: contracts/src/deploy/10_identity.rho
+    flow: {file: contracts/src/deploy/10_identity.rho, contract: IdentityFactory, arm: resume}
+    guard_eq: owed
+    atoms:
+      - '"not subject"'
+      - '"no pending"'
+      - '"expired reservation; retry create"'
+      - '"in progress"'
+      - 's.get("byAddress").get(subject)'
+  - id: claim.create
+    source: contracts/src/deploy/20_claim.rho
+    flow: {file: contracts/src/deploy/20_claim.rho, contract: ClaimFactory, arm: create}
+    guard_eq: owed
+    atoms:
+      - 'claimReqOk'
+      - 'subjectRef'
+      - '"fields"'
+      - 'commentUntilHeight'
+  - id: claim.validate
+    source: contracts/src/deploy/20_claim.rho
+    flow: {file: contracts/src/deploy/20_claim.rho, contract: Claim, arm: validate}
+    guard_eq: RGen.claimValidate_guard_eq
+    atoms:
+      - '"validating"'
+      - 'validationReceipt'
+      - 'credentialUri'
+      - '"expired"'
+      - '"proof"'
+  - id: claim.resume
+    source: contracts/src/deploy/20_claim.rho
+    flow: {file: contracts/src/deploy/20_claim.rho, contract: Claim, arm: resume}
+    guard_eq: owed
+    atoms:
+      - '"validating"'
+      - '"not party"'
+      - '"no validation"'
+      - 'finalizeValidation'
+  - id: claim.comment
+    source: contracts/src/deploy/20_claim.rho
+    flow: {file: contracts/src/deploy/20_claim.rho, contract: Claim, arm: comment}
+    guard_eq: RGen.claimComment_guard_eq
+    atoms:
+      - 'commentUntilHeight'
+      - 'deadlineHeight'
+      - '"comment closed"'
+  - id: credential.issue
+    source: contracts/src/deploy/11_credentials.rho
+    flow: {file: contracts/src/deploy/11_credentials.rho, contract: CredentialFactory, arm: issue}
+    guard_eq: owed
+    atoms:
+      - 'credentialReqOk'
+      - '"fields"'
+      - '"self issue"'
+  - id: credential.prove
+    source: contracts/src/deploy/11_credentials.rho
+    flow: {file: contracts/src/deploy/11_credentials.rho, contract: Credential, arm: prove}
+    guard_eq: RGen.credentialProve_guard_eq
+    atoms:
+      - 'proofCh'
+      - 'bundle+{*Proof}'
+      - '(true, Nil)'
+  - id: vp.validate
+    source: contracts/src/deploy/22_value.rho
+    flow: {file: contracts/src/deploy/22_value.rho, contract: ValueProposition, arm: validate}
+    guard_eq: RGen.vpValidate_guard_eq
+    atoms:
+      - 'deadlineHeight'
+      - '"deadline"'
+  - id: vp.openDispute
+    source: contracts/src/deploy/22_value.rho
+    flow: {file: contracts/src/deploy/22_value.rho, contract: ValueProposition, arm: openDispute}
+    guard_eq: RGen.vpOpenDispute_guard_eq
+    atoms:
+      - '*dId2'
+      - 'parties'
+      - '"not a party"'
+  - id: oracle.open
+    source: contracts/src/deploy/30_oracle.rho
+    flow: {file: contracts/src/deploy/30_oracle.rho, contract: OracleFactory, arm: open}
+    guard_eq: owed
+    atoms:
+      - 'caseReqOk'
+      - '"case fields"'
+      - 'deadlineHeight'
+  - id: oracle.decide
+    source: contracts/src/deploy/30_oracle.rho
+    flow: {file: contracts/src/deploy/30_oracle.rho, contract: OracleCase, arm: decide}
+    guard_eq: RGen.oracleDecide_guard_eq
+    atoms:
+      - 'deadlineHeight'
+      - '"expired"'
+  - id: oracle.execute
+    source: contracts/src/deploy/30_oracle.rho
+    flow: {file: contracts/src/deploy/30_oracle.rho, contract: OracleCase, arm: execute}
+    guard_eq: RGen.oracleExecute_guard_eq
+    atoms:
+      - '"executing"'
+      - '"not decided"'
+      - '"already executed"'
+  - id: provenance.create
+    source: contracts/src/deploy/40_provenance.rho
+    flow: {file: contracts/src/deploy/40_provenance.rho, contract: ProvenanceFactory, arm: create}
+    guard_eq: owed
+    atoms:
+      - '[creator] ++ writers'
+      - 'assetRef'
+      - 'writers'
+  - id: kasset.proveApproved
+    source: contracts/src/lib/KAsset.rho
+    flow: {file: contracts/src/lib/KAsset.rho, contract: KAsset, arm: proveApproved}
+    guard_eq: RGen.kassetProveApproved_guard_eq
+    atoms:
+      - 'proofCh'
+      - 'bundle+{*Proof}'
+      - '(true, Nil)'
+  - id: kasset.nest
+    source: contracts/src/lib/KAsset.rho
+    flow: {file: contracts/src/lib/KAsset.rho, contract: KAsset, arm: nest}
+    guard_eq: RGen.kassetNest_guard_eq
+    atoms:
+      - 'proofCh'
+      - 'proveApproved'

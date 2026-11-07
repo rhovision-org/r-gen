@@ -81,3 +81,18 @@ The HAZOP is qualitative. It does not cover the node's Rholang semantics, phlo a
 extension primitives. It is not exhaustive over all parameter values; it covers the fifteen guide
 words per node and the parameters listed above. A clean coverage cell is a considered
 not-applicable, not proof of safety.
+
+## 2026-11 workflow run and repair
+
+A second, blind multi-agent run covers the end-to-end workflow and the cross-node interactions
+that the ten contract nodes cannot see. It adds the workflow and cross-node register in
+`spec/hazop/runs/2026-11-07/`, with twenty-five rows over nine nodes. The run also records the
+red-team probes against the live devnet install.
+
+The repair closes the identity reservation window (RGA-031), the claim mint window (RGA-032), the
+VP validator-dispute opener, the VP and oracle deadline guards, the claim credential attribution,
+the Nil comment window, the unvalidated credential fields, the free-string `subjectRef`, and the
+public proof bearer token. The remaining accepted items are provenance asset binding, the
+permissionless execute crank, the unbounded private-proof mint, and the decided-but-unexecutable
+close path. See [Workflow HAZOP](workflow-hazop.md), [Red team](red-team.md), and
+[Deploy semantics](deploy-semantics.md).

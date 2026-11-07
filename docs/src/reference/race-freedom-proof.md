@@ -48,6 +48,28 @@ consumed/authority, not an ambient read. `RGen.peek_not_authority` is the two-ce
 `RGen.proof_take_once_versioned` / `RGen.core_proof_payloads_consumed`: after an accepted
 proof take, the next take rejects; the payload is a snapshot and is not reachable twice.
 
+## Composed repair (2026-11)
+
+The 2026-11 workflow HAZOP added composed results that sit above the per-cell theorem:
+
+- `ReservedDirectory.at_most_one_identity_per_address`: once `byAddress` names a URI, no
+  reachable reservation step changes it; a second create cannot commit.
+- `ClaimMintState.at_most_one_reachable_kasset_per_claim`: the claim has a single
+  `kassetRef`; once set, no reachable assertion, mint, commit or resume step changes it.
+- `ProofCap.private_capability_no_bearer_dos`: with a named consumer, a different caller
+  has no take transition; the proof is not published.
+- `crash_release_all`: a crash before the nest commit leaves every reservation releasable.
+- `Deadline.deadline_boundary_deterministic`: every height is admitted by exactly one side
+  of the claim/VP/oracle boundary.
+- `core_no_proof_reuse_across_arms`: a well-formed token trace consumes no proof token
+  twice; a commit requires its token to have been consumed.
+- `System.system_safety`: link consistency, at most one K-Asset linked to a claim, and
+  directory stability hold along every reachable composed step.
+
+These are model theorems about the repaired protocol. The deployed-guard link is the
+decision-table bridge in [Guard conformance](guard-conformance.md), not a refinement
+theorem.
+
 ## Pair matrix
 
 `spec/flows/races.yaml` records every proved arm pair, its class, and the Lean theorem.

@@ -1,0 +1,66 @@
+schema: rgen.hazop-run/v1
+run_id: 2026-11-07
+date: 2026-11-07
+baseline: 639d0f2b2ddcb4cc2f90186b4b7ad82b296fc008
+worktree: contract and Lean fixes under review
+method: >-
+  Blind multi-agent HAZOP. Each analyst received only its node scope, the contract
+  source, the 15 guide words, and the row schema. The existing worksheet, findings
+  ledger, flow manifests and other analysts' rows were withheld until adjudication.
+  Red-team probes were run against the live devnet install and recorded separately.
+agreement_rule: >-
+  Every new S1 or S2 row has at least two independent authors, or an adjudication
+  decision with a reproduced counterexample. S3/S4 rows may be single-author.
+agents:
+  - id: analyst-identity-credentials
+    scope: [identity, issuer-credential-proof, registries-factories]
+    blind_inputs:
+      - contracts/src/deploy/00_root.rho
+      - contracts/src/deploy/10_identity.rho
+      - contracts/src/deploy/11_credentials.rho
+      - contracts/src/lib/Auth.rho
+      - contracts/src/lib/Scope.rho
+      - contracts/src/lib/Proof.rho
+  - id: analyst-claim-kasset-oracle
+    scope: [claim-validation, kasset-nesting, oracle]
+    blind_inputs:
+      - contracts/src/deploy/20_claim.rho
+      - contracts/src/lib/KAsset.rho
+      - contracts/src/deploy/30_oracle.rho
+      - contracts/src/lib/Proof.rho
+  - id: analyst-vp-provenance-workflow
+    scope:
+      - value-proposition
+      - provenance
+      - deploy-root
+      - wf-onboard
+      - wf-propose-claim
+      - wf-validate-mint
+      - wf-dispute-decide-execute
+      - wf-closeout-provenance
+      - wf-recovery
+      - xnode-authority
+      - xnode-registry
+      - xnode-time
+    blind_inputs:
+      - contracts/src/deploy/22_value.rho
+      - contracts/src/deploy/40_provenance.rho
+      - contracts/src/deploy/00_root.rho
+      - harness/install.py
+  - id: redteam-operator
+    scope: [live-devnet exploits]
+    blind_inputs:
+      - harness/probe_deploy_semantics.py
+      - harness/redteam_core.py
+adjudicator: owner
+inputs_sha256:
+  00_root.rho: c8e8f65bc8edae32e9c7f64d79ac8d6600788d47e3de17087c276f7df7c1a5db
+  10_identity.rho: 797bfb763b98feffa606d5266da4e96f0f0b83b03f474c1f59a53ac228f7dcc3
+  11_credentials.rho: fa1a9f5035d45fa50cb2cc41037dc140633ed7e25dc3528dc870c445f32beb39
+  20_claim.rho: dff79049bcc40b458c46ca46f6540f2f1cfd69dd7a7c88f62c3fc4028df24ed5
+  22_value.rho: 14b91c26c9c3e15576dd19ecf93527e68795d91fbf84767923e5f47fe80eb658
+  30_oracle.rho: 06da8d55ca52392c164a4f811d4d685022b78b33aeede2409f449fbcb3ce0fa4
+  40_provenance.rho: 163e3b0d5e480aed9db52d92a5f299c3262d692635ced6ef49ab4203ec619454
+  KAsset.rho: b89f3e1bdd9d1048b9a3e9307de14713150d2d8515c8f051f8fc7d53e44a9552
+  Proof.rho: db62ea3c848b178de60dbc5b9f2c1d799a799c177bfd31c6958deb20a1328819
+  Scope.rho: e6c84f77557c0d3db67de0c3640c487c3cc5842116564aa1d7964206eed9c1ff

@@ -18,7 +18,7 @@ export RGEN_CONTAINER
 .PHONY: venv build build-check measure measure-check spec-check parse-check docs docs-check \
         check-arch check-captures check-placeholders check-money check-core-boundary \
         check-concurrency check-citations check-docs check-docs-links check-suites \
-        check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit check-conformance lean-build lean-audit lean-audit-coverage lean-check gen-core-vectors check-core-vectors \
+        check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit check-conformance check-hazop hazop-check guard-check style-check audit-control-flow probe-deploy-semantics redteam lean-build lean-audit lean-audit-coverage lean-check gen-core-vectors check-core-vectors \
         devnet-up devnet-wait down status keys install unit-identity unit-credentials \
         unit-claim unit-kasset unit-value unit-oracle unit-provenance unit-integration \
         unit-core unit-race unit-all verify \
@@ -97,6 +97,26 @@ check-audit:
 check-conformance:
 	$(PY) tools/check_conformance.py
 
+check-hazop:
+	$(PY) tools/check_hazop_runs.py
+
+hazop-check: check-hazop
+
+guard-check:
+	$(PY) tools/check_guard_bridge.py
+
+style-check:
+	$(PY) tools/check_rholang_style.py
+
+audit-control-flow:
+	$(PY) tools/audit_rholang_control_flow.py
+
+probe-deploy-semantics:
+	$(PY) harness/probe_deploy_semantics.py
+
+redteam:
+	$(PY) harness/redteam_core.py
+
 lean-build:
 	cd spec/lean && lake build
 
@@ -116,7 +136,7 @@ lean-check: lean-build check-lean lean-audit lean-audit-coverage check-core-vect
 
 spec-check: build-check measure-check check-arch check-captures check-placeholders \
             check-money check-core-boundary check-concurrency check-citations \
-            check-suites check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit check-conformance
+            check-suites check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit check-conformance check-hazop guard-check style-check
 
 parse-check:
 	rm -f .devnet/rendered/*.rho

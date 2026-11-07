@@ -1,0 +1,89 @@
+schema: rgen.hazop-adjudication/v1
+run_id: 2026-11-07
+adjudicator: owner
+decisions:
+  - row: WF-001
+    decision: fixed by the identity reservation; the failing window is modelled and proved
+    finding: RGA-031
+    disposition: fixed
+    evidence: contracts/src/deploy/10_identity.rho; spec/lean/RGen/Model/IdentityReservation.lean
+  - row: WF-003
+    decision: accepted; the VP reference is not validated at create, but approval requires a validated VP proof
+    finding: RGA-046
+    disposition: accepted
+    evidence: contracts/src/lib/KAsset.rho:34-55
+  - row: WF-005
+    decision: accepted for the same reason; a K-Asset can exist with a bad VP reference but cannot be approved
+    finding: RGA-046
+    disposition: accepted
+    evidence: contracts/src/lib/KAsset.rho:34-55
+  - row: WF-006
+    decision: fixed; the proved credential URI is passed into finalizeValidation and recorded
+    finding: RT-023
+    disposition: fixed
+    evidence: contracts/src/deploy/20_claim.rho:230-290; harness/redteam_core.py RT-023
+  - row: WF-007
+    decision: fixed; write-ahead validating receipt, release, mint, commit, resume
+    finding: RGA-032
+    disposition: fixed
+    evidence: contracts/src/deploy/20_claim.rho:230-330; spec/lean/RGen/Model/ClaimMint.lean
+  - row: WF-009
+    decision: fixed; openDispute authenticates the caller and excludes a Nil validator from parties
+    finding: RT-020
+    disposition: fixed
+    evidence: contracts/src/deploy/22_value.rho:225-275; harness/redteam_core.py RT-020
+  - row: WF-010
+    decision: fixed; decide refuses after the deadline
+    finding: RT-022
+    disposition: fixed
+    evidence: contracts/src/deploy/30_oracle.rho:118-150; harness/redteam_core.py RT-022
+  - row: WF-013
+    decision: accepted; provenance is advisory and no core arm uses it as authority
+    finding: RGA-022
+    disposition: accepted
+    evidence: contracts/src/deploy/40_provenance.rho; docs/src/reference/primitives/provenance.md
+  - row: WF-014
+    decision: accepted; a per-asset registry is a future extension
+    finding: RGA-022
+    disposition: accepted
+    evidence: contracts/src/deploy/40_provenance.rho
+  - row: WF-022
+    decision: fixed; omitted patch fields preserve the old value
+    finding: RGA-047
+    disposition: fixed
+    evidence: contracts/src/deploy/10_identity.rho:80-115; harness/unit_identity.py
+  - row: WF-023
+    decision: fixed; credentialReqOk and a total scopeMatches
+    finding: RT-008
+    disposition: fixed
+    evidence: contracts/src/deploy/11_credentials.rho:26-45; contracts/src/lib/Scope.rho
+  - row: WF-025
+    decision: fixed; proofs are private capabilities and are not inserted into the registry
+    finding: RT-004
+    disposition: fixed
+    evidence: contracts/src/lib/Proof.rho; spec/lean/RGen/Model/ProofCapability.lean
+  - row: WF-011
+    decision: accepted with a partial fix; execute now retries an executing case, but attempts remains 1
+    finding: RGA-024
+    disposition: accepted
+    evidence: contracts/src/deploy/30_oracle.rho:180-240
+  - row: WF-017
+    decision: accepted; private proofs remove third-party burn, and a failed nest can re-mint
+    finding: RGA-033
+    disposition: accepted
+    evidence: contracts/src/lib/KAsset.rho:279-330; spec/lean/RGen/Model/NestCrash.lean
+  - row: WF-018
+    decision: accepted; decide re-proves the adjudicator credential
+    finding: RGA-045
+    disposition: accepted
+    evidence: contracts/src/deploy/30_oracle.rho:27-55
+  - row: WF-019
+    decision: accepted; verify is existence-only and core consumers use prove/check
+    finding: RGA-027
+    disposition: accepted
+    evidence: contracts/src/deploy/11_credentials.rho:88-99
+  - row: WF-021
+    decision: partially fixed; opener must be in parties and the adjudicator must not be; subjectRef remains free
+    finding: RGA-023
+    disposition: accepted
+    evidence: contracts/src/deploy/30_oracle.rho:55-120

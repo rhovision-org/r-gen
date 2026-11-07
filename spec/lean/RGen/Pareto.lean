@@ -3,6 +3,12 @@ import RGen.Linear.Consumption
 import RGen.RaceFreedom
 import RGen.Linear.Consumption
 import RGen.ArmGuards
+import RGen.Model.IdentityReservation
+import RGen.Model.ClaimMint
+import RGen.Model.ProofCapability
+import RGen.Model.NestCrash
+import RGen.Deadline
+import RGen.System
 
 /-!
 # Pareto core theorem set
@@ -114,3 +120,54 @@ end RGen
 #check RGen.OracleState.addEvidence_requires_party
 #check RGen.core_proof_cells_consumed_before_commit
 #check RGen.Action.proof_cell_not_reused
+
+-- Identity reservation
+#check RGen.ReservedDirectory.reserve_refuses_claimed
+#check RGen.ReservedDirectory.commit_requires_minted
+#check RGen.ReservedDirectory.commit_sets_byAddress
+#check RGen.ReservedDirectory.resume_refuses_claimed
+#check RGen.ReservedDirectory.reach_byAddress_stable
+#check RGen.ReservedDirectory.at_most_one_identity_per_address
+#check RGen.ReservedDirectory.stale_reservation_cannot_commit
+
+-- Claim validation and mint
+#check RGen.ClaimMintState.begin_blocks_second
+#check RGen.ClaimMintState.mint_once
+#check RGen.ClaimMintState.commit_requires_intent
+#check RGen.ClaimMintState.resume_sets_from_receipt
+#check RGen.ClaimMintState.resume_cannot_mint
+#check RGen.ClaimMintState.at_most_one_reachable_kasset_per_claim
+#check RGen.ClaimMintState.step_kassetRef_stable
+#check RGen.ClaimMintState.reach_kassetRef_stable
+#check RGen.ClaimMintState.at_most_one_reachable_kasset_across_reach
+#check RGen.exactly_one_eventually
+
+-- Private proof capabilities
+#check RGen.ProofCap.third_party_cannot_take
+#check RGen.ProofCap.take_once
+#check RGen.ProofCap.reserve_release_restores
+#check RGen.ProofCap.private_capability_no_bearer_dos
+
+-- Nest reservation and crash safety
+#check RGen.failed_check_no_reserve
+#check RGen.commit_requires_all_reserved
+#check RGen.commit_marks_used
+#check RGen.crash_release_all
+#check RGen.nest_proof_not_burned
+
+-- Deadline boundaries
+#check RGen.nil_comment_window_total
+#check RGen.deadline_boundary_deterministic
+#check RGen.oracle_open_requires_future
+#check RGen.vp_validate_after_deadline_refused
+
+-- Composed system
+#check RGen.link_consistent_at_most_one
+#check RGen.SystemReach.link_consistent
+#check RGen.SystemReach.at_most_one_linked_kasset
+#check RGen.system_safety
+
+-- Cross-arm proof consumption and run framing
+#check RGen.core_no_proof_reuse_across_arms
+#check RGen.runExec_no_lost_update
+#check RGen.runExec_unique_accepted_per_generation

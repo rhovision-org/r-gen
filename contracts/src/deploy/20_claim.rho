@@ -17,33 +17,54 @@ new
   rootCh, cfCh, vpCh, ofCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
   listHas, listHasId, listHasAny, listHas3,
-  makeKAsset, claimReqOk, claimStatus, kassetStatus, claimRegistryState,
+  makeKAsset, claimReqOk, outcomeStatus, claimRegistryState,
   CredentialFactory, ValuePropositionFactory, OracleFactory, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
 in {
   // @@INLINE:lib/Auth.rho@@
   // @@INLINE:lib/Time.rho@@
   // @@INLINE:lib/List.rho@@
   // @@INLINE:lib/Proof.rho@@
+  // @@INLINE:lib/Status.rho@@
 
   claimRegistryState!({}) |
 
   contract claimReqOk(@req, @height, ret) = {
-    match req.get("work") {
-      Nil => { ret!(false) }
-      work => {
-        match (req.get("statementHash"), req.get("definitionHash"),
-               work.get("discipline"), work.get("jurisdiction"),
-               req.get("selectionCriteria"), req.get("quantity")) {
-          (s, d, di, j, sc, q) => {
-            if (s == Nil || s == "" || d == Nil || d == ""
-                || di == Nil || di == "" || j == Nil || j == ""
-                || sc == Nil || q == Nil || req.get("deadlineHeight") == Nil
-                || req.get("deadlineHeight") <= height) { ret!(false) }
-            else {
-              if (req.get("commentUntilHeight") != Nil
-                  && req.get("commentUntilHeight") > req.get("deadlineHeight")) {
-                ret!(false)
-              } else { ret!(true) }
+    new srCh in {
+      match req.get("subjectRef") {
+        Nil => { srCh!(true) }
+        sr => {
+          match sr {
+            {"uri": uri} => {
+              if (uri == Nil || uri == "") { srCh!(false) }
+              else { srCh!(true) }
+            }
+            _ => { srCh!(false) }
+          }
+        }
+      } |
+      for (@srOk <- srCh) {
+        if (not srOk) {
+          ret!(false)
+        } else {
+          match req.get("work") {
+            Nil => { ret!(false) }
+            work => {
+              match (req.get("statementHash"), req.get("definitionHash"),
+                     work.get("discipline"), work.get("jurisdiction"),
+                     req.get("selectionCriteria"), req.get("quantity")) {
+                (s, d, di, j, sc, q) => {
+                  if (s == Nil || s == "" || d == Nil || d == ""
+                      || di == Nil || di == "" || j == Nil || j == ""
+                      || sc == Nil || q == Nil || req.get("deadlineHeight") == Nil
+                      || req.get("deadlineHeight") <= height) { ret!(false) }
+                  else {
+                    if (req.get("commentUntilHeight") != Nil
+                        && req.get("commentUntilHeight") > req.get("deadlineHeight")) {
+                      ret!(false)
+                    } else { ret!(true) }
+                  }
+                }
+              }
             }
           }
         }
@@ -51,25 +72,8 @@ in {
     }
   } |
 
-  // Claim and K-Asset status are derived from the same three verdicts. An unknown
-  // verdict is rejected in both, so the two records cannot disagree.
-  contract claimStatus(@verdict, ret) = {
-    match verdict {
-      "valid" => { ret!("validated") }
-      "partial" => { ret!("validated") }
-      "invalid" => { ret!("rejected") }
-      _ => { ret!("rejected") }
-    }
-  } |
-
-  contract kassetStatus(@verdict, ret) = {
-    match verdict {
-      "valid" => { ret!("validated") }
-      "partial" => { ret!("conditional") }
-      "invalid" => { ret!("rejected") }
-      _ => { ret!("rejected") }
-    }
-  } |
+  // Claim and K-Asset status are derived from one verdict table in finalizeValidation.
+  // An unknown verdict is rejected in both, so the two records cannot disagree.
 
   rl!(`__CREDENTIAL_FACTORY_URI__`, *cfCh) |
   rl!(`__VALUE_PROPOSITION_FACTORY_URI__`, *vpCh) |
@@ -97,7 +101,7 @@ in {
               if (not ok) {
                 ret!((false, "fields"))
               } else {
-                new claimState, Claim, finalizeValidation, uriCh in {
+                new claimState, Claim, finalizeValidation, finalizeWith, resumeFinalize, appendComment, uriCh in {
                   claimState!({
                     "uri": "",
                     "claimant": claimant,
@@ -129,6 +133,17 @@ in {
                     for (@s <<- claimState) { ret2!((true, s.get("comments"))) }
                   } |
 
+                  contract appendComment(@s, @who, @now, @comment, ret2) = {
+                    claimState!(s.set("comments",
+                      s.get("comments") ++ [{
+                        "id": "cm:" ++ who ++ ":" ++ now.toString(),
+                        "by": who, "hash": comment.get("hash"),
+                        "at": now}])
+                      .set("updatedAt", now)
+                      .set("version", s.get("version") + 1)) |
+                    ret2!((true, Nil))
+                  } |
+
                   contract Claim(@"comment", dId2, @comment, ret2) = {
                     new a2, h2 in {
                       authSubject!(*dId2, *a2) |
@@ -138,17 +153,18 @@ in {
                           if (s.get("status") != "open") {
                             claimState!(s) | ret2!((false, "not open"))
                           } else {
-                            if (now > s.get("commentUntilHeight")) {
-                              claimState!(s) | ret2!((false, "comment closed"))
-                            } else {
-                              claimState!(s.set("comments",
-                                s.get("comments") ++ [{
-                                  "id": "cm:" ++ who ++ ":" ++ now.toString(),
-                                  "by": who, "hash": comment.get("hash"),
-                                  "at": now}])
-                                .set("updatedAt", now)
-                                .set("version", s.get("version") + 1)) |
-                              ret2!((true, Nil))
+                            match s.get("commentUntilHeight") {
+                              Nil => {
+                                if (now > s.get("deadlineHeight")) {
+                                  claimState!(s) | ret2!((false, "comment closed"))
+                                } else { appendComment!(s, who, now, comment, *ret2) }
+                              }
+                              until => {
+                                if (now > until) {
+                                  claimState!(s) | ret2!((false, "comment closed"))
+                                } else { appendComment!(s, who, now, comment, *ret2) }
+                              }
+                              _ => { claimState!(s) | ret2!((false, "comment closed")) }
                             }
                           }
                         }
@@ -201,71 +217,114 @@ in {
                     }
                   } |
 
-                  contract finalizeValidation(@s, @validator, @height, @validation, ret2) = {
-                    new stCh in {
-                      claimStatus!(validation.get("verdict"), *stCh) |
-                      for (@claimSt <- stCh) {
-                        new ksCh in {
-                          kassetStatus!(validation.get("verdict"), *ksCh) |
-                          for (@kassetSt <- ksCh) {
-                            new kaCh in {
-                              makeKAsset!({
-                                "uri": "",
-                                "claimRef": {"id": s.get("uri"), "uri": s.get("uri")},
-                                "validation": validation,
-                                "validator": validator,
-                                "validatorCredential": validation.get("credentialUri"),
-                                "claimant": s.get("claimant"),
-                                "verdict": validation.get("verdict"),
-                                "quality": validation.get("quality"),
-                                "quantity": s.get("quantity"),
-                                "discipline": s.get("work").get("discipline"),
-                                "jurisdiction": s.get("work").get("jurisdiction"),
-                                "valuePropositionRef": s.get("valuePropositionRef"),
-                                "status": kassetSt,
-                                "approver": Nil,
-                                "approval": Nil,
-                                "approvedAt": Nil,
-                                "approvalVersion": Nil,
-                                "childRefs": [],
-                                "dispute": Nil,
-                                "revocation": Nil,
-                                "createdAt": height,
-                                "version": 1
-                              }, *OracleFactory, *ValuePropositionFactory, *ClaimFactory, *kaCh) |
-                              for (@ka <- kaCh) {
-                                match ka {
-                                  (true, _, kassetUri) => {
-                                    claimState!(s.set("status", "validating")
-                                      .set("validationReceipt", {
-                                        "claimStatus": claimSt,
-                                        "validationRef": {
-                                          "credentialUri": validation.get("credentialUri"),
-                                          "verdict": validation.get("verdict"),
-                                          "quality": validation.get("quality"),
-                                          "validator": validator},
-                                        "kassetRef": {"id": kassetUri, "uri": kassetUri}})
-                                      .set("updatedAt", height)
-                                      .set("version", s.get("version") + 1)) |
-                                    for (@s2 <- claimState) {
-                                      claimState!(s2.set("status", claimSt)
-                                        .set("validationRef", {
-                                          "credentialUri": validation.get("credentialUri"),
-                                          "verdict": validation.get("verdict"),
-                                          "quality": validation.get("quality"),
-                                          "validator": validator})
-                                        .set("kassetRef", {"id": kassetUri, "uri": kassetUri})
-                                        .set("validationReceipt", Nil)
-                                        .set("updatedAt", height)
-                                        .set("version", s2.get("version") + 1)) |
-                                      ret2!((true, {"id": kassetUri, "uri": kassetUri}))
-                                    }
-                                  }
-                                  _ => { claimState!(s) | ret2!(ka) }
+                  contract finalizeWith(@claimSt, @kassetSt, @s, @validator, @height,
+                                        @credentialUri, @validation, ret2) = {
+                    claimState!(s.set("status", "validating")
+                      .set("validationReceipt", {
+                        "claimStatus": claimSt,
+                        "validation": validation,
+                        "credentialUri": credentialUri,
+                        "validator": validator,
+                        "height": height,
+                        "kassetRef": Nil})
+                      .set("updatedAt", height)
+                      .set("version", s.get("version") + 1)) |
+                    new kaCh in {
+                      makeKAsset!({
+                        "uri": "",
+                        "claimRef": {"id": s.get("uri"), "uri": s.get("uri")},
+                        "validation": validation,
+                        "validator": validator,
+                        "validatorCredential": credentialUri,
+                        "claimant": s.get("claimant"),
+                        "verdict": validation.get("verdict"),
+                        "quality": validation.get("quality"),
+                        "quantity": s.get("quantity"),
+                        "discipline": s.get("work").get("discipline"),
+                        "jurisdiction": s.get("work").get("jurisdiction"),
+                        "valuePropositionRef": s.get("valuePropositionRef"),
+                        "status": kassetSt,
+                        "approver": Nil,
+                        "approval": Nil,
+                        "approvedAt": Nil,
+                        "approvalVersion": Nil,
+                        "childRefs": [],
+                        "dispute": Nil,
+                        "revocation": Nil,
+                        "createdAt": height,
+                        "version": 1
+                      }, *OracleFactory, *ValuePropositionFactory, *ClaimFactory, *kaCh) |
+                      for (@ka <- kaCh) {
+                        match ka {
+                          (true, _, kassetUri) => {
+                            for (@s2 <- claimState) {
+                              match s2.get("status") {
+                                "validating" => {
+                                  claimState!(s2.set("status", claimSt)
+                                    .set("validationRef", {
+                                      "credentialUri": credentialUri,
+                                      "verdict": validation.get("verdict"),
+                                      "quality": validation.get("quality"),
+                                      "validator": validator})
+                                    .set("kassetRef", {"id": kassetUri, "uri": kassetUri})
+                                    .set("validationReceipt", Nil)
+                                    .set("updatedAt", height)
+                                    .set("version", s2.get("version") + 1)) |
+                                  ret2!((true, {"id": kassetUri, "uri": kassetUri}))
                                 }
+                                _ => { claimState!(s2) | ret2!((false, "claim changed")) }
                               }
                             }
                           }
+                          _ => { ret2!(ka) }
+                        }
+                      }
+                    }
+                  } |
+
+                  contract finalizeValidation(@s, @validator, @height, @credentialUri,
+                                              @validation, ret2) = {
+                    match validation.get("verdict") {
+                      "valid" => {
+                        finalizeWith!("validated", "validated", s, validator, height,
+                                      credentialUri, validation, *ret2)
+                      }
+                      "partial" => {
+                        finalizeWith!("validated", "conditional", s, validator, height,
+                                      credentialUri, validation, *ret2)
+                      }
+                      "invalid" => {
+                        finalizeWith!("rejected", "rejected", s, validator, height,
+                                      credentialUri, validation, *ret2)
+                      }
+                      _ => {
+                        finalizeWith!("rejected", "rejected", s, validator, height,
+                                      credentialUri, validation, *ret2)
+                      }
+                    }
+                  } |
+
+                  contract resumeFinalize(@s, @r, @validator, @who, ret3) = {
+                    if (who != s.get("claimant") && who != validator) {
+                      claimState!(s) | ret3!((false, "not party"))
+                    } else {
+                      match r.get("kassetRef") {
+                        Nil => {
+                          match r.get("validation") {
+                            Nil => { claimState!(s) | ret3!((false, "no validation")) }
+                            validation => {
+                              finalizeValidation!(s, validator, r.get("height"),
+                                                  r.get("credentialUri"), validation, *ret3)
+                            }
+                          }
+                        }
+                        kr => {
+                          claimState!(s.set("status", r.get("claimStatus"))
+                            .set("validationRef", r.get("validationRef"))
+                            .set("kassetRef", kr)
+                            .set("validationReceipt", Nil)
+                            .set("version", s.get("version") + 1)) |
+                          ret3!((true, kr))
                         }
                       }
                     }
@@ -289,7 +348,7 @@ in {
                                         s.get("selectionCriteria"), validator, height, *okCh) |
                                       for (@ok <- okCh) {
                                         if (ok) {
-                                          finalizeValidation!(s, validator, height, validation, *ret2)
+                                          finalizeValidation!(s, validator, height, credentialUri, validation, *ret2)
                                         } else { claimState!(s) | ret2!((false, "proof")) }
                                       }
                                     }
@@ -322,12 +381,15 @@ in {
                               if (r == Nil) {
                                 claimState!(s) | ret3!((false, "no receipt"))
                               } else {
-                                claimState!(s.set("status", r.get("claimStatus"))
-                                  .set("validationRef", r.get("validationRef"))
-                                  .set("kassetRef", r.get("kassetRef"))
-                                  .set("validationReceipt", Nil)
-                                  .set("version", s.get("version") + 1)) |
-                                ret3!((true, r.get("kassetRef")))
+                                match (r.get("validator"), r.get("validationRef")) {
+                                  (Nil, {"validator": v, ..._}) => {
+                                    resumeFinalize!(s, r, v, who, *ret3)
+                                  }
+                                  (v, _) => {
+                                    resumeFinalize!(s, r, v, who, *ret3)
+                                  }
+                                  _ => { claimState!(s) | ret3!((false, "no validator")) }
+                                }
                               }
                             }
                             _ => { claimState!(s) | ret3!((false, "not resumable")) }

@@ -14,12 +14,13 @@ new
   rootCh, cfCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
   listHas, listHasId, listHasAny, listHas3,
-  CredentialFactory, openCaseCheck, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
+  CredentialFactory, openCaseCheck, caseReqOk, outcomeStatus, resolveAndProve, checkCredentialProof, proveAndCheck, checkValidatedProof, resolveProveValidated, proveValidatedAndCheck
 in {
   // @@INLINE:lib/Auth.rho@@
   // @@INLINE:lib/Time.rho@@
   // @@INLINE:lib/List.rho@@
   // @@INLINE:lib/Proof.rho@@
+  // @@INLINE:lib/Status.rho@@
 
   rl!(`__CREDENTIAL_FACTORY_URI__`, *cfCh) |
   for (CredentialFactory <- cfCh) {
@@ -54,17 +55,43 @@ in {
         }
       } |
 
+      contract caseReqOk(@caseReq, @opener, @now, ret) = {
+        new pCh, aCh in {
+          match (caseReq.get("deadlineHeight"), caseReq.get("kind"),
+                 caseReq.get("parties"), caseReq.get("adjudicator")) {
+            (deadline, kind, parties, adjudicator) => {
+              if (deadline == Nil || deadline <= now
+                  || kind == Nil || kind == ""
+                  || parties == Nil || parties.length() == 0) { ret!(false) }
+              else {
+                listHas!(parties, opener, 0, *pCh) |
+                listHas!(parties, adjudicator, 0, *aCh) |
+                for (@isParty <- pCh; @isAdj <- aCh) {
+                  if (not isParty || isAdj) { ret!(false) }
+                  else { ret!(true) }
+                }
+              }
+            }
+          }
+        }
+      } |
+
       contract OracleFactory(@"open", dId, @subjectRef, @caseReq, subjectApply, ret) = {
-        new aCh, okCh in {
+        new aCh, okCh, hCh in {
         authSubject!(*dId, *aCh) |
         openCaseCheck!(caseReq, *okCh) |
-        for (@(true, opener) <- aCh; @ok <- okCh) {
+        nowHeight!(*hCh) |
+        for (@(true, opener) <- aCh; @ok <- okCh; @now <- hCh) {
         if (opener != caseReq.get("openedBy")) { ret!((false, "not opener")) }
-        else if (subjectRef == Nil || caseReq.get("parties") == Nil
-                 || caseReq.get("deadlineHeight") == Nil) { ret!((false, "case fields")) }
+        else if (subjectRef == Nil) { ret!((false, "case fields")) }
+        else {
+        new ckCh in {
+        caseReqOk!(caseReq, opener, now, *ckCh) |
+        for (@caseOk <- ckCh) {
+        if (not caseOk) { ret!((false, "case fields")) }
         else if (not ok) { ret!((false, "adjudicator credential")) }
         else {
-        new caseState, OracleCase, selfDecide, uriCh in {
+        new caseState, OracleCase, selfDecide, commitExecution, uriCh in {
           caseState!({
             "uri": "",
             "kind": caseReq.get("kind"),
@@ -121,24 +148,28 @@ in {
               nowHeight!(*hCh) |
               for (@(true, who) <- aCh; @now <- hCh) {
                 for (@s <- caseState) {
-                  match (s.get("status") == "open", who == s.get("adjudicator")) {
-                    (true, true) => {
+                  match (s.get("status") == "open", who == s.get("adjudicator"),
+                         now > s.get("deadlineHeight")) {
+                    (true, true, false) => {
                       new okCh in {
                         proveAndCheck!(s.get("adjudicatorCredentialUri"), *dId,
                           s.get("requirement"), who, now, *okCh) |
-                        for (@ok <- okCh) {
-                          if (ok) {
-                            match decision.get("outcome") {
-                              "uphold" => { selfDecide!(s, decision, now, *ret2) }
-                              "revoke" => { selfDecide!(s, decision, now, *ret2) }
-                              "partial" => { selfDecide!(s, decision, now, *ret2) }
+                        new osCh in {
+                          outcomeStatus!(decision.get("outcome"), *osCh) |
+                          for (@ok <- okCh; @target <- osCh) {
+                            match (ok, target) {
+                              (true, Nil) => { caseState!(s) | ret2!((false, "outcome")) }
+                              (true, _) => { selfDecide!(s, decision, now, *ret2) }
+                              (false, _) => { caseState!(s) | ret2!((false, "not qualified")) }
                               _ => { caseState!(s) | ret2!((false, "outcome")) }
                             }
-                          } else { caseState!(s) | ret2!((false, "not qualified")) }
+                          }
                         }
                       }
                     }
-                    (false, _) => { caseState!(s) | ret2!((false, "not open")) }
+                    (true, false, false) => { caseState!(s) | ret2!((false, "not adjudicator")) }
+                    (true, _, true) => { caseState!(s) | ret2!((false, "expired")) }
+                    (false, _, _) => { caseState!(s) | ret2!((false, "not open")) }
                     _ => { caseState!(s) | ret2!((false, "not adjudicator")) }
                   }
                 }
@@ -153,12 +184,26 @@ in {
             ret2!((true, Nil))
           } |
 
+          contract commitExecution(@s, @status, @execStatus, @lastError, @outcome,
+                                   @reply, ret2) = {
+            for (@s2 <- caseState) {
+              caseState!(s2.set("status", status)
+                           .set("execution", {"attempts": 1,
+                                              "lastError": lastError,
+                                              "status": execStatus,
+                                              "caseId": s.get("uri"),
+                                              "decision": s.get("decision"),
+                                              "outcome": outcome}))
+            } |
+            ret2!(reply)
+          } |
+
           contract OracleCase(@"execute", ret2) = {
             for (@s <- caseState) {
               if (s.get("status") == "executed") {
                 caseState!(s) | ret2!((true, "already executed"))
               } else {
-                if (s.get("status") != "decided") {
+                if (s.get("status") != "decided" && s.get("status") != "executing") {
                   caseState!(s) | ret2!((false, "not decided"))
                 } else {
                   caseState!(s.set("status", "executing")
@@ -171,38 +216,16 @@ in {
                     for (@a <- aCh) {
                       match a {
                         (true, outcome) => {
-                          for (@s2 <- caseState) {
-                            caseState!(s2.set("status", "executed")
-                                         .set("execution", {"attempts": 1,
-                                                            "lastError": Nil,
-                                                            "status": "applied",
-                                                            "caseId": s.get("uri"),
-                                                            "decision": s.get("decision"),
-                                                            "outcome": outcome}))
-                          } |
-                          ret2!((true, outcome))
+                          commitExecution!(s, "executed", "applied", Nil, outcome,
+                                           (true, outcome), *ret2)
                         }
                         (false, why) => {
-                          for (@s2 <- caseState) {
-                            caseState!(s2.set("status", "decided")
-                                         .set("execution", {"attempts": 1,
-                                                            "lastError": why,
-                                                            "status": "failed",
-                                                            "caseId": s.get("uri"),
-                                                            "decision": s.get("decision")}))
-                          } |
-                          ret2!((false, why))
+                          commitExecution!(s, "decided", "failed", why, Nil,
+                                           (false, why), *ret2)
                         }
                         _ => {
-                          for (@s2 <- caseState) {
-                            caseState!(s2.set("status", "decided")
-                                         .set("execution", {"attempts": 1,
-                                                            "lastError": "apply",
-                                                            "status": "failed",
-                                                            "caseId": s.get("uri"),
-                                                            "decision": s.get("decision")}))
-                          } |
-                          ret2!((false, "apply"))
+                          commitExecution!(s, "decided", "failed", "apply", Nil,
+                                           (false, "apply"), *ret2)
                         }
                       }
                     }
@@ -250,6 +273,9 @@ in {
             for (@s2 <- caseState) { caseState!(s2.set("uri", uri)) } |
             ret!((true, {"id": uri, "uri": uri}))
           }
+        }
+        }
+        }
         }
         }
         }

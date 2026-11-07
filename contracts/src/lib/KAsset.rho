@@ -136,14 +136,14 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
       }
     } |
 
-    contract KAsset(@"proveApproved", ret2) = {
+    contract KAsset(@"proveApproved", ret2, proofCh) = {
       for (@s <- kState) {
         match s.get("status") {
           "approved" => {
             match s.get("approver") {
               Nil => { kState!(s) | ret2!((false, "not approved")) }
               approver => {
-                new proofState, Proof, proofUriCh in {
+                new proofState, Proof in {
                   proofState!({
                     "data": {
                       "id": s.get("id"),
@@ -165,11 +165,9 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
                       }
                     }
                   } |
-                  rs!(bundle+{*Proof}, *proofUriCh) |
-                  for (@proofUri <- proofUriCh) {
-                    kState!(s) |
-                    ret2!((true, proofUri))
-                  }
+                  kState!(s) |
+                  proofCh!(bundle+{*Proof}) |
+                  ret2!((true, Nil))
                 }
               }
             }
@@ -286,14 +284,13 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
             new cch in {
               rl!(ref.get("uri"), *cch) |
               for (Child <- cch) {
-                new pCh in {
-                  Child!("proveApproved", *pCh) |
+                new pCh, proofCh in {
+                  Child!("proveApproved", *pCh, *proofCh) |
                   for (@pr <- pCh) {
                     match pr {
-                      (true, proofUri) => {
-                        new pc, tCh in {
-                          rl!(proofUri, *pc) |
-                          for (Proof <- pc) {
+                      (true, _) => {
+                        for (Proof <- proofCh) {
+                          new tCh in {
                             Proof!("take", *tCh) |
                             for (@t <- tCh) {
                               match t {
@@ -447,33 +444,34 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
               kState!(s) | ret2!((false, "case mismatch"))
             } else {
               if (s.get("status") != "disputed") {
-                match (s.get("status"), decision.get("outcome")) {
-                  ("upheld", "uphold") => { kState!(s) | ret2!((true, "already applied")) }
-                  ("revoked", "revoke") => { kState!(s) | ret2!((true, "already applied")) }
-                  ("partially_revoked", "partial") => { kState!(s) | ret2!((true, "already applied")) }
-                  _ => { kState!(s) | ret2!((false, "not disputed")) }
+                new osCh in {
+                  outcomeStatus!(decision.get("outcome"), *osCh) |
+                  for (@target <- osCh) {
+                    match (target, s.get("status")) {
+                      (Nil, _) => { kState!(s) | ret2!((false, "not disputed")) }
+                      (t, current) => {
+                        if (current == t) {
+                          kState!(s) | ret2!((true, "already applied"))
+                        } else { kState!(s) | ret2!((false, "not disputed")) }
+                      }
+                      _ => { kState!(s) | ret2!((false, "not disputed")) }
+                    }
+                  }
                 }
               } else {
-                match decision.get("outcome") {
-                  "uphold" => {
-                    kState!(s.set("status", "upheld")
-                              .set("revocation", decision)
-                              .set("version", s.get("version") + 1)) |
-                    ret2!((true, "upheld"))
+                new osCh in {
+                  outcomeStatus!(decision.get("outcome"), *osCh) |
+                  for (@status <- osCh) {
+                    match status {
+                      Nil => { kState!(s) | ret2!((false, "outcome")) }
+                      target => {
+                        kState!(s.set("status", target)
+                                  .set("revocation", decision)
+                                  .set("version", s.get("version") + 1)) |
+                        ret2!((true, target))
+                      }
+                    }
                   }
-                  "revoke" => {
-                    kState!(s.set("status", "revoked")
-                              .set("revocation", decision)
-                              .set("version", s.get("version") + 1)) |
-                    ret2!((true, "revoked"))
-                  }
-                  "partial" => {
-                    kState!(s.set("status", "partially_revoked")
-                              .set("revocation", decision)
-                              .set("version", s.get("version") + 1)) |
-                    ret2!((true, "partially_revoked"))
-                  }
-                  _ => { kState!(s) | ret2!((false, "outcome")) }
                 }
               }
             }

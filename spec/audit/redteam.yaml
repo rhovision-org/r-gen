@@ -1,0 +1,267 @@
+schema: rgen.redteam/v1
+measured_at: '2026-11-07T12:07:36.817210+00:00'
+node:
+  api: '1'
+  node: RChain Node 0.1.0 (e2d073dcd02f1e560ccb84749937138a1e184b0b)
+expectation: fixed
+results:
+- id: RT-004
+  name: third party takes a proof URI
+  classification: fixed
+  finding: RGA-035
+  observed: prove returned no proof URI; the capability is sent only on the caller's
+    private channel
+  detail:
+    reply:
+    - true
+- id: RT-008
+  name: credential with missing level
+  classification: fixed
+  finding: RGA-038
+  observed: 'issue refused: (False, ''fields'')'
+  detail:
+    issue:
+    - false
+    - fields
+- id: RT-007
+  name: claim with a free-string subjectRef
+  classification: fixed
+  finding: RGA-039
+  observed: 'create refused: (False, ''fields'')'
+  detail: null
+- id: RT-006
+  name: comment on a Nil window
+  classification: fixed
+  finding: RGA-037
+  observed: comment returned; claim status 'open'
+  detail:
+    claim: rho:id:uzmjkmjqwupf98w8habgfam9pba461mq57xpcth95pequtpqtrfy
+    comment_error: null
+    after:
+    - true
+    - claimant: 11112Y3bEDcWaEJZfiHxrr6r3y95KsR4gTRnDgsguMP2rKXigLW8jJ
+      comments:
+      - at: 1777
+        by: 111121DGWxeCFbw2LLevJybrH2xtDDG18YBLPvtNYdbbDWQTx3TG5A
+        hash: x
+        id: cm:111121DGWxeCFbw2LLevJybrH2xtDDG18YBLPvtNYdbbDWQTx3TG5A:1777
+      createdAt: 1775
+      deadlineHeight: 1000000
+      definitionHash: twelve inspections
+      evidence:
+      - hash: aa
+        kind: photo
+      quantity:
+        unit: inspections
+        value: 12
+      selectionCriteria:
+        ctype: Validator
+        discipline: structural
+        jurisdiction: US-TX
+        minLevel: 1
+        role: validator
+      selectionCriteriaHash: sc
+      statementHash: deck inspected
+      status: open
+      updatedAt: 1777
+      uri: rho:id:uzmjkmjqwupf98w8habgfam9pba461mq57xpcth95pequtpqtrfy
+      version: 2
+      work:
+        discipline: structural
+        jurisdiction: US-TX
+        projectRef: fixture
+        titleHash: bridge-deck
+- id: RT-009
+  name: oracle open with a past deadline
+  classification: fixed
+  finding: RGA-026
+  observed: 'refused: (False, ''case fields'')'
+  detail:
+    open: &id001
+    - false
+    - case fields
+    adjudicator_credential: rho:id:r7rs9ryuxjaegyinpxcbf8xmcawpz7xxfnnyteyqrt7u9hx1myfy
+- id: RT-010
+  name: oracle open with caller-chosen parties
+  classification: fixed
+  finding: RGA-023
+  observed: 'refused: (False, ''case fields'')'
+  detail:
+    open: *id001
+- id: RT-011
+  name: provenance record for a victim assetRef
+  classification: accepted
+  finding: RGA-022
+  observed: created with mallory as the only writer; provenance is advisory and no
+    core arm reads it
+  detail:
+    provenance:
+    - true
+    - id: rho:id:sa76mf7ttrz3enphx7oos91q1ane9jm43q7hempxg1sp5nsjsf7y
+      uri: rho:id:sa76mf7ttrz3enphx7oos91q1ane9jm43q7hempxg1sp5nsjsf7y
+- id: RT-013
+  name: permissionless proveApproved minting
+  classification: accepted
+  finding: RGA-040
+  observed: 3/3 private proofs minted and taken by mallory; caller-paid, no registry
+    entry, no victim state
+  detail:
+    kasset: rho:id:i7dnsghtftasuareer51kcrwf5yi55erpmak3osopiqyus79ebco
+    proofs:
+    - - - true
+        - private
+      - - true
+        - approvedAt: 1792
+          approver: 11112W74yBP3hicQeS79pUBEmNGCiEsUA4z2SVdWvzrvatyinLok2T
+          discipline: structural
+          id: rho:id:i7dnsghtftasuareer51kcrwf5yi55erpmak3osopiqyus79ebco
+          jurisdiction: US-TX
+          uri: rho:id:i7dnsghtftasuareer51kcrwf5yi55erpmak3osopiqyus79ebco
+    - - - true
+        - private
+      - - true
+        - approvedAt: 1792
+          approver: 11112W74yBP3hicQeS79pUBEmNGCiEsUA4z2SVdWvzrvatyinLok2T
+          discipline: structural
+          id: rho:id:i7dnsghtftasuareer51kcrwf5yi55erpmak3osopiqyus79ebco
+          jurisdiction: US-TX
+          uri: rho:id:i7dnsghtftasuareer51kcrwf5yi55erpmak3osopiqyus79ebco
+    - - - true
+        - private
+      - - true
+        - approvedAt: 1792
+          approver: 11112W74yBP3hicQeS79pUBEmNGCiEsUA4z2SVdWvzrvatyinLok2T
+          discipline: structural
+          id: rho:id:i7dnsghtftasuareer51kcrwf5yi55erpmak3osopiqyus79ebco
+          jurisdiction: US-TX
+          uri: rho:id:i7dnsghtftasuareer51kcrwf5yi55erpmak3osopiqyus79ebco
+- id: RT-014
+  name: nest above the 32-child cap
+  classification: fixed
+  finding: RGA-025
+  observed: reply (False, 'parent not approved or limit')
+  detail:
+    reply:
+    - false
+    - parent not approved or limit
+- id: RT-002
+  name: two validations in one deploy
+  classification: fixed
+  finding: RGA-032
+  observed: 1 validation(s) succeeded
+  detail:
+    replies:
+    - - true
+      - id: rho:id:okbyf51pmj3mw9yauzg68bfr8o75dsphr7eqn39f1yqmhdhxxwcy
+        uri: rho:id:okbyf51pmj3mw9yauzg68bfr8o75dsphr7eqn39f1yqmhdhxxwcy
+    - - false
+      - not open
+    claim: rho:id:aqzketz8gcwm4yip8ign9xmrb4gkkqgmcsjmudsb3dtuss6g1c4y
+- id: RT-012
+  name: permissionless execute crank
+  classification: accepted
+  finding: RGA-024
+  observed: execute reply (True, 'upheld'); status 'executed'
+  detail:
+    decide:
+    - true
+    execute:
+    - true
+    - upheld
+    state:
+    - true
+    - adjudicator: 11112SiSZcbqNGU7Nd6y13hnDVtr9hgFr87AG5K8fAczokJvueqXpe
+      adjudicatorCredentialUri: rho:id:cckttz1rp64acypyazej7w667snhqh4xm6ui5drc7jbkfamc97ty
+      deadlineHeight: 1000000
+      decision:
+        decidedAt: 1806
+        outcome: uphold
+        rationaleHash: r
+      evidence: []
+      execution:
+        attempts: 1
+        caseId: rho:id:jjndr7kfac3f4gwcjjeb4sxa8auaug31w8jipbiy5fxghf1qtido
+        decision:
+          decidedAt: 1806
+          outcome: uphold
+          rationaleHash: r
+        outcome: upheld
+        status: applied
+      groundsHash: grounds
+      kind: dispute
+      openedBy: 11112Y3bEDcWaEJZfiHxrr6r3y95KsR4gTRnDgsguMP2rKXigLW8jJ
+      parties:
+      - 11112Y3bEDcWaEJZfiHxrr6r3y95KsR4gTRnDgsguMP2rKXigLW8jJ
+      - 11112W74yBP3hicQeS79pUBEmNGCiEsUA4z2SVdWvzrvatyinLok2T
+      requirement:
+        ctype: Oracle
+        discipline: structural
+        jurisdiction: US-TX
+        minLevel: 1
+        role: oracle
+      status: executed
+      subjectRef:
+        id: rho:id:wypqwnbtf8e95cotw9ppf1471shxkc4pbh5b6bbexgbxjhdw4u3o
+        uri: rho:id:wypqwnbtf8e95cotw9ppf1471shxkc4pbh5b6bbexgbxjhdw4u3o
+      uri: rho:id:jjndr7kfac3f4gwcjjeb4sxa8auaug31w8jipbiy5fxghf1qtido
+      version: 2
+- id: RT-020
+  name: VP validator opens a dispute
+  classification: fixed
+  finding: RGA-041
+  observed: validator dispute opened
+  detail:
+    vp: rho:id:qtqyi3cz3t7asq9shrar861xiytjxxjbk9ouj5jqc1ibm6mxma3y
+    reply:
+    - true
+    - id: rho:id:91w5uu7p8xr33d9omcxu1iz8oatckdzdz3m6d1f6gd6o89r3x4zy
+      uri: rho:id:91w5uu7p8xr33d9omcxu1iz8oatckdzdz3m6d1f6gd6o89r3x4zy
+- id: RT-021
+  name: VP validation after the deadline
+  classification: fixed
+  finding: RGA-042
+  observed: deadline 1818; reply (False, 'deadline'); error None
+  detail:
+    vp: rho:id:6m9rht7nzte466j6y9rr8xj3jc4ims9qjnjeh41n6n33ijk5jgqo
+- id: RT-022
+  name: oracle decide after the case deadline
+  classification: fixed
+  finding: RGA-043
+  observed: deadline 1834; reply (False, 'expired')
+  detail:
+    case: rho:id:8zkt19whsmcstf1pqnnndpa7myffwwydd3oezntbckkn9fgf8oyo
+- id: RT-023
+  name: claim records the proved credential
+  classification: fixed
+  finding: RGA-044
+  observed: claim stored 'rho:id:4uqgp5cur7nq4483wtmes1j6c5zzqyb6ffc5gizbq4akytnrb37y';
+    kasset stored 'rho:id:4uqgp5cur7nq4483wtmes1j6c5zzqyb6ffc5gizbq4akytnrb37y'
+  detail:
+    claim: rho:id:6unuob9i17cz3n8poekugy8cwc868diwdkehx5eocfchribychbo
+    kasset: rho:id:7itoi3dr9p6uxjyiwjyou4197p7pjnkszh4y9zcyiuip1qtju6oy
+- id: RT-001
+  name: two identity creates for one address
+  classification: not_reproduced
+  finding: RGA-031
+  observed: 0 duplicate(s) in 3 attempt(s)
+  detail:
+    attempts:
+    - actor: mallory
+      replies:
+      - - false
+        - duplicate
+      - - true
+        - rho:id:7xjm4x5au4bcdantbz6i5nbqu4ax99eniqqapp9tdg7osxg8saay
+    - actor: ida
+      replies:
+      - - false
+        - duplicate
+      - - false
+        - duplicate
+    - actor: idb
+      replies:
+      - - true
+        - rho:id:cxxoskwxnrno73hexs51c71wmux63p8d513tauxtxuu9ubinzq7o
+      - - false
+        - duplicate
+

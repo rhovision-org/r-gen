@@ -1,25 +1,15 @@
 // One-shot proof helpers. A credential or value proposition `prove` arm returns a private
-// `Proof` capability whose `take` arm yields `(true, data)` once and `(false, "used")` after
-// that. These helpers resolve the credential by its registry URI, obtain a proof, take it, and
-// check the fields the caller binds. Extracting them keeps the consuming arms within the
-// parser's nesting limit.
+// `Proof` capability on a caller-supplied channel; every `prove` variant sends
+// `bundle+{*Proof}` on that channel and returns `(true, Nil)`. The proof is never inserted into
+// the registry, so there is no discoverable proof URI for a third party to burn. `take` yields
+// `(true, data)` once and `(false, "used")` after that.
+//
+// These helpers resolve the credential or value proposition by its registry URI, receive the
+// private proof capability, take it, and check the fields the caller binds. The capability is
+// bound directly in a receive pattern; it is never passed through a data tuple.
 
-contract resolveAndProve(@credentialUri, dId, @rq, ret) = {
-  new credCh in {
-    rl!(credentialUri, *credCh) |
-    for (Credential <- credCh) {
-      new pCh in {
-        Credential!("prove", *dId, rq, *pCh) |
-        for (@p <- pCh) { ret!(p) }
-      }
-    }
-  }
-} |
-
-contract checkCredentialProof(@proofUri, @validator, @credentialUri, @height, ret) = {
-  new pc, tCh in {
-    rl!(proofUri, *pc) |
-    for (Proof <- pc) {
+contract checkCredentialProof(Proof, @validator, @credentialUri, @height, ret) = {
+  new tCh in {
     Proof!("take", *tCh) |
     for (@t <- tCh) {
       match t {
@@ -32,29 +22,33 @@ contract checkCredentialProof(@proofUri, @validator, @credentialUri, @height, re
         _ => { ret!(false) }
       }
     }
-    }
   }
 } |
 
 contract proveAndCheck(@credentialUri, dId, @rq, @validator, @height, ret) = {
-  new pCh, okCh in {
-    resolveAndProve!(credentialUri, *dId, rq, *pCh) |
-    for (@pr <- pCh) {
-      match pr {
-        (true, proofUri) => {
-          checkCredentialProof!(proofUri, validator, credentialUri, height, *okCh) |
-          for (@ok <- okCh) { ret!(ok) }
+  new credCh, proofCh, okCh in {
+    rl!(credentialUri, *credCh) |
+    for (Credential <- credCh) {
+      new statusCh in {
+        Credential!("prove", *dId, rq, *statusCh, *proofCh) |
+        for (@s <- statusCh) {
+          match s {
+            (true, _) => {
+              for (Proof <- proofCh) {
+                checkCredentialProof!(*Proof, validator, credentialUri, height, *okCh) |
+                for (@ok <- okCh) { ret!(ok) }
+              }
+            }
+            _ => { ret!(false) }
+          }
         }
-        _ => { ret!(false) }
       }
     }
   }
 } |
 
-contract checkValidatedProof(@proofUri, @caller, @atHeight, ret) = {
-  new pc, tCh in {
-    rl!(proofUri, *pc) |
-    for (Proof <- pc) {
+contract checkValidatedProof(Proof, @caller, @atHeight, ret) = {
+  new tCh in {
     Proof!("take", *tCh) |
     for (@t <- tCh) {
       match t {
@@ -66,32 +60,26 @@ contract checkValidatedProof(@proofUri, @caller, @atHeight, ret) = {
         _ => { ret!(false) }
       }
     }
-    }
-  }
-} |
-
-contract resolveProveValidated(@vpUri, dId, @atHeight, ret) = {
-  new vpc in {
-    rl!(vpUri, *vpc) |
-    for (VP <- vpc) {
-      new pCh in {
-        VP!("proveValidated", *dId, atHeight, *pCh) |
-        for (@p <- pCh) { ret!(p) }
-      }
-    }
   }
 } |
 
 contract proveValidatedAndCheck(@vpUri, dId, @caller, @atHeight, ret) = {
-  new pCh, okCh in {
-    resolveProveValidated!(vpUri, *dId, atHeight, *pCh) |
-    for (@pr <- pCh) {
-      match pr {
-        (true, proofUri) => {
-          checkValidatedProof!(proofUri, caller, atHeight, *okCh) |
-          for (@ok <- okCh) { ret!(ok) }
+  new vpc, proofCh, okCh in {
+    rl!(vpUri, *vpc) |
+    for (VP <- vpc) {
+      new statusCh in {
+        VP!("proveValidated", *dId, atHeight, *statusCh, *proofCh) |
+        for (@s <- statusCh) {
+          match s {
+            (true, _) => {
+              for (Proof <- proofCh) {
+                checkValidatedProof!(*Proof, caller, atHeight, *okCh) |
+                for (@ok <- okCh) { ret!(ok) }
+              }
+            }
+            _ => { ret!(false) }
+          }
         }
-        _ => { ret!(false) }
       }
     }
   }

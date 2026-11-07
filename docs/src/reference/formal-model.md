@@ -30,7 +30,14 @@ and r-share draw around `proved-model`.
 | `RGen.RaceFreedom` | headline non-representability theorems |
 | `RGen.Model.Proof` | one-shot proof cells with an arbitrary payload, `ProofData` |
 | `RGen.Model.Registry` | append-only registry, monotone `verify`, duplicate refusal |
+| `RGen.Linear.Consumption` | proof-cell and proof-token traces; no cross-arm token reuse |
 | `RGen.Model.Identity` | first-writer-wins directory, owner-only transfer |
+| `RGen.Model.IdentityReservation` | reserve → mint → commit → resume; no duplicate address |
+| `RGen.Model.ClaimMint` | validating receipt, mint once, commit/resume; one reachable K-Asset |
+| `RGen.Model.ProofCapability` | private proof capability, consumer check, reserve/release/consume |
+| `RGen.Model.NestCrash` | nest reservation, commit gate, crash release of every reservation |
+| `RGen.Deadline` | inclusive admit / strict expire boundaries; total Nil comment window |
+| `RGen.System` | composed claims + K-Asset links + directory; `system_safety` |
 | `RGen.Model.Issuer` | immutable issuer; the transition relation has no constructors |
 | `RGen.Model.Credential` | active/revoked, prove guard, revoke/renew/attest, identity invariance over `Reach` |
 | `RGen.Model.ValueProposition` | proposed → validated → disputed → upheld/revoked; one-shot validated proof |
@@ -94,16 +101,16 @@ of the pre-state.
 
 ## Axiom audit
 
-`tools/check_lean.py --audit` elaborates `RGen/Audit.lean`. On 2026-11-04 the listed
-196 theorems reported only `propext` and `Quot.sound` (`Classical.choice` is permitted
-but unused). The list is hand-maintained; the [proof audit](proof-audit.md) records that
-gap as RGA-006.
+`tools/check_lean.py --audit` elaborates `RGen/Audit.lean`. On 2026-11-07 the listed
+233 theorems reported only `propext` and `Quot.sound` (`Classical.choice` is permitted
+but unused). `--audit-coverage` reports 123 Pareto checks. The list is hand-maintained;
+the [proof audit](proof-audit.md) records that gap as RGA-006.
 
 ## Manifest and corpus
 
 `spec/flows/core.yaml` maps every deployed arm to a Lean declaration and one of four
-statuses: `proved-model`, `proved-conformance`, `owed`, `open`. At this checkpoint 34
-of the 67 deployed arms are 0 `proved-model`, 35 `proved-conformance`, and 32 `owed`
+statuses: `proved-model`, `proved-conformance`, `owed`, `open`. At this checkpoint the
+67 deployed arms are 0 `proved-model`, 35 `proved-conformance`, and 32 `owed`
 (read-only arms, creation registries, and extensions). `Identity.update` is modeled by
 `ProfileState.updateProfile`. `tools/check_flows.py` enforces coverage, deployment, and
 declaration existence.

@@ -39,11 +39,11 @@ say the table is complete over unbounded inputs. The target set is the 35 proved
 | LR-00 | done | `ProfileState.updateProfile` and `IdentityPatch`; Arm values for identity update, identity create, and VP comment; model-only arms listed in `spec/proofs/rigor.yaml` |
 | LR-01 | done | `*_guard_eq` theorems for all 32 mutating proved-model arms and a manifest `guard_eq` field; the three read-only arms have no guard obligation |
 | LR-02 | partial | `VWorld.set_commute`, `VWorld.commit_commute`, `Event.apply_commute_distinct`, `core_independent_arms_commute`, and `runExec_append`; a full `runExec` commute theorem remains |
-| LR-03 | done | `Linear/Consumption.lean` requires declared proof cells before a commit and forbids proof-cell reuse in a trace |
+| LR-03 | done | `Linear/Consumption.lean` requires declared proof cells before a commit, forbids proof-cell reuse, and the 2026-11 extension proves `core_no_proof_reuse_across_arms` over a token trace |
 | LR-04 | done | Independent arm events commute to the same final world; `core_independent_cells_commute` remains as a compatibility alias |
 | LR-05 | partial | The model-only finish/execute row is removed; the matrix is 32 rows against 48 distinct modeled pairs |
 | LR-06 | partial | `check_conformance.py` enforces theorem + vector + suite; all 35 proved arms are promoted via emitted vectors and the primitive suites |
-| LR-07 | done | `check_lean.py --audit-coverage` requires every Pareto `#check` in `Audit.lean`; 86 Pareto checks and 196 axiom checks pass |
+| LR-07 | done | `check_lean.py --audit-coverage` requires every Pareto `#check` in `Audit.lean`; 123 Pareto checks and 233 axiom checks pass |
 | LR-08 | partial | Identity update is now modeled; the other divergences remain in the ledger |
 
 The guard count is 32 of 35 proved-model arms; the remaining three are read-only verification
@@ -98,6 +98,11 @@ footprints. The roadmap does not claim that independence implies global race fre
        exactly once, and no two arms to consume the same proof generation.
 4. `core_no_proof_reuse_across_arms` is a trace theorem over the combined event list, not a
        statement about one proof cell in isolation.
+
+The 2026-11 `Linear/Consumption.lean` extension implements item 4 over a proof-token trace
+(`TokenWellFormedFrom`, `NoDoubleConsumeFrom`). It does not yet wire each `Arm` to a specific
+proof payload, so items 1-3 remain partial; the theorem is no-reuse over the token trace, not a
+per-arm payload relation.
 
 This still does not prove that the deployed private capability is unforgeable. It proves the
 consumption discipline of the model.

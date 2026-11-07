@@ -1,0 +1,12 @@
+// One outcome-to-status table. The K-Asset and value-proposition applyDecision arms use the
+// same mapping; keeping it in one helper stops the two copies from drifting. An unknown
+// outcome returns Nil, which the caller turns into an explicit refusal.
+
+contract outcomeStatus(@outcome, ret) = {
+  match outcome {
+    "uphold" => { ret!("upheld") }
+    "revoke" => { ret!("revoked") }
+    "partial" => { ret!("partially_revoked") }
+    _ => { ret!(Nil) }
+  }
+} |
