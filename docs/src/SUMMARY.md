@@ -7,6 +7,7 @@
 - [Local devnet](guides/devnet.md)
 - [Public testnet](guides/testnet.md)
 - [Web client](guides/web.md)
+- [Local-devnet testing](guides/devnet-testing.md)
 
 ## Primitives
 

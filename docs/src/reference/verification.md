@@ -76,6 +76,17 @@ generation theorem `core_races_not_representable`, the arm authority theorem
 behavioural race suite is regression evidence only; it is not the proof. It is a model
 proof: no mechanized Rholang semantics and no refinement theorem.
 
+## Local-devnet test tiers (2026-11-07)
+
+- `make devnet-test-smoke` — preflight, install, `devnet-verify`, identity/credentials/claim.
+- `make devnet-test-full` — smoke + all ten suites, red team, deploy-semantics probe, demo
+  seed/verify, web tests and both Playwright journeys, `make check`, `make lean-check`.
+- `make devnet-test-nightly` — full + reinstall check + 20-deploy soak; fault injection is
+  recorded as skipped until the recovery harness lands.
+- `make devnet-verify` resolves all nine Root keys through the deployed manifest and exits 4 on
+  a missing key or URI mismatch.
+- The full plan and the P1/P2 gap list are in [Local-devnet testing](../guides/devnet-testing.md).
+
 ## HAZOP, red team and deploy semantics (2026-11-07)
 
 - Blind multi-agent workflow HAZOP: 25 rows over 9 workflow/cross-node nodes; every S1/S2 row

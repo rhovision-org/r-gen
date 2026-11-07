@@ -22,7 +22,8 @@ export RGEN_CONTAINER
         devnet-up devnet-wait down status keys install unit-identity unit-credentials \
         unit-claim unit-kasset unit-value unit-oracle unit-provenance unit-integration \
         unit-core unit-race unit-all verify \
-        devnet-image devnet-doctor devnet-logs devnet-reset setup devnet-setup \
+        devnet-image devnet-doctor devnet-logs devnet-reset devnet-verify \
+        devnet-test-smoke devnet-test-full devnet-test-nightly setup devnet-setup \
         client-lint client-test client-build client-wasm client-check \
         web-install web-dev web-build web-test web-typecheck web-wasm-smoke sync-manifest \
         testnet-preflight testnet-keys testnet-fund testnet-install testnet-verify \
@@ -171,6 +172,19 @@ devnet-wait:
 
 devnet-logs:
 	cd $(RHOLO_DIR) && DEVNET_PREFIX=$(DEVNET_PREFIX) tools/devnet.sh logs
+
+devnet-verify: client-build
+	target/debug/rgen-cli --node $(NODE) --manifest deployments/devnet.json \
+		--shard /root --phlo-limit 8000000 --phlo-price 1 manifest verify --json
+
+devnet-test-smoke:
+	$(PY) harness/devnet_test.py --tier smoke
+
+devnet-test-full:
+	$(PY) harness/devnet_test.py --tier full
+
+devnet-test-nightly:
+	$(PY) harness/devnet_test.py --tier nightly
 
 devnet-reset:
 	cd $(RHOLO_DIR) && DEVNET_PREFIX=$(DEVNET_PREFIX) tools/devnet.sh down -v

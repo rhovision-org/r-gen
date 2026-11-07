@@ -1,5 +1,7 @@
 # Local devnet
 
+> For the tiered test workflow, see [Local-devnet testing](devnet-testing.md).
+
 r-gen runs against an rholo devnet. The node launcher is in the pinned
 `rchain-community/rchain-rust` checkout; this repository owns the contracts, keys and web
 client, not the node image.
