@@ -57,6 +57,7 @@ DIRECTIONS = {
 }
 AUDIT_PAGES = [
     "reference/audit-charter.md",
+    "reference/object-capabilities.md",
     "reference/hazop.md",
     "reference/proof-audit.md",
     "reference/rigor-roadmap.md",

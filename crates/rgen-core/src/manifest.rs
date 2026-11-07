@@ -1,7 +1,9 @@
 //! The deployment manifest written by `harness/install.py`.
 //!
 //! The Root is the authority. The component map is a convenience copy; a client resolves
-//! each key through `GenRoot.resolve` and treats a mismatch as a stale manifest.
+//! each key through `GenRoot.resolve`. `rgen-cli manifest verify` compares the resolved
+//! entries with this copy and reports a stale manifest; the SDK's `resolve_all` does not,
+//! and `Manifest::component` must not be used as an authority.
 
 use std::collections::BTreeMap;
 

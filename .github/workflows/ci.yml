@@ -111,7 +111,7 @@ jobs:
       - run: cargo build -p rgen-cli
       - run: DEVNET_PREFIX=rgen DEVNET_NODE_MEMORY=8g RHOLO_DIR=$PWD/rnode-rust \
           make devnet-up keys install devnet-verify unit-all demo-seed demo-verify \
-            redteam probe-deploy-semantics PY=.venv/bin/python
+            redteam redteam-capabilities probe-deploy-semantics PY=.venv/bin/python
         env:
           RGEN_EXPECT: fixed
       - uses: actions/setup-node@v4

@@ -70,15 +70,34 @@ cannot touch a real subject.
   is consumed and rechecked. A failed final check leaves the parent unchanged; the attempt's
   private proofs are re-mintable.
 
+## Capability run (2026-11-07-capabilities)
+
+`spec/hazop/runs/2026-11-07-capabilities/` is a second blind run over the object-capability
+surface. It has 36 `CHZ-*` rows over nine nodes (`cap-designation`, `cap-publication`,
+`cap-authority`, `cap-delegation`, `cap-confused-deputy`, `cap-attenuation`, `cap-revocation`,
+`cap-serialization`, `cap-client-manifest`), 18 adjudication decisions, and 21 guide words
+(the 15 plus `Delegate`, `Amplify`, `Leak`, `Bearer`, `Revoke`, `Attenuate`). The three
+analysts had disjoint blind inputs; the red-team operator supplied RT-025..RT-037. Every row
+references a capability register id, a finding, or a probe.
+
+The run's S1/S2 decisions are in `adjudication.yaml`. The headline fixed rows are the fake
+child anchor (CHZ-013/RGA-049), the Root register state order (CHZ-001/RGA-061), the
+caller-nominated `Issuer.authorize` (CHZ-006/RGA-048), and the validator dispute parties
+(CHZ-021/RGA-060). The accepted rows are the durable approval/validation, the proof bearer
+burn, the permissionless `proveApproved`/`execute`, the forest nesting, the manifest trust
+anchor, and the provenance limits.
+
 ## Verify
 
 ```bash
 python3 tools/check_hazop_runs.py
 ```
 
-The checker requires a manifest, at least three blind agents, input hashes, every workflow node,
-all row fields, two independent authors or an adjudication decision for every S1/S2 row, existing
-evidence paths, and adjudication entries that reference real rows.
+The checker discovers every run under `spec/hazop/runs/`, reads the run's `nodes` and
+`guide_words` (the 2026-11-07 run falls back to the original sets), and requires a manifest,
+at least three blind agents, input hashes, every node, all row fields, two independent authors
+or an adjudication decision for every S1/S2 row, existing evidence paths, a resolvable finding
+id (ledger or red-team result), and a resolvable capability register id.
 
 ## Limits
 

@@ -258,7 +258,7 @@ in {
                       }, *OracleFactory, *ValuePropositionFactory, *ClaimFactory, *kaCh) |
                       for (@ka <- kaCh) {
                         match ka {
-                          (true, _, kassetUri) => {
+                          (true, kassetUri) => {
                             for (@s2 <- claimState) {
                               match s2.get("status") {
                                 "validating" => {

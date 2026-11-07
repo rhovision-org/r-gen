@@ -1,8 +1,9 @@
 # Core arm reference
 
 Replies are `(true, payload…)` or `(false, reason)`. Mutating arms consume the entity cell
-first and re-post exactly once. Proofs are one-shot capabilities returned as a registry URI;
-the caller resolves the URI, calls `Proof("take")`, and checks the payload.
+first and re-post exactly once. Proofs are one-shot capabilities sent as
+`bundle+{*Proof}` on a caller-supplied `proofCh`; the caller calls `Proof("take")` and checks
+the payload. No proof URI is published.
 
 Each section links the primitive page with the paper anchors and the Lean theorem names.
 
@@ -20,6 +21,7 @@ See [Identity](../primitives/identity.md).
 ## Credentials
 
 - `Issuer("get"|"authorize"|"covers", ...)` — immutable genesis issuer; no revoke arm.
+  `authorize` takes a `dId` name and derives the caller with `authSubject`.
 - `CredentialFactory("issue"|"verify"|"count", ...) -> (true, credentialUri)`
 - `Credential("get"|"check"|"prove"|"revoke"|"renew"|"attest", ...)`
 - `Proof("take", ret) -> (true, proofData)` once, then `(false, "used")`

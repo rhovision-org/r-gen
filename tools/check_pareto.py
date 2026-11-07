@@ -107,7 +107,8 @@ def main() -> int:
         short = theorem.rsplit(".", 1)[-1]
         if short not in decls:
             errors.append(f"theorem {theorem} not found in Lean sources")
-        if f"#check {theorem}" not in pareto:
+        if (f"#check {theorem}" not in pareto
+                and f"#check RGen.{theorem}" not in pareto):
             errors.append(f"theorem {theorem} is not in RGen/Pareto.lean")
 
     for entry in data.get("docs", []):

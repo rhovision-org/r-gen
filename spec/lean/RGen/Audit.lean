@@ -9,6 +9,7 @@ import RGen.ArmGuards
 import RGen.Model.IdentityReservation
 import RGen.Model.ClaimMint
 import RGen.Model.ProofCapability
+import RGen.Model.Capability
 import RGen.Model.NestCrash
 import RGen.Deadline
 import RGen.System
@@ -269,3 +270,13 @@ This file is not imported by `RGen.lean`; it is an audit artefact.
 #print axioms RGen.core_no_proof_reuse_across_arms
 #print axioms RGen.runExec_no_lost_update
 #print axioms RGen.runExec_unique_accepted_per_generation
+
+-- Object capabilities
+#print axioms RGen.Cap.no_holder_without_grant
+#print axioms RGen.Cap.bundle_excludes_private
+#print axioms RGen.Cap.apply_case_bound
+#print axioms RGen.Cap.forward_burns_but_cannot_forge
+#print axioms RGen.Cap.public_reference_not_authority
+#print axioms RGen.Cap.anchored_nest_requires_issued_child
+#print axioms RGen.Cap.issuer_authorize_requires_issuer
+#print axioms RGen.Cap.approval_survives_revocation

@@ -164,6 +164,9 @@ def full() -> None:
     ok, _ = make("redteam", env={"RGEN_EXPECT": "fixed"})
     if not ok:
         raise SystemExit(1)
+    ok, _ = make("redteam-capabilities", env={"RGEN_EXPECT": "fixed"})
+    if not ok:
+        raise SystemExit(1)
     ok, _ = make("probe-deploy-semantics")
     if not ok:
         raise SystemExit(1)

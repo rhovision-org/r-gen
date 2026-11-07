@@ -12,6 +12,7 @@ with no paper basis; they must not be presented as paper-derived.
 | Read arms use `<<-` (peek) | Reads never block writers and never mutate. | r-gen |
 | Exactly one re-post per consume path | A missing re-post deadlocks the entity; a double re-post creates two states. `tools/check_concurrency.py` checks this structurally. | r-gen |
 | Private `Apply.applyDecision` capability | The Oracle case stores the subject's capability in its closure, never a caller-supplied id. A decision cannot be applied to another K-Asset. | r-gen + `@robles2016nspe p.25` |
+| Nest child anchored to the Claim's `kassetRef` | The child is resolved from the genuine Claim's K-Asset URI and the proof must name the same URI, so a self-registered fake child cannot be nested. | r-gen; RGA-049 |
 | Parent-owned nesting edges with `(approvedAt,id)` order | Cycles are non-representable without graph traversal; duplicate children are refused under the parent's consume. | r-gen + `@zhong2019bridge p.6` |
 | No global nonce cell | IDs are registry URIs; no global counter serializes creation. | r-gen |
 | Compile-time factory wiring | Core terms resolve factory URIs at install, not per call. Root is a client directory only. | r-gen |

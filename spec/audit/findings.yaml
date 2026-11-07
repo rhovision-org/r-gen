@@ -562,6 +562,663 @@ findings:
   note: The contract refuses same-parent duplicates and cycles but allows a child approved by a different parent to be nested
     again. The model theorem is about acyclicity and strict order, not unique parentage. Documentation should say "forest"
     precisely.
+- id: RGA-035
+  title: A proof URI was a public bearer token a third party could take
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: capability
+  evidence:
+  - contracts/src/lib/Proof.rho:1
+  - contracts/src/deploy/11_credentials.rho:238
+  claim: Only the intended consumer can take a proof.
+  verdict: unproved
+  arms: []
+  actions: []
+  disposition: fixed
+  note: prove sent bundle+{*Proof} on the caller's proofCh and no longer inserts a proof URI into the registry. A forwarded
+    proof can still be burned by the first taker; it cannot be forged. RT-004 and ProofCap.private_capability_no_bearer_dos
+    record the model-level evidence.
+- id: RGA-036
+  title: Claim.resume authenticated the caller but did not compare it to the claim or validator
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: authority
+  evidence:
+  - contracts/src/deploy/20_claim.rho:309
+  - contracts/src/deploy/20_claim.rho:376
+  claim: Only the claimant or the receipt validator can finalize a validating claim.
+  verdict: unproved
+  arms:
+  - Claim.resume
+  actions: []
+  disposition: fixed
+  note: resumeFinalize now refuses who != claimant && who != validator with "not party". The window needs a blocked mint, so
+    the probe is a unit case rather than a live exploit.
+- id: RGA-037
+  title: A Nil comment window reached Int > Nil and errored the comment deploy
+  severity: S3
+  likelihood: A
+  risk: 8
+  priority: P1
+  category: deadline
+  evidence:
+  - contracts/src/deploy/20_claim.rho:145
+  - contracts/src/lib/Time.rho:1
+  claim: A claim with a Nil comment window can be commented until its deadline.
+  verdict: unproved
+  arms:
+  - Claim.comment
+  actions: []
+  disposition: fixed
+  note: A Nil window normalizes to deadlineHeight; a legacy Nil refuses cleanly. RT-006 and Deadline.nil_comment_window_total
+    record the fix.
+- id: RGA-038
+  title: Credential issue accepted a missing level, producing an unprovable credential
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: validation
+  evidence:
+  - contracts/src/deploy/11_credentials.rho:29
+  - contracts/src/deploy/11_credentials.rho:122
+  claim: Every issued credential has the fields check and prove require.
+  verdict: unproved
+  arms:
+  - CredentialFactory.issue
+  actions: []
+  disposition: fixed
+  note: credentialReqOk rejects a missing or negative level and the other required fields. RT-008 records the refusal.
+- id: RGA-039
+  title: Claim.create stored a free-string subjectRef
+  severity: S3
+  likelihood: A
+  risk: 8
+  priority: P1
+  category: validation
+  evidence:
+  - contracts/src/deploy/20_claim.rho:36
+  claim: subjectRef is Nil or a map with a non-empty uri.
+  verdict: unproved
+  arms:
+  - ClaimFactory.create
+  actions: []
+  disposition: fixed
+  note: 'claimReqOk matches Nil or {"uri": uri, ..._}; any other value is refused with "fields". RT-007 records the refusal.'
+- id: RGA-040
+  title: proveApproved is permissionless and mints an unbounded number of approval proofs
+  severity: S3
+  likelihood: A
+  risk: 8
+  priority: P1
+  category: capability
+  evidence:
+  - contracts/src/lib/KAsset.rho:199
+  claim: An approval proof is only obtainable by an authorized requester.
+  verdict: unproved
+  arms:
+  - KAsset.proveApproved
+  actions:
+  - accept-risk
+  disposition: accepted
+  note: Any deployer can mint a fresh one-shot proof for an approved K-Asset. The proof carries approval data, no registry
+    entry and no victim state; the caller pays. Parent-owned nesting uses this proof as its authority.
+- id: RGA-041
+  title: A value-proposition validator could not open a dispute as itself
+  severity: S2
+  likelihood: A
+  risk: 12
+  priority: P0
+  category: authority
+  evidence:
+  - contracts/src/deploy/22_value.rho:231
+  - contracts/src/deploy/22_value.rho:260
+  claim: A proposer or validator can open a dispute on a VP.
+  verdict: unproved
+  arms:
+  - ValueProposition.openDispute
+  actions: []
+  disposition: fixed
+  note: openVpDispute passed *dId (the proposer) instead of *dId2 (the caller). It now passes *dId2 and parties excludes
+    Nil. RT-020 records the validator's successful dispute.
+- id: RGA-042
+  title: ValueProposition.validate accepted a validation after the deadline
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: deadline
+  evidence:
+  - contracts/src/deploy/22_value.rho:146
+  claim: A VP cannot validate after its deadline.
+  verdict: unproved
+  arms:
+  - ValueProposition.validate
+  actions: []
+  disposition: fixed
+  note: The ("proposed", _, true) arm refuses with "deadline". RT-021 records the refusal.
+- id: RGA-043
+  title: Oracle decide accepted a decision after the case deadline
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: deadline
+  evidence:
+  - contracts/src/deploy/30_oracle.rho:147
+  claim: A case cannot be decided after deadlineHeight.
+  verdict: unproved
+  arms:
+  - OracleCase.decide
+  actions: []
+  disposition: fixed
+  note: The (_, _, true) arm refuses with "expired"; expire remains available. RT-022 and Deadline.deadline_boundary_deterministic
+    record the fix.
+- id: RGA-044
+  title: Claim.validate recorded the caller-supplied credential URI, not the proved one
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: authority
+  evidence:
+  - contracts/src/deploy/20_claim.rho:287
+  - contracts/src/deploy/20_claim.rho:335
+  claim: The recorded validator credential is the one the validator proved.
+  verdict: unproved
+  arms:
+  - Claim.validate
+  actions: []
+  disposition: fixed
+  note: finalizeValidation receives the proved credentialUri and writes it into validationRef. RT-023 records the fix.
+- id: RGA-045
+  title: Oracle open checks the adjudicator subject but not revocation or expiry
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: authority
+  evidence:
+  - contracts/src/deploy/30_oracle.rho:32
+  claim: A case can only be opened with an active adjudicator credential.
+  verdict: unproved
+  arms:
+  - OracleFactory.open
+  actions:
+  - accept-risk
+  disposition: accepted
+  note: openCaseCheck reads Credential.get and compares the subject only. decide re-proves the credential at the current height,
+    so a revoked adjudicator cannot decide. The case can still be opened and then expire.
+- id: RGA-046
+  title: Claim.create stores valuePropositionRef without verifying it
+  severity: S2
+  likelihood: A
+  risk: 12
+  priority: P0
+  category: validation
+  evidence:
+  - contracts/src/deploy/20_claim.rho:110
+  - contracts/src/lib/KAsset.rho:51
+  claim: A claim only references a genuine value proposition.
+  verdict: unproved
+  arms:
+  - ClaimFactory.create
+  actions:
+  - accept-risk
+  disposition: accepted
+  note: A claim can store a forged or disputed VP reference. Approval requires ValuePropositionFactory.verify plus a validated
+    VP proof at the approval height, so the reference cannot authorize approval. The stale reference remains visible.
+- id: RGA-047
+  title: Identity.update cleared omitted profile fields
+  severity: S2
+  likelihood: A
+  risk: 12
+  priority: P0
+  category: state-integrity
+  evidence:
+  - contracts/src/deploy/10_identity.rho:40
+  - contracts/src/deploy/10_identity.rho:67
+  claim: Omitting a profile field from an update preserves its old value.
+  verdict: unproved
+  arms:
+  - Identity.update
+  actions: []
+  disposition: fixed
+  note: patchOr keeps the old value when the patch field is Nil. The update no longer silently loses displayNameHash, orgHash
+    or contactHash.
+- id: RGA-048
+  title: Issuer.authorize trusts a caller-nominated address as the issuer
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: capability
+  evidence:
+  - contracts/src/deploy/11_credentials.rho:69
+  - contracts/src/deploy/11_credentials.rho:134
+  claim: Issuer.authorize accepts only the deployer that controls the issuer identity.
+  verdict: unproved
+  arms:
+  - Issuer.authorize
+  actions: []
+  disposition: fixed
+  note: The arm was published in bundle+{*Issuer} and compared a caller-supplied address to issuerState.subject. Any deployer
+    could pass the genesis address and receive (true, true). The factory derived the caller correctly, so no state changed,
+    but the arm was not an authority check. It now takes a dId name and derives the caller with authSubject. RT-031 records the
+    pre-fix (true, true) and the post-fix refusal.
+- id: RGA-049
+  title: KAsset.nest can link a self-registered fake child because it trusts a registry-resolved proof
+  severity: S2
+  likelihood: B
+  risk: 9
+  priority: P0
+  category: capability
+  evidence:
+  - contracts/src/lib/KAsset.rho:293
+  - contracts/src/lib/KAsset.rho:369
+  - contracts/src/lib/KAsset.rho:404
+  claim: A nested child is the K-Asset named by a genuine Claim's kassetRef.
+  verdict: unproved
+  arms:
+  - KAsset.nest
+  actions:
+  - RR-12
+  disposition: fixed
+  note: The pre-pass compared the genuine Claim's kassetRef.uri to the child's self-reported get().uri, while phase 2 resolved
+    the caller-supplied ref.uri and trusted the proof minted by that process. A fake child that answered get/proveApproved
+    could be nested. The fix compares the Claim's kassetRef.uri to ref.uri, resolves the child from that URI, and requires the
+    proof id/uri to match. RT-032 records the pre-fix (true, "ok") and the post-fix refusal.
+- id: RGA-050
+  title: makeKAsset returned the K-Asset bundle in a reply value
+  severity: S4
+  likelihood: B
+  risk: 3
+  priority: P2
+  category: capability
+  evidence:
+  - contracts/src/lib/KAsset.rho:609
+  - contracts/src/deploy/20_claim.rho:259
+  claim: No capability is delivered as a reply value.
+  verdict: unproved
+  arms: []
+  actions:
+  - RR-12
+  disposition: fixed
+  note: The private Claim channel received (true, bundle+{*KAsset}, uri) and discarded the bundle. The same capability is
+    public through the registry URI, so the reply added no authority, only an escape surface. makeKAsset now returns (true, uri).
+- id: RGA-051
+  title: The client trusts the manifest's Root URI without an on-chain or signed anchor
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: capability
+  evidence:
+  - harness/install.py:192
+  - crates/rgen-core/src/manifest.rs:1
+  - web/scripts/sync-manifest.mjs:12
+  claim: A client can distinguish the genuine Root from a substituted manifest.
+  verdict: unproved
+  arms: []
+  actions:
+  - accept-risk
+  disposition: accepted
+  note: The manifest is an unsigned file of URI designations. A substituted manifest points the client at a self-consistent fake
+    Root and fake factories; the client then signs deploys to attacker-designated contracts. Signing the manifest or pinning
+    the Root URI is a client/extension concern. The core records the Root URI and verifies all nine keys through it.
+- id: RGA-052
+  title: The installer is both the Root writer and the genesis Issuer
+  severity: S3
+  likelihood: C
+  risk: 4
+  priority: P1
+  category: authority
+  evidence:
+  - contracts/src/deploy/00_root.rho:63
+  - contracts/src/deploy/11_credentials.rho:48
+  claim: Root registration and qualification issuance are separate authorities.
+  verdict: unproved
+  arms: []
+  actions:
+  - accept-risk
+  disposition: accepted
+  note: The 00_root deployer becomes the installer and the 11_credentials deployer becomes the genesis Issuer. In the installer
+    they are one key. Loss of that key freezes Root updates and new qualifications; there is no rotate arm. A governance
+    extension must separate or rotate them.
+- id: RGA-053
+  title: Registry insertion is unauthenticated, so a URI is a designation and not an endorsement
+  severity: S3
+  likelihood: A
+  risk: 8
+  priority: P1
+  category: capability
+  evidence:
+  - contracts/src/deploy/11_credentials.rho:333
+  - contracts/src/deploy/11_credentials.rho:109
+  claim: Holding a registry URI grants the authority of the term at that URI.
+  verdict: unproved
+  arms: []
+  actions:
+  - accept-risk
+  disposition: accepted
+  note: Any deploy can insert an arbitrary term and receive a fresh URI. The core compensates with installer-gated Root
+    entries and factory issuance registries. Every consumer must verify factory membership before treating a URI as an
+    entity; the pre-fix KAsset.nest was the one place that did not.
+- id: RGA-054
+  title: Oracle execute, expire and close, and Claim expire, have no caller check
+  severity: S3
+  likelihood: A
+  risk: 8
+  priority: P1
+  category: authority
+  evidence:
+  - contracts/src/deploy/30_oracle.rho:203
+  - contracts/src/deploy/30_oracle.rho:240
+  - contracts/src/deploy/30_oracle.rho:261
+  - contracts/src/deploy/20_claim.rho:200
+  claim: Only a party or the adjudicator can advance a case or close a claim.
+  verdict: unproved
+  arms:
+  - OracleCase.execute
+  - OracleCase.expire
+  - OracleCase.close
+  - Claim.expire
+  actions:
+  - accept-risk
+  disposition: accepted
+  note: These are open clock/transition arms. execute replays only the adjudicator's stored decision through the case-bound
+    Apply; expire refuses before the deadline; close refuses until executed or expired; Claim.expire refuses before the
+    deadline. A third party can pay phlo to advance them, which is a crank, not a decision.
+- id: RGA-055
+  title: An approval survives revocation of the approver credential
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: capability
+  evidence:
+  - contracts/src/lib/KAsset.rho:33
+  - contracts/src/deploy/11_credentials.rho:258
+  claim: Revoking the approver credential invalidates the approval.
+  verdict: unproved
+  arms:
+  - KAsset.approve
+  - Credential.revoke
+  actions:
+  - accept-risk
+  disposition: accepted
+  note: The credential proof is checked at the approval height; the approved status is a durable state transition. A later
+    revocation does not de-approve. The proof is height-bound, so it cannot be reused at a later height, but the approval
+    remains. De-approval would need a new transition and a policy for the liability record.
+- id: RGA-056
+  title: The SDK resolve_all does not compare resolved components with the manifest copies
+  severity: S4
+  likelihood: B
+  risk: 3
+  priority: P2
+  category: capability
+  evidence:
+  - crates/rgen-sdk/src/client.rs:213
+  - crates/rgen-core/src/manifest.rs:3
+  claim: resolve_all verifies the manifest component copies against Root.
+  verdict: unproved
+  arms: []
+  actions: []
+  disposition: fixed
+  note: The doc comment claimed the comparison, but resolve_all only inserted Root's answers. The comment now states the
+    actual boundary and Manifest::component is documented as a convenience copy. rgen-cli manifest verify performs the
+    comparison; no production caller uses Manifest::component.
+- id: RGA-057
+  title: Resolved components are cached for the client lifetime with no refresh method
+  severity: S3
+  likelihood: C
+  risk: 4
+  priority: P1
+  category: capability
+  evidence:
+  - crates/rgen-sdk/src/client.rs:181
+  claim: A client observes a reinstall or Root rotation without being recreated.
+  verdict: unproved
+  arms: []
+  actions: []
+  disposition: fixed
+  note: The comment named refresh_components but the method did not exist. Added Client::refresh_components to clear the
+    cache; a long-lived client must call it after a reinstall or Root rotation.
+- id: RGA-058
+  title: The installer wrote a manifest from deploy output without checking the Root acknowledgement
+  severity: S2
+  likelihood: C
+  risk: 6
+  priority: P1
+  category: capability
+  evidence:
+  - harness/install.py:180
+  - contracts/src/deploy/00_root.rho:39
+  claim: install fails when a component registration is refused.
+  verdict: unproved
+  arms: []
+  actions:
+  - RR-13
+  disposition: fixed
+  note: Every term emitted its deployId even when GenRoot.register returned (false, reason). install.py now resolves all
+    nine keys through Root before writing the manifest and exits non-zero on a missing or different URI (9/9 in the normal
+    path).
+- id: RGA-059
+  title: The installer could deploy a dependent term with a dry-run placeholder URI
+  severity: S3
+  likelihood: C
+  risk: 4
+  priority: P1
+  category: capability
+  evidence:
+  - harness/install.py:182
+  claim: A real install never renders a term against rho:id:dryrun-*.
+  verdict: unproved
+  arms: []
+  actions:
+  - RR-13
+  disposition: fixed
+  note: If a component label was absent from a deploy, common kept the dry-run default and dependent terms were rendered
+    against it. install.py now rejects a rendered term that still contains a dry-run placeholder before deploying it.
+- id: RGA-060
+  title: A K-Asset validator could not open a dispute because the parties list omitted the validator
+  severity: S2
+  likelihood: A
+  risk: 12
+  priority: P0
+  category: capability
+  evidence:
+  - contracts/src/lib/KAsset.rho:504
+  - contracts/src/lib/KAsset.rho:517
+  claim: A K-Asset claimant or validator can open a dispute.
+  verdict: unproved
+  arms:
+  - KAsset.openDispute
+  actions: []
+  disposition: fixed
+  note: openDisputeGate allowed the validator, but openOracleCase passed parties=[claimant, approver]. OracleFactory requires
+    the opener to be in parties, so a validator opening was refused with "case fields". parties now includes the validator.
+- id: RGA-061
+  title: GenRoot.register consumed rootState before authenticating the caller
+  severity: S2
+  likelihood: A
+  risk: 12
+  priority: P0
+  category: capability
+  evidence:
+  - contracts/src/deploy/00_root.rho:39
+  claim: A malformed register call cannot destroy the Root directory.
+  verdict: unproved
+  arms:
+  - GenRoot.register
+  actions:
+  - RR-13
+  disposition: fixed
+  note: The arm consumed rootState and then called authSubject with the caller's dId. A fresh channel in the dId position
+    could block the auth continuation, and the blocked continuation commits the consumed cell, leaving every resolve/get/keys
+    call blocked. Authentication now precedes the rootState consume and a (false, _) auth reply is returned as "not installer".
+- id: RGA-062
+  title: A validated value proposition stays validated after the validator credential is revoked
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: capability
+  evidence:
+  - contracts/src/deploy/22_value.rho:190
+  claim: Revoking the validator credential invalidates the validation and its proofs.
+  verdict: unproved
+  arms:
+  - ValueProposition.proveValidated
+  actions:
+  - accept-risk
+  disposition: accepted
+  note: validate checks the credential once and writes status validated; proveValidated mints from that durable status
+    without re-reading the credential. The proof is height-bound, but a revoked validator can mint a fresh proof at a later
+    height. This is the validation analogue of approval durability (RGA-055); devalidation would need a new transition.
+- id: RGA-063
+  title: Provenance writers cannot be revoked or attenuated
+  severity: S3
+  likelihood: C
+  risk: 4
+  priority: P1
+  category: capability
+  evidence:
+  - contracts/src/deploy/40_provenance.rho:36
+  claim: Provenance write authority can be withdrawn after creation.
+  verdict: unproved
+  arms:
+  - Provenance.anchor
+  - Provenance.comment
+  actions:
+  - accept-risk
+  disposition: accepted
+  note: The writers list is fixed at create. A compromised writer keeps appending anchors and comments for the cell's
+    lifetime. Provenance is advisory and no core arm uses it as authority; a removeWriter arm would add a state transition
+    and a writer-consent policy.
+- id: RGA-064
+  title: An expired dispute leaves the K-Asset in disputed status with no restoration path
+  severity: S3
+  likelihood: A
+  risk: 8
+  priority: P1
+  category: authority
+  evidence:
+  - contracts/src/lib/KAsset.rho:533
+  - contracts/src/deploy/30_oracle.rho:240
+  claim: Every disputed K-Asset eventually leaves disputed status.
+  verdict: unproved
+  arms:
+  - KAsset.openDispute
+  - OracleCase.expire
+  actions:
+  - accept-risk
+  disposition: accepted
+  note: openDispute sets status disputed; only Apply.applyDecision changes it. If the case expires without a decision, execute
+    never runs and the approved asset stays frozen. A timeout transition on the K-Asset or an expire notification through
+    Apply would be needed; the Apply outcome table currently maps no expire outcome.
+- id: RGA-065
+  title: A concurrent validate and resume can mint a second orphaned K-Asset for one claim
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: capability
+  evidence:
+  - contracts/src/deploy/20_claim.rho:224
+  - contracts/src/deploy/20_claim.rho:376
+  claim: A claim has exactly one K-Asset in the registry.
+  verdict: unproved
+  arms:
+  - Claim.validate
+  - Claim.resume
+  actions:
+  - accept-risk
+  disposition: accepted
+  note: finalizeWith writes a validating receipt before makeKAsset; resume with a Nil kassetRef re-drives finalizeValidation,
+    so a concurrent validate and resume can each register a KAsset. The claim records one kassetRef; the second is orphaned
+    but has a claimRef to the same claim. The existing ClaimMintState model proves at most one reachable from the claim, not
+    at most one registry entry. A one-shot mint gate would close it.
+- id: RGA-066
+  title: Caller-supplied maps can carry a name into durable state and the public get reply
+  severity: S3
+  likelihood: D
+  risk: 2
+  priority: P2
+  category: capability
+  evidence:
+  - contracts/src/deploy/30_oracle.rho:184
+  - contracts/src/deploy/40_provenance.rho:35
+  claim: No capability can be serialized into state or a get reply.
+  verdict: unproved
+  arms: []
+  actions:
+  - accept-risk
+  disposition: accept-risk
+  note: OracleCase stores the decision map and Provenance stores assetRef wholesale. If the @ pattern accepts a process
+    containing a name, a caller could leak it to every get reader. The state checker scans for a direct *Name in a state
+    send but not a name nested in a caller map. No exploit was reproduced; confidence is low. A schema that rejects
+    name-bearing maps would settle it.
+- id: RGA-067
+  title: checkCredentialProof does not compare the proof requirement with the consumer requirement
+  severity: S3
+  likelihood: B
+  risk: 6
+  priority: P1
+  category: capability
+  evidence:
+  - contracts/src/lib/Proof.rho:10
+  claim: A proof accepted for a strong requirement was minted against that requirement.
+  verdict: unproved
+  arms: []
+  actions:
+  - accept-risk
+  disposition: accepted
+  note: The proof payload carries requirement, but checkCredentialProof compares only subject, credentialUri and atHeight.
+    proveAndCheck passes the consumer requirement into prove, so every in-tree consumer is bound. The helper is private; a
+    future caller that takes a proof out of band and calls the helper directly could accept a weaker requirement.
+- id: RGA-068
+  title: proveAndCheck trusts a caller-supplied credential URI without checking factory membership
+  severity: S3
+  likelihood: C
+  risk: 4
+  priority: P1
+  category: capability
+  evidence:
+  - contracts/src/lib/Proof.rho:26
+  claim: proveAndCheck only resolves credentials issued by the credential factory.
+  verdict: unproved
+  arms: []
+  actions:
+  - accept-risk
+  disposition: accepted
+  note: The helper resolves the URI and calls prove on whatever contract answers. Every in-tree consumer calls
+    CredentialFactory.verify first (Claim, VP, KAsset approve/reject, Oracle open). The helper is private; a call site that
+    omits the factory check would accept a fake credential contract's proof.
+- id: RGA-069
+  title: CredentialFactory.issue held factoryState across the registry insert
+  severity: S2
+  likelihood: C
+  risk: 6
+  priority: P1
+  category: capability
+  evidence:
+  - contracts/src/deploy/11_credentials.rho:138
+  - contracts/src/deploy/11_credentials.rho:333
+  claim: A blocked registry insert cannot lose the credential issuance registry.
+  verdict: unproved
+  arms:
+  - CredentialFactory.issue
+  actions: []
+  disposition: fixed
+  note: The arm consumed factoryState before creating the Credential and calling rs!. A blocked rs! continuation
+    committed the consumed registry cell, so verify/count/issue could block forever while the Credential cell existed.
+    The consume now happens after the URI is known, and the self-issue refusal no longer touches the cell.
+
 arms:
 - file: contracts/src/deploy/00_root.rho
   contract: GenRoot

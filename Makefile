@@ -18,7 +18,7 @@ export RGEN_CONTAINER
 .PHONY: venv build build-check measure measure-check spec-check parse-check docs docs-check \
         check-arch check-captures check-placeholders check-money check-core-boundary \
         check-concurrency check-citations check-docs check-docs-links check-suites \
-        check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit check-conformance check-hazop hazop-check guard-check style-check audit-control-flow probe-deploy-semantics redteam lean-build lean-audit lean-audit-coverage lean-check gen-core-vectors check-core-vectors \
+        check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit check-conformance check-hazop hazop-check check-capabilities capabilities-check guard-check style-check audit-control-flow probe-deploy-semantics redteam redteam-capabilities lean-build lean-audit lean-audit-coverage lean-check gen-core-vectors check-core-vectors \
         devnet-up devnet-wait down status keys install unit-identity unit-credentials \
         unit-claim unit-kasset unit-value unit-oracle unit-provenance unit-integration \
         unit-core unit-race unit-all verify \
@@ -103,6 +103,11 @@ check-hazop:
 
 hazop-check: check-hazop
 
+check-capabilities:
+	$(PY) tools/check_capabilities.py
+
+capabilities-check: check-capabilities
+
 guard-check:
 	$(PY) tools/check_guard_bridge.py
 
@@ -117,6 +122,9 @@ probe-deploy-semantics:
 
 redteam:
 	$(PY) harness/redteam_core.py
+
+redteam-capabilities:
+	$(PY) harness/redteam_capabilities.py
 
 lean-build:
 	cd spec/lean && lake build
@@ -137,7 +145,7 @@ lean-check: lean-build check-lean lean-audit lean-audit-coverage check-core-vect
 
 spec-check: build-check measure-check check-arch check-captures check-placeholders \
             check-money check-core-boundary check-concurrency check-citations \
-            check-suites check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit check-conformance check-hazop guard-check style-check
+            check-suites check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit check-conformance check-hazop check-capabilities guard-check style-check
 
 parse-check:
 	rm -f .devnet/rendered/*.rho

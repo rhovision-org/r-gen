@@ -273,3 +273,54 @@ items:
   - harness/unit_credentials.py
   status: accepted
   note: Directory and factory states remain explicit serialization points; a cap/sharding plan is deferred.
+- id: RR-12
+  priority: P0
+  title: Harden capability handoff, child anchoring, and the Issuer authorize arm
+  files:
+  - path: contracts/src/lib/KAsset.rho
+    function: checkChildKassetUri
+    lines: 286-296
+  - path: contracts/src/lib/KAsset.rho
+    function: makeKAsset
+    lines: 606-610
+  - path: contracts/src/deploy/11_credentials.rho
+    function: Issuer.authorize
+    lines: 69-90
+  - path: contracts/src/deploy/20_claim.rho
+    function: finalizeWith
+    lines: 259-261
+  finding: RGA-049
+  hazop: []
+  action: 'Anchor a nested child to the genuine Claim''s kassetRef.uri, resolve the child from that URI, and require the
+    proof id/uri to match; stop returning the K-Asset bundle in makeKAsset''s reply; and make Issuer.authorize derive the
+    caller from a dId name with authSubject. Add RT-031/RT-032 and unit_kasset coverage.'
+  compatibility: The KAsset library and the Issuer authorize signature are internal to the deployed terms; no client calls
+    authorize directly. The nested childRef shape is unchanged.
+  tests:
+  - harness/unit_kasset.py
+  - harness/unit_claim.py
+  - harness/redteam_capabilities.py
+  status: proposed
+  note: Proposed by the object-capability audit. The pre-fix probes are RT-031 (Issuer authorize) and RT-032 (fake child).
+- id: RR-13
+  priority: P0
+  title: Authenticate Root.register before consuming rootState and verify installs through Root
+  files:
+  - path: contracts/src/deploy/00_root.rho
+    function: GenRoot.register
+    lines: 39-70
+  - path: harness/install.py
+    function: verify_components
+    lines: 113-170
+  finding: RGA-061
+  hazop: []
+  action: 'Move authSubject before the linear rootState receive and answer a failed auth with (false, "not installer");
+    resolve all nine component keys through Root before writing the manifest and reject a rendered term that still contains
+    a dry-run placeholder.'
+  compatibility: The register arm signature is unchanged; the installer now fails instead of writing a partial manifest.
+  tests:
+  - harness/install.py
+  - harness/unit_identity.py
+  - harness/redteam_capabilities.py
+  status: fixed
+  note: The installer reports Root resolves 9/9 keys on the normal path. A blocked dId no longer loses the Root directory.

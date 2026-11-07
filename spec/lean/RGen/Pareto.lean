@@ -6,6 +6,7 @@ import RGen.ArmGuards
 import RGen.Model.IdentityReservation
 import RGen.Model.ClaimMint
 import RGen.Model.ProofCapability
+import RGen.Model.Capability
 import RGen.Model.NestCrash
 import RGen.Deadline
 import RGen.System
@@ -147,6 +148,14 @@ end RGen
 #check RGen.ProofCap.take_once
 #check RGen.ProofCap.reserve_release_restores
 #check RGen.ProofCap.private_capability_no_bearer_dos
+
+-- Object capabilities
+#check RGen.Cap.no_holder_without_grant
+#check RGen.Cap.bundle_excludes_private
+#check RGen.Cap.apply_case_bound
+#check RGen.Cap.forward_burns_but_cannot_forge
+#check RGen.Cap.anchored_nest_requires_issued_child
+#check RGen.Cap.issuer_authorize_requires_issuer
 
 -- Nest reservation and crash safety
 #check RGen.failed_check_no_reserve

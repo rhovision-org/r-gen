@@ -1,0 +1,206 @@
+schema: rgen.redteam/v1
+measured_at: '2026-11-07T15:41:56.714915+00:00'
+node:
+  api: '1'
+  node: RChain Node 0.1.0 (e2d073dcd02f1e560ccb84749937138a1e184b0b)
+expectation: fixed
+scope: object capabilities
+results:
+- id: RT-025
+  name: private helper names are not callable through a factory URI
+  classification: fixed
+  finding: '-'
+  observed: '0 helper(s) replied: []'
+  detail:
+    replies:
+      makeKAsset: []
+      mintIdentity: []
+      finalizeWith: []
+      Apply: []
+- id: RT-024
+  name: an unauthorized deployer cannot drive another entity's arms
+  classification: fixed
+  finding: '-'
+  observed: '0 unauthorized arm(s) succeeded: []'
+  detail:
+    replies:
+      identity.update:
+      - false
+      - not owner
+      claim.withdraw:
+      - false
+      - not claimant
+      vp.withdraw:
+      - false
+      - not proposer
+      provenance.anchor:
+      - false
+      - not writer
+      kasset.approve:
+      - false
+      - forged credential
+- id: RT-029
+  name: Root register is installer-gated and write-once
+  classification: fixed
+  finding: '-'
+  observed: mallory=(False, 'not installer'); duplicate=(False, 'duplicate')
+  detail:
+    non_installer:
+    - false
+    - not installer
+    duplicate:
+    - false
+    - duplicate
+- id: RT-031
+  name: Issuer authorize derives the caller from deployerId
+  classification: fixed
+  finding: RGA-048
+  observed: data-caller=(True, False, 'not issuer'); dId-caller=(True, False, 'not
+    issuer')
+  detail:
+    data_caller:
+    - true
+    - false
+    - not issuer
+    d_id_caller:
+    - true
+    - false
+    - not issuer
+    pre_fix: data-caller=(True, True)
+- id: RT-030
+  name: a forged credential URI is refused by the Claim factory
+  classification: fixed
+  finding: '-'
+  observed: validate=(False, 'forged credential')
+  detail:
+    fake_credential: rho:id:cqu3r6ctz1fi4994ewfjpkwpzycgnoxn4tbyusyzowmxi7omfsdo
+    validate:
+    - false
+    - forged credential
+- id: RT-032
+  name: a self-registered fake child is refused by KAsset nest
+  classification: fixed
+  finding: RGA-049
+  observed: fake='rho:id:tmj9sf5wqfmajeow44zikbjkokp8funayw4m83ks15b1rds7qw8o'; nest=(False,
+    'claim kasset mismatch')
+  detail:
+    parent: rho:id:ez44w7jympawn38okmkjqoiu7sbkfiui7zswunbcpnq7nscdf85y
+    fake: rho:id:tmj9sf5wqfmajeow44zikbjkokp8funayw4m83ks15b1rds7qw8o
+    nest:
+    - false
+    - claim kasset mismatch
+    pre_fix: nest=(True, 'ok')
+- id: RT-035
+  name: public OracleCase arms enforce party and adjudicator roles
+  classification: fixed
+  finding: RGA-054
+  observed: evidence=(False, 'not a party'); decide=(False, 'not adjudicator'); close=(False,
+    'not finished'); expire=(False, 'not expired')
+  detail:
+    evidence:
+    - false
+    - not a party
+    decide_other:
+    - false
+    - not adjudicator
+    close_early:
+    - false
+    - not finished
+    expire_early:
+    - false
+    - not expired
+- id: RT-028
+  name: third-party execute applies only the stored decision
+  classification: accepted
+  finding: RGA-024
+  observed: decide=(True,); mallory execute=(True, 'upheld')
+  detail:
+    decide:
+    - true
+    execute:
+    - true
+    - upheld
+- id: RT-034
+  name: approval survives the approver credential revocation
+  classification: accepted
+  finding: RGA-055
+  observed: 'approve=(True, {''approvalVersion'': 2, ''approvedAt'': 1242, ''liability'':
+    {''basisHash'': ''liability'', ''responsible'': ''11112utC5BqFMSTefiSd3xFaWFkwndvtEHdBm5phPcvtyvPVUmURxo'',
+    ''shareBps'': 10000}}); revoke=(True,); status=''approved'''
+  detail:
+    approve:
+    - true
+    - approvalVersion: 2
+      approvedAt: 1242
+      liability:
+        basisHash: liability
+        responsible: 11112utC5BqFMSTefiSd3xFaWFkwndvtEHdBm5phPcvtyvPVUmURxo
+        shareBps: 10000
+    revoke:
+    - true
+    status: approved
+- id: RT-026
+  name: a forwarded proof can be burned but not forged
+  classification: accepted
+  finding: RGA-035
+  observed: 'mallory=(True, {''atHeight'': 1247, ''credentialUri'': ''rho:id:ag86m9fw86x5zgi9jzfx664c7gtogpybz3eiwy1wixzndcn616ay'',
+    ''level'': 1, ''requirement'': {''ctype'': ''Validator'', ''discipline'': ''structural'',
+    ''jurisdiction'': ''US-TX'', ''minLevel'': 1, ''role'': ''validator''}, ''subject'':
+    ''11112uzDWFsN37BsEo64bbz1SyvQKX51K5hjqjoL7fZpnEd7FVBzUb'', ''uri'': ''proof:rho:id:ag86m9fw86x5zgi9jzfx664c7gtogpybz3eiwy1wixzndcn616ay:1247''});
+    bob=(False, ''used''); subject=''11112uzDWFsN37BsEo64bbz1SyvQKX51K5hjqjoL7fZpnEd7FVBzUb'''
+  detail:
+    proof: rho:id:9pduygmj653gcf1by61wxtgc5bfszqme7whho55q1xeieym164do
+    mallory:
+    - true
+    - atHeight: 1247
+      credentialUri: rho:id:ag86m9fw86x5zgi9jzfx664c7gtogpybz3eiwy1wixzndcn616ay
+      level: 1
+      requirement:
+        ctype: Validator
+        discipline: structural
+        jurisdiction: US-TX
+        minLevel: 1
+        role: validator
+      subject: 11112uzDWFsN37BsEo64bbz1SyvQKX51K5hjqjoL7fZpnEd7FVBzUb
+      uri: proof:rho:id:ag86m9fw86x5zgi9jzfx664c7gtogpybz3eiwy1wixzndcn616ay:1247
+    bob:
+    - false
+    - used
+- id: RT-036
+  name: a K-Asset validator can open a dispute
+  classification: fixed
+  finding: RGA-060
+  observed: 'openDispute as bob=(True, {''id'': ''rho:id:9rzxizhgynctfpu6md45oucgfy5duwpyuj5wmrkeq193d3p446by'',
+    ''uri'': ''rho:id:9rzxizhgynctfpu6md45oucgfy5duwpyuj5wmrkeq193d3p446by''})'
+  detail:
+    kasset: rho:id:167f6agofmud4zdc8agio79gazdwu3ubjk7zrmu19qu7dw7z17iy
+    open:
+    - true
+    - id: rho:id:9rzxizhgynctfpu6md45oucgfy5duwpyuj5wmrkeq193d3p446by
+      uri: rho:id:9rzxizhgynctfpu6md45oucgfy5duwpyuj5wmrkeq193d3p446by
+    pre_fix: source-identified; parties omitted the validator
+- id: RT-037
+  name: a malformed register dId leaves the Root directory readable
+  classification: fixed
+  finding: RGA-061
+  observed: malformed register=(False, 'not installer'); Root.keys=(True, ['component:claim-factory',
+    'component:credential-factory', 'component:identity-directory', 'component:identity-factory',
+    'component:issuer', 'component:oracle-factory', 'component:provenance-factory',
+    'component:root', 'component:value-proposition-factory'])
+  detail:
+    register:
+    - false
+    - not installer
+    keys:
+    - true
+    - - component:claim-factory
+      - component:credential-factory
+      - component:identity-directory
+      - component:identity-factory
+      - component:issuer
+      - component:oracle-factory
+      - component:provenance-factory
+      - component:root
+      - component:value-proposition-factory
+    pre_fix: source-identified; not run pre-fix because it destroys rootState
+

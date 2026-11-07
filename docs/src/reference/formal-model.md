@@ -35,6 +35,7 @@ and r-share draw around `proved-model`.
 | `RGen.Model.IdentityReservation` | reserve → mint → commit → resume; no duplicate address |
 | `RGen.Model.ClaimMint` | validating receipt, mint once, commit/resume; one reachable K-Asset |
 | `RGen.Model.ProofCapability` | private proof capability, consumer check, reserve/release/consume |
+| `RGen.Model.Capability` | grants, bundle exclusion, case-bound Apply, proof forwarding, nest anchor |
 | `RGen.Model.NestCrash` | nest reservation, commit gate, crash release of every reservation |
 | `RGen.Deadline` | inclusive admit / strict expire boundaries; total Nil comment window |
 | `RGen.System` | composed claims + K-Asset links + directory; `system_safety` |
@@ -93,7 +94,8 @@ Representative public names (the full list is `RGen/Audit.lean`):
 `ProofState α` is `{ data : α, used : Bool }`. `take` returns the payload and marks the
 cell used; `take_second` and `take_take` show a second take fails; `take_data` shows the
 payload is a snapshot. The `used` flag is observability and testability, not the security
-boundary: the capability is private and unforgeable in the deployed model.
+boundary: the capability is private in the deployed model; name unforgeability is an
+assumption (ASM-003), not a proved result.
 
 Credential, value-proposition, and K-Asset proofs use the same cell. Revocation and
 dispute after a proof are non-retroactive by construction: the proof carries a snapshot
@@ -102,8 +104,8 @@ of the pre-state.
 ## Axiom audit
 
 `tools/check_lean.py --audit` elaborates `RGen/Audit.lean`. On 2026-11-07 the listed
-233 theorems reported only `propext` and `Quot.sound` (`Classical.choice` is permitted
-but unused). `--audit-coverage` reports 123 Pareto checks. The list is hand-maintained;
+241 theorems reported only `propext` and `Quot.sound` (`Classical.choice` is permitted
+but unused). `--audit-coverage` reports 129 Pareto checks. The list is hand-maintained;
 the [proof audit](proof-audit.md) records that gap as RGA-006.
 
 ## Manifest and corpus

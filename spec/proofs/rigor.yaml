@@ -256,6 +256,48 @@ claims:
   verdict: proved-but-narrower
   finding: RGA-022
   note: Creation authenticity is outside the model.
+- id: PRF-040
+  theorem: Cap.no_holder_without_grant
+  source: docs/src/reference/object-capabilities.md
+  claim: Every holder of a capability has a grant path from its creator.
+  verdict: proved
+  finding: '-'
+  note: The model's WellFormed predicate is the grant invariant; the deployed term is not extracted.
+- id: PRF-041
+  theorem: Cap.bundle_excludes_private
+  source: docs/src/reference/object-capabilities.md
+  claim: A published bundle exposes only its listed arms, not its private helpers.
+  verdict: proved
+  finding: '-'
+  note: Disjointness of the exposed and private name lists is the model; the bundle form is bundle+.
+- id: PRF-042
+  theorem: Cap.apply_case_bound
+  source: docs/src/reference/object-capabilities.md
+  claim: An Apply capability changes only the case it is bound to.
+  verdict: proved
+  finding: '-'
+  note: The case-id comparison is modeled; the private name's possession is not.
+- id: PRF-043
+  theorem: Cap.forward_burns_but_cannot_forge
+  source: docs/src/reference/object-capabilities.md
+  claim: A forwarded proof can be consumed by another holder but cannot forge an acceptance.
+  verdict: proved-but-narrower
+  finding: RGA-035
+  note: The model checks subject, credential and height; possession of the private channel is not modeled.
+- id: PRF-044
+  theorem: Cap.anchored_nest_requires_issued_child
+  source: docs/src/reference/object-capabilities.md
+  claim: A nested child must be a K-Asset issued by the claim factory.
+  verdict: proved-but-narrower
+  finding: RGA-049
+  note: The model states the anchor precondition; the deployed check compares the claim's kassetRef.uri to ref.uri.
+- id: PRF-045
+  theorem: Cap.issuer_authorize_requires_issuer
+  source: docs/src/reference/object-capabilities.md
+  claim: Issuer.authorize accepts only the issuer subject.
+  verdict: proved-but-narrower
+  finding: RGA-048
+  note: authSubject derivation is a runtime assumption; the comparison is modeled.
 divergences:
 - id: DIV-001
   arm: Credential.revoke
@@ -414,6 +456,10 @@ assumptions:
   assumption: The six modeled cells cover the core state machine.
   effect: Registries, factories, and deployment wiring are outside the model.
   finding: RGA-029
+- id: ASM-011
+  assumption: A registry URI cannot be re-registered, so the term at a URI is fixed after insertion.
+  effect: The nest anchor check can rely on ref.uri naming a genuine K-Asset; registry insertion itself is unauthenticated.
+  finding: RGA-053
 coverage:
 - id: INV-D1
   invariant: D1

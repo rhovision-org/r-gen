@@ -73,7 +73,11 @@ the Pareto ledger labels every row.
 - `harness/unit_core.py` is the vertical slice.
 - `harness/concurrency_core.py` is the same-deploy race suite.
 - A suite that cannot reach a healthy devnet exits 2 (`not run`), never 0.
-- `make spec-check parse-check docs-check` must pass before a commit.
+- `make spec-check parse-check docs-check` must pass before a commit. `make
+  capabilities-check` is part of `spec-check`: every new `bundle+`, `Apply` handoff, proof
+  channel or capability-bearing reply needs a row in `spec/audit/capabilities.yaml`.
+- `make redteam-capabilities` runs RT-024..RT-037 on the local devnet; a new capability arm
+  should add a probe or a register row and a HAZOP row.
 - The Rust crates must pass `cargo fmt`, `clippy -D warnings`, and `cargo test`;
   `rgen-wasm` must pass `cargo check --target wasm32-unknown-unknown`.
 - The web client must pass `npm --prefix web run typecheck`, `test`, `test:wasm` and

@@ -3,7 +3,9 @@
 This is the current-core HAZOP. It treats the seven deploy terms as ten nodes and applies fifteen
 guide words to each node's parameters. The worksheet is
 [`spec/hazop/worksheet.yaml`](https://github.com/rhovision-org/r-gen/blob/main/spec/hazop/worksheet.yaml);
-the method is in the [audit charter](audit-charter.md).
+the method is in the [audit charter](audit-charter.md). The capability-focused run is
+`spec/hazop/runs/2026-11-07-capabilities/`; its public summary is
+[Object capabilities](object-capabilities.md).
 
 ## Design intent
 

@@ -141,3 +141,5 @@ arms:
     atoms:
       - 'proofCh'
       - 'proveApproved'
+      - 'kr.get("uri").toString() == ref.get("uri").toString()'
+      - '"claim kasset mismatch"'

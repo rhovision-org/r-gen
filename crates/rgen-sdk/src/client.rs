@@ -209,13 +209,18 @@ impl Client {
         Ok(resolved)
     }
 
-    /// Resolve every component and compare with the manifest copies.
+    /// Resolve every component through the Root. The manifest copies are not authority.
     pub async fn resolve_all(&self) -> Result<BTreeMap<ComponentKey, ResolvedComponent>> {
         let mut resolved = BTreeMap::new();
         for key in ComponentKey::ALL {
             resolved.insert(key, self.resolve(key).await?);
         }
         Ok(resolved)
+    }
+
+    /// Drop cached component resolutions after a reinstall or a Root rotation.
+    pub fn refresh_components(&self) {
+        self.cache.lock().expect("component cache lock").clear();
     }
 
     /// The Root's own key list. Read-only; the chain is the authority.

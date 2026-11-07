@@ -24,6 +24,7 @@ import RGen.Linear.Lift
 import RGen.Linear.Consumption
 import RGen.Model.ProofVersioned
 import RGen.Model.ProofCapability
+import RGen.Model.Capability
 import RGen.Deadline
 import RGen.Model.NestCrash
 import RGen.Arms.Credential

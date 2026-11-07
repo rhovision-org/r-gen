@@ -31,6 +31,7 @@
 - [Race-freedom proof](reference/race-freedom-proof.md)
 - [Concurrency and proofs](reference/concurrency-and-proofs.md)
 - [Adversarial review](reference/adversarial-review.md)
+- [Object capabilities](reference/object-capabilities.md)
 - [Audit charter](reference/audit-charter.md)
 - [HAZOP](reference/hazop.md)
 - [Workflow HAZOP: multi-agent run](reference/workflow-hazop.md)

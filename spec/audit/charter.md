@@ -77,6 +77,21 @@ Risk is a 1–16 judgement (`severity × likelihood`, with S1=4 … S4=1 and A=4
 risk ≥ 9; P1 when 4–8; P2 when ≤ 3. Scores are judgements, not measurements, and must not be
 presented as probabilities.
 
+## Object-capability pass (2026-11-07)
+
+The capability register is `spec/audit/capabilities.yaml` (schema `rgen.capabilities/v1`):
+38 rows over 19 `bundle+` expressions, 3 proof kinds, 2 private `Apply` capabilities, 7
+ambient system channels and the Root installer. `tools/check_capabilities.py` is the gate.
+The live suite is `harness/redteam_capabilities.py` (RT-024..RT-037); the blind run is
+`spec/hazop/runs/2026-11-07-capabilities/` (36 rows, 9 nodes, 18 decisions). Findings
+RGA-048..RGA-069 record the fixes and accepted hazards. The public synthesis is
+`docs/src/reference/object-capabilities.md`.
+
+This pass does not change the boundary below: it is a source-level register, a live-devnet
+probe suite and a structured expert review. The Lean model `RGen.Model.Capability` abstracts
+names as identifiers; it does not prove Rholang name unforgeability or a refinement from the
+model to the deployed term.
+
 ## Assumptions ledger
 
 The following are assumptions of the model or the deployment, not proved results:

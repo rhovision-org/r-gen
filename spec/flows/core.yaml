@@ -165,7 +165,7 @@
   arm: authorize
   lean: -
   status: owed
-  note: monotone issuer read; issuer is immutable
+  note: dId-derived caller; issuer is immutable
 
 - file: contracts/src/deploy/11_credentials.rho
   contract: Issuer
@@ -537,7 +537,7 @@
   authority: RGen.core_arm_authority
   status: proved-conformance
   suite: harness/unit_kasset.py
-  note: suite asserts the K3-nest-unsorted vector row
+  note: suite asserts the K3-nest-unsorted vector row; child anchored to the claim kassetRef (RGA-049)
   consumedProofs: [childApprovedProof]
   classification: RGen.kasset_nest_same_never_after_arm
 

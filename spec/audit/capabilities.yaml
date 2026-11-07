@@ -1,0 +1,849 @@
+schema: rgen.capabilities/v1
+baseline: 38d0003
+scope: >-
+  The seven deploy terms in contracts/src/deploy and the libraries in contracts/src/lib,
+  the Root/factory/registry publication surface, the installer manifest, and the values the
+  client resolves. The legacy top-level contracts/build architecture is not deployed and is
+  out of scope.
+method: >-
+  One row per distinct capability. Each row records its creator, holders, grant path,
+  exposure, bundle attenuation, the authority check on every reachable arm, delegation sites,
+  revocation, a non-holder forge path, and a disposition. The register is checked against the
+  source by tools/check_capabilities.py; it is a source-level audit, not a Rholang semantics
+  proof. Name unforgeability is an assumption (spec/proofs/rigor.yaml ASM-003/ASM-011), not a
+  result.
+summary:
+  published_bundles: 19
+  unbundled_name_handoffs: 2
+  name_valued_replies: 0
+  ambient_system_channels: 7
+  bundling_forms: [bundle+]
+capabilities:
+  # ---------------------------------------------------------------------------
+  # Ambient system authority. These are available to every deploy and are not
+  # attenuated by the core; the registry is public read/write.
+  # ---------------------------------------------------------------------------
+  - id: CAP-001
+    name: registry-lookup
+    kind: ambient-system
+    source: system:rho:registry:lookup
+    creator: runtime
+    holders: every deploy
+    grant_path: ambient
+    exposure: system-channel
+    attenuation: none
+    authority_check: runtime
+    arms:
+      - arm: lookup
+        mutating: false
+        authority: runtime
+        rationale: returns the term registered at a URI; the term is not verified.
+    delegation: []
+    revocation: none
+    forge_path: anyone can insert a term at a new URI; lookup returns it.
+    hazard: designation is not authority; every consumer must verify factory membership.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/lib/Proof.rho:27
+  - id: CAP-002
+    name: registry-insert
+    kind: ambient-system
+    source: system:rho:registry:insertArbitrary
+    creator: runtime
+    holders: every deploy
+    grant_path: ambient
+    exposure: system-channel
+    attenuation: none
+    authority_check: runtime
+    arms:
+      - arm: insertArbitrary
+        mutating: true
+        authority: runtime
+        rationale: anyone can publish any term under a fresh URI.
+    delegation: []
+    revocation: none
+    forge_path: publish a look-alike factory or entity at an attacker-chosen URI.
+    hazard: a URI is a designation, not an endorsement; core consumers use factory registries.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/deploy/11_credentials.rho:342
+  - id: CAP-003
+    name: deployer-id
+    kind: deployer-id
+    source: system:rho:rchain:deployerId
+    creator: runtime per deploy
+    holders: the deploying process
+    grant_path: bound by the runtime for the deploy
+    exposure: system-channel
+    attenuation: per-deploy; cannot be obtained for another deploy
+    authority_check: runtime
+    arms:
+      - arm: authSubject
+        mutating: false
+        authority: runtime
+        rationale: derives the REV address from the deployer public key.
+    delegation: [every arm that takes a dId name]
+    revocation: none
+    forge_path: none from data; a caller can only pass the name it holds.
+    hazard: an arm that accepts a dId delegates the caller's identity for the rest of the deploy.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/lib/Auth.rho:4
+  - id: CAP-004
+    name: deploy-id
+    kind: ambient-system
+    source: system:rho:rchain:deployId
+    creator: runtime
+    holders: every deploy
+    grant_path: ambient
+    exposure: system-channel
+    attenuation: per-deploy reply channel
+    authority_check: runtime
+    arms:
+      - arm: reply
+        mutating: true
+        authority: runtime
+        rationale: the deploy result channel; not an authorization surface.
+    delegation: []
+    revocation: none
+    forge_path: none.
+    hazard: a blocked continuation on the deploy reply loses the consumed cell.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/deploy/00_root.rho:67
+  - id: CAP-005
+    name: deployer-ops
+    kind: ambient-system
+    source: system:rho:rchain:deployerId:ops
+    creator: runtime
+    holders: every deploy
+    grant_path: ambient
+    exposure: system-channel
+    attenuation: key read only
+    authority_check: runtime
+    arms:
+      - arm: pubKeyBytes
+        mutating: false
+        authority: runtime
+        rationale: reads the signer public key; it cannot sign.
+    delegation: []
+    revocation: none
+    forge_path: none; a non-deployerId name does not resolve to key bytes.
+    hazard: a malformed dId can block the continuation.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/lib/Auth.rho:6
+  - id: CAP-006
+    name: rev-address
+    kind: ambient-system
+    source: system:rho:rev:address
+    creator: runtime
+    holders: every deploy
+    grant_path: ambient
+    exposure: system-channel
+    attenuation: derivation only
+    authority_check: runtime
+    arms:
+      - arm: fromPublicKey
+        mutating: false
+        authority: runtime
+        rationale: maps a public key to its REV address.
+    delegation: []
+    revocation: none
+    forge_path: none; the mapping is deterministic.
+    hazard: the address is the identity string used in state.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/lib/Auth.rho:8
+  - id: CAP-007
+    name: block-data
+    kind: ambient-system
+    source: system:rho:block:data
+    creator: runtime
+    holders: every deploy
+    grant_path: ambient
+    exposure: system-channel
+    attenuation: read-only clock
+    authority_check: runtime
+    arms:
+      - arm: now
+        mutating: false
+        authority: runtime
+        rationale: supplies the current block height/time.
+    delegation: []
+    revocation: none
+    forge_path: none.
+    hazard: deadlines are only as authentic as the node clock.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/lib/Time.rho:5
+
+  # ---------------------------------------------------------------------------
+  # Published contract capabilities. Each row is the bundle inserted into the
+  # registry; the arms list records every reachable arm and its authority.
+  # ---------------------------------------------------------------------------
+  - id: CAP-010
+    name: GenRoot
+    kind: published-contract
+    source: contracts/src/deploy/00_root.rho:69
+    source_atom: 'bundle+{*GenRoot}'
+    creator: 00_root deploy
+    holders: anyone with the Root URI
+    grant_path: manifest root_uri or a prior resolve
+    exposure: registry-uri
+    attenuation: 'bundle+{*GenRoot}; excludes rootState and the Auth helpers'
+    authority_check: mixed
+    arms:
+      - {arm: resolve, mutating: false, authority: none, rationale: public directory read}
+      - {arm: get, mutating: false, authority: none, rationale: public directory read}
+      - {arm: keys, mutating: false, authority: none, rationale: public directory read}
+      - {arm: register, mutating: true, authority: installer, atoms: ['authSubject', 's.get("installer")', '"not installer"', '"duplicate"']}
+    delegation: []
+    revocation: root-immutable
+    forge_path: non-installer register; duplicate key; key overwrite.
+    hazard: installer key loss is unrecoverable; no rotate or freeze arm.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/00_root.rho:39-59
+  - id: CAP-011
+    name: IdentityFactory
+    kind: published-contract
+    source: contracts/src/deploy/10_identity.rho:229
+    source_atom: 'bundle+{*IdentityFactory}'
+    creator: 10_identity deploy
+    holders: anyone with the factory URI
+    grant_path: Root component:identity-factory
+    exposure: registry-uri
+    attenuation: 'bundle+{*IdentityFactory}; excludes directoryState, mintIdentity, patchOr and the reservation helpers'
+    authority_check: caller-subject
+    arms:
+      - {arm: create, mutating: true, authority: caller-subject, atoms: ['authOwner', 's.get("byAddress")', '"reserving"', '"duplicate"', '"in progress"']}
+      - {arm: resume, mutating: true, authority: caller-subject, atoms: ['authSubject', 'who != subject', '"not subject"']}
+    delegation: []
+    revocation: none
+    forge_path: create or resume for another subject requires that subject's deployerId.
+    hazard: creation is a serialization point; a stale reservation expires after 100 blocks.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/deploy/10_identity.rho:137-225
+  - id: CAP-012
+    name: IdentityDirectory
+    kind: published-contract
+    source: contracts/src/deploy/10_identity.rho:230
+    source_atom: 'bundle+{*IdentityDirectory}'
+    creator: 10_identity deploy
+    holders: anyone with the directory URI
+    grant_path: Root component:identity-directory
+    exposure: registry-uri
+    attenuation: 'bundle+{*IdentityDirectory}; excludes directoryState'
+    authority_check: none
+    arms:
+      - {arm: lookup, mutating: false, authority: none, rationale: public address-to-URI read}
+      - {arm: count, mutating: false, authority: none, rationale: public count}
+    delegation: []
+    revocation: none
+    forge_path: none; the directory is written only by IdentityFactory.
+    hazard: the lookup result is a URI designation, not an identity proof.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/deploy/10_identity.rho:25-38
+  - id: CAP-013
+    name: Identity
+    kind: published-contract
+    source: contracts/src/deploy/10_identity.rho:95
+    source_atom: 'bundle+{*Identity}'
+    creator: mintIdentity per address
+    holders: anyone with the identity URI
+    grant_path: IdentityFactory.create returns the URI; directory lookup
+    exposure: registry-uri
+    attenuation: 'bundle+{*Identity}; excludes identityState'
+    authority_check: caller-subject
+    arms:
+      - {arm: get, mutating: false, authority: none, rationale: public profile read}
+      - {arm: update, mutating: true, authority: caller-subject, atoms: ['authSubject', 'who != subject', '"not owner"']}
+    delegation: []
+    revocation: none
+    forge_path: update another profile requires that subject's deployerId.
+    hazard: no deactivate arm; the profile is immortal.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/10_identity.rho:63-93
+  - id: CAP-014
+    name: Issuer
+    kind: issuer
+    source: contracts/src/deploy/11_credentials.rho:372
+    source_atom: 'bundle+{*Issuer}'
+    creator: 11_credentials deploy
+    holders: anyone with the issuer URI
+    grant_path: Root component:issuer
+    exposure: registry-uri
+    attenuation: 'bundle+{*Issuer}; excludes issuerState'
+    authority_check: mixed
+    arms:
+      - {arm: get, mutating: false, authority: none, rationale: public issuer read}
+      - {arm: authorize, mutating: false, authority: caller-subject, atoms: ['authSubject', 'caller == s.get("subject")', '"not issuer"']}
+      - {arm: covers, mutating: false, authority: none, rationale: public scope read}
+    delegation: []
+    revocation: none
+    forge_path: the pre-fix authorize arm accepts a caller-nominated address; fixed by RT-031.
+    hazard: self-asserted caller data in a published advisory arm.
+    disposition: holds
+    finding: RGA-048
+    evidence: contracts/src/deploy/11_credentials.rho:65-107
+  - id: CAP-015
+    name: CredentialFactory
+    kind: factory
+    source: contracts/src/deploy/11_credentials.rho:373
+    source_atom: 'bundle+{*CredentialFactory}'
+    creator: 11_credentials deploy
+    holders: anyone with the factory URI
+    grant_path: Root component:credential-factory
+    exposure: registry-uri
+    attenuation: 'bundle+{*CredentialFactory}; closes over the genuine Issuer and factoryState'
+    authority_check: installer
+    arms:
+      - {arm: verify, mutating: false, authority: none, rationale: existence-only issuance index read}
+      - {arm: count, mutating: false, authority: none, rationale: public count}
+      - {arm: issue, mutating: true, authority: installer, atoms: ['authSubject', 'Issuer!("authorize"', '"self issue"', '"fields"']}
+    delegation: []
+    revocation: none
+    forge_path: a non-issuer issue requires the genesis issuer's deployerId.
+    hazard: verify does not carry status; a client must use prove/check for authority.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/11_credentials.rho:109-160
+  - id: CAP-016
+    name: Credential
+    kind: published-contract
+    source: contracts/src/deploy/11_credentials.rho:342
+    source_atom: 'bundle+{*Credential}'
+    creator: CredentialFactory.issue
+    holders: anyone with the credential URI
+    grant_path: issue returns the URI; factory registry verify
+    exposure: registry-uri
+    attenuation: 'bundle+{*Credential}; excludes credState'
+    authority_check: mixed
+    arms:
+      - {arm: get, mutating: false, authority: none, rationale: public credential read}
+      - {arm: check, mutating: false, authority: none, rationale: 'advisory only; check_concurrency.py forbids it as a commit authority'}
+      - {arm: prove, mutating: true, authority: caller-subject, atoms: ['authSubject', 'who == cs.get("subject")', '"not subject"']}
+      - {arm: revoke, mutating: true, authority: caller-subject, atoms: ['who != cs.get("issuer") && who != cs.get("subject")', '"not authorized"']}
+      - {arm: renew, mutating: true, authority: caller-subject, atoms: ['who != cs.get("issuer")', '"not issuer"']}
+      - {arm: attest, mutating: true, authority: caller-subject, atoms: ['who == cs.get("subject")', '"self attest"', '"already attested"']}
+    delegation: []
+    revocation: credential
+    forge_path: prove for another subject requires that subject's deployerId; a forwarded proof can be burned.
+    hazard: attest is open to any non-subject identity; the list is unbounded.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/11_credentials.rho:163-332
+  - id: CAP-017
+    name: credential-proof
+    kind: proof
+    source: contracts/src/deploy/11_credentials.rho:247
+    source_atom: 'bundle+{*Proof}'
+    creator: Credential.prove
+    holders: the caller-supplied proofCh
+    grant_path: prove sends the bundle on proofCh
+    exposure: caller-channel
+    attenuation: 'one-shot take; bundle excludes proofState'
+    authority_check: none
+    arms:
+      - {arm: take, mutating: true, authority: none, rationale: 'one-shot bearer; the consumer check binds subject, credentialUri and atHeight'}
+    delegation: [proveAndCheck, checkCredentialProof]
+    revocation: one-shot
+    forge_path: a recipient of proofCh can take first and burn the proof.
+    hazard: bearer burn, not forgery; the proof is never registered.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/11_credentials.rho:195-256
+  - id: CAP-018
+    name: ClaimFactory
+    kind: factory
+    source: contracts/src/deploy/20_claim.rho:426
+    source_atom: 'bundle+{*ClaimFactory}'
+    creator: 20_claim deploy
+    holders: anyone with the factory URI
+    grant_path: Root component:claim-factory
+    exposure: registry-uri
+    attenuation: 'bundle+{*ClaimFactory}; excludes claimRegistryState, Claim, KAsset and the proof helpers'
+    authority_check: caller-subject
+    arms:
+      - {arm: verify, mutating: false, authority: none, rationale: existence-only claim index read}
+      - {arm: create, mutating: true, authority: caller-subject, atoms: ['authOwner', 'claimReqOk', '"fields"']}
+    delegation: []
+    revocation: none
+    forge_path: create for another claimant requires that claimant's deployerId.
+    hazard: create stores valuePropositionRef without verifying it; approval verifies a VP proof.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/20_claim.rho:86-424
+  - id: CAP-019
+    name: Claim
+    kind: published-contract
+    source: contracts/src/deploy/20_claim.rho:404
+    source_atom: 'bundle+{*Claim}'
+    creator: ClaimFactory.create
+    holders: anyone with the claim URI
+    grant_path: create returns the URI; factory registry verify
+    exposure: registry-uri
+    attenuation: 'bundle+{*Claim}; excludes claimState, makeKAsset, finalizeWith and the proof helpers'
+    authority_check: mixed
+    arms:
+      - {arm: get, mutating: false, authority: none, rationale: public claim read}
+      - {arm: comments, mutating: false, authority: none, rationale: public comments read}
+      - {arm: comment, mutating: true, authority: any-subject, atoms: ['authSubject', 'commentUntilHeight', '"comment closed"']}
+      - {arm: withdraw, mutating: true, authority: caller-subject, atoms: ['who != s.get("claimant")', '"not claimant"']}
+      - {arm: expire, mutating: true, authority: none, rationale: clock arm; refuses before the deadline}
+      - {arm: validate, mutating: true, authority: credential-proof, atoms: ['CredentialFactory!("verify"', 'proveAndCheck', '"self validation"', '"proof"']}
+      - {arm: resume, mutating: true, authority: caller-subject, atoms: ['who != s.get("claimant") && who != validator', '"not party"']}
+    delegation: []
+    revocation: none
+    forge_path: validation requires a valid credential proof for the caller; withdraw/resume require the claimant.
+    hazard: any subject can comment; expire is permissionless after the deadline.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/20_claim.rho:130-402
+  - id: CAP-020
+    name: ValuePropositionFactory
+    kind: factory
+    source: contracts/src/deploy/22_value.rho:355
+    source_atom: 'bundle+{*ValuePropositionFactory}'
+    creator: 22_value deploy
+    holders: anyone with the factory URI
+    grant_path: Root component:value-proposition-factory
+    exposure: registry-uri
+    attenuation: 'bundle+{*ValuePropositionFactory}; excludes vpRegistryState and the per-VP Apply'
+    authority_check: caller-subject
+    arms:
+      - {arm: verify, mutating: false, authority: none, rationale: existence-only VP index read}
+      - {arm: propose, mutating: true, authority: caller-subject, atoms: ['authSubject', 'vpReqOk', '"fields"']}
+    delegation: []
+    revocation: none
+    forge_path: propose for another proposer requires that proposer's deployerId.
+    hazard: any identity can propose.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/deploy/22_value.rho:50-353
+  - id: CAP-021
+    name: ValueProposition
+    kind: published-contract
+    source: contracts/src/deploy/22_value.rho:332
+    source_atom: 'bundle+{*ValueProposition}'
+    creator: ValuePropositionFactory.propose
+    holders: anyone with the VP URI
+    grant_path: propose returns the URI; factory registry verify
+    exposure: registry-uri
+    attenuation: 'bundle+{*ValueProposition}; excludes vpState and the private Apply'
+    authority_check: mixed
+    arms:
+      - {arm: get, mutating: false, authority: none, rationale: public VP read}
+      - {arm: comments, mutating: false, authority: none, rationale: public comments read}
+      - {arm: comment, mutating: true, authority: any-subject, atoms: ['authSubject', '"clock"']}
+      - {arm: withdraw, mutating: true, authority: caller-subject, atoms: ['who != s.get("proposer")', '"not proposer"']}
+      - {arm: validate, mutating: true, authority: credential-proof, atoms: ['CredentialFactory!("verify"', 'proveAndCheck', '"self validation"', '"proof"']}
+      - {arm: proveValidated, mutating: true, authority: caller-subject, atoms: ['authSubject', 'atHeight == now', '"height"']}
+      - {arm: openDispute, mutating: true, authority: party, atoms: ['who == s.get("proposer") || who == s.get("validator")', '"not a party"', '"already disputed"']}
+      - {arm: revocation, mutating: false, authority: none, rationale: public revocation read}
+    delegation: []
+    revocation: credential
+    forge_path: validate/proveValidated require a credential proof for the caller; openDispute requires a party.
+    hazard: a proposer or validator can freeze a validated VP without the other party's consent.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/22_value.rho:92-330
+  - id: CAP-022
+    name: vp-proof
+    kind: proof
+    source: contracts/src/deploy/22_value.rho:220
+    source_atom: 'bundle+{*Proof}'
+    creator: ValueProposition.proveValidated
+    holders: the caller-supplied proofCh
+    grant_path: proveValidated sends the bundle on proofCh
+    exposure: caller-channel
+    attenuation: 'one-shot take; bundle excludes proofState'
+    authority_check: none
+    arms:
+      - {arm: take, mutating: true, authority: none, rationale: 'one-shot bearer; checkValidatedProof binds caller and atHeight'}
+    delegation: [proveValidatedAndCheck, checkValidatedProof]
+    revocation: one-shot
+    forge_path: a recipient of proofCh can burn the proof.
+    hazard: bearer burn, not forgery.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/22_value.rho:190-229
+  - id: CAP-023
+    name: OracleFactory
+    kind: factory
+    source: contracts/src/deploy/30_oracle.rho:288
+    source_atom: 'bundle+{*OracleFactory}'
+    creator: 30_oracle deploy
+    holders: anyone with the factory URI
+    grant_path: Root component:oracle-factory
+    exposure: registry-uri
+    attenuation: 'bundle+{*OracleFactory}; excludes openCaseCheck, caseReqOk and the per-case closure'
+    authority_check: party
+    arms:
+      - {arm: open, mutating: true, authority: party, atoms: ['authSubject', 'opener == caseReq.get("openedBy")', 'listHas!(parties, opener', 'not isAdj', 'openCaseCheck', '"not opener"', '"case fields"']}
+    delegation: [subjectApply]
+    revocation: none
+    forge_path: a non-party opener is refused; an adjudicator who is a party is refused.
+    hazard: parties and subjectRef are caller-supplied; a victim can be named a party.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/30_oracle.rho:81-120
+  - id: CAP-024
+    name: OracleCase
+    kind: published-contract
+    source: contracts/src/deploy/30_oracle.rho:273
+    source_atom: 'bundle+{*OracleCase}'
+    creator: OracleFactory.open
+    holders: anyone with the case URI
+    grant_path: open returns the URI
+    exposure: registry-uri
+    attenuation: 'bundle+{*OracleCase}; excludes caseState, selfDecide, commitExecution and the stored subjectApply'
+    authority_check: mixed
+    arms:
+      - {arm: get, mutating: false, authority: none, rationale: public case read}
+      - {arm: evidence, mutating: true, authority: party, atoms: ['authSubject', 'listHas!(s.get("parties")', 'who != s.get("adjudicator")', '"not a party"']}
+      - {arm: decide, mutating: true, authority: credential-proof, atoms: ['who == s.get("adjudicator")', 'proveAndCheck', '"not adjudicator"', '"expired"']}
+      - {arm: execute, mutating: true, authority: none, rationale: permissionless crank; applies only the stored decision through the case-bound Apply}
+      - {arm: expire, mutating: true, authority: none, rationale: clock arm; refuses before the deadline}
+      - {arm: close, mutating: true, authority: none, rationale: only executed or expired cases can close}
+    delegation: []
+    revocation: none
+    forge_path: decide requires the adjudicator's credential proof; execute cannot change the decision.
+    hazard: the public case URI is a capability to crank execute/expire/close; the Apply is case-bound.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/30_oracle.rho:115-271
+  - id: CAP-025
+    name: ProvenanceFactory
+    kind: factory
+    source: contracts/src/deploy/40_provenance.rho:141
+    source_atom: 'bundle+{*ProvenanceFactory}'
+    creator: 40_provenance deploy
+    holders: anyone with the factory URI
+    grant_path: Root component:provenance-factory
+    exposure: registry-uri
+    attenuation: 'bundle+{*ProvenanceFactory}; excludes the per-provenance pState'
+    authority_check: caller-subject
+    arms:
+      - {arm: create, mutating: true, authority: caller-subject, atoms: ['authOwner', 'writers.length() == 0', '"writers or asset"']}
+    delegation: []
+    revocation: none
+    forge_path: create for another creator requires that creator's deployerId; assetRef is unverified.
+    hazard: provenance is advisory; any assetRef can be named.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/40_provenance.rho:24-139
+  - id: CAP-026
+    name: Provenance
+    kind: published-contract
+    source: contracts/src/deploy/40_provenance.rho:127
+    source_atom: 'bundle+{*Provenance}'
+    creator: ProvenanceFactory.create
+    holders: anyone with the provenance URI
+    grant_path: create returns the URI
+    exposure: registry-uri
+    attenuation: 'bundle+{*Provenance}; excludes pState'
+    authority_check: mixed
+    arms:
+      - {arm: get, mutating: false, authority: none, rationale: public provenance read}
+      - {arm: anchors, mutating: false, authority: none, rationale: public anchors read}
+      - {arm: anchor, mutating: true, authority: writer, atoms: ['authSubject', 'listHas!(s.get("writers")', '"not writer"', '"duplicate"']}
+      - {arm: comment, mutating: true, authority: writer, atoms: ['authSubject', 'listHas!(s.get("writers")', '"not writer"']}
+      - {arm: verify, mutating: false, authority: none, rationale: public hash read}
+    delegation: []
+    revocation: none
+    forge_path: anchor/comment require the caller to be a declared writer.
+    hazard: writer consent is not required at creation; the creator chooses the list.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/40_provenance.rho:42-125
+  - id: CAP-027
+    name: KAsset
+    kind: published-contract
+    source: contracts/src/lib/KAsset.rho:607
+    source_atom: 'bundle+{*KAsset}'
+    creator: makeKAsset (Claim term)
+    holders: anyone with the K-Asset URI
+    grant_path: Claim.kassetRef; registry lookup
+    exposure: registry-uri
+    attenuation: 'bundle+{*KAsset}; excludes kState, Apply and every helper'
+    authority_check: mixed
+    arms:
+      - {arm: get, mutating: false, authority: none, rationale: public K-Asset read}
+      - {arm: approve, mutating: true, authority: credential-proof, atoms: ['authSubject', 'approver == s.get("claimant") || approver == s.get("validator")', 'proveAndCheck', '"conflict"']}
+      - {arm: reject, mutating: true, authority: credential-proof, atoms: ['authSubject', 'proveAndCheck', '"not qualified"']}
+      - {arm: proveApproved, mutating: true, authority: none, rationale: 'permissionless read capability; mints a one-shot approval proof'}
+      - {arm: nest, mutating: true, authority: caller-subject, atoms: ['authSubject', 'snap.get("claimant") == who', '"not claimant"', 'kr.get("uri").toString() == ref.get("uri").toString()', '"claim kasset mismatch"', '"order"']}
+      - {arm: openDispute, mutating: true, authority: party, atoms: ['who == s.get("claimant") || who == s.get("validator")', '"not a party"', '"not disputable"']}
+      - {arm: children, mutating: false, authority: none, rationale: public children read}
+      - {arm: revocation, mutating: false, authority: none, rationale: public revocation read}
+    delegation: [Apply]
+    revocation: credential
+    forge_path: approve/reject require a credential proof; nest requires the parent claimant; openDispute requires a party.
+    hazard: nest trusts a registry-resolved child and a self-minted proof; fixed by RT-032.
+    disposition: holds
+    finding: RGA-049
+    evidence: contracts/src/lib/KAsset.rho:88-604
+  - id: CAP-028
+    name: kasset-proof
+    kind: proof
+    source: contracts/src/lib/KAsset.rho:237
+    source_atom: 'bundle+{*Proof}'
+    creator: KAsset.proveApproved
+    holders: the caller-supplied proofCh
+    grant_path: proveApproved sends the bundle on proofCh
+    exposure: caller-channel
+    attenuation: 'one-shot take; bundle excludes proofState'
+    authority_check: none
+    arms:
+      - {arm: take, mutating: true, authority: none, rationale: 'one-shot bearer; the nest consumer checks id, uri and approvedAt order'}
+    delegation: [nestProofTake, nestProofCheck]
+    revocation: one-shot
+    forge_path: anyone can call proveApproved for an approved K-Asset; the proof is a bearer token.
+    hazard: parent-owned nesting uses a permissionless proof; child consent is not required.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/lib/KAsset.rho:199-242
+  # ---------------------------------------------------------------------------
+  # Unbundled names and closure-only capabilities.
+  # ---------------------------------------------------------------------------
+  - id: CAP-030
+    name: kasset-apply-decision
+    kind: apply-decision
+    source: contracts/src/lib/KAsset.rho:550
+    source_atom: 'contract Apply(@"applyDecision"'
+    creator: makeKAsset
+    holders: the KAsset closure; the OracleCase closure after openDispute
+    grant_path: KAsset.openDispute sends *Apply to OracleFactory.open
+    exposure: closure-only
+    attenuation: case-bound; no dId; only the stored dispute case id
+    authority_check: case-id
+    arms:
+      - {arm: applyDecision, mutating: true, authority: case-id, atoms: ['d.get("id") != caseId', '"case mismatch"', '"not disputed"']}
+    delegation: [OracleCase.execute]
+    revocation: none; idempotent after resolution
+    forge_path: a caller cannot obtain Apply; the case passes only its own uri.
+    hazard: a public execute crank can invoke it, but only with the stored decision.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/lib/KAsset.rho:494-604
+  - id: CAP-031
+    name: vp-apply-decision
+    kind: apply-decision
+    source: contracts/src/deploy/22_value.rho:323
+    source_atom: 'contract Apply(@"applyDecision"'
+    creator: ValuePropositionFactory.propose
+    holders: the VP closure; the OracleCase closure after openDispute
+    grant_path: ValueProposition.openDispute sends *Apply to OracleFactory.open
+    exposure: closure-only
+    attenuation: case-bound; no dId; only the stored dispute case id
+    authority_check: case-id
+    arms:
+      - {arm: applyDecision, mutating: true, authority: case-id, atoms: ['d.get("id") == caseId', '"case mismatch"', '"not disputed"']}
+    delegation: [OracleCase.execute]
+    revocation: none; idempotent after resolution
+    forge_path: a caller cannot obtain Apply; the case passes only its own uri.
+    hazard: a public execute crank can invoke it, but only with the stored decision.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/deploy/22_value.rho:231-330
+  - id: CAP-032
+    name: oracle-subject-apply
+    kind: apply-decision
+    source: contracts/src/deploy/30_oracle.rho:81
+    source_atom: 'subjectApply'
+    creator: OracleFactory.open parameter
+    holders: the OracleCase closure
+    grant_path: the opener passes a name; the case stores it in its closure
+    exposure: closure-only
+    attenuation: case-bound; invoked only with s.get("uri") and s.get("decision")
+    authority_check: case-id
+    arms:
+      - {arm: applyDecision, mutating: true, authority: case-id, rationale: the case always passes its own uri; the Apply re-checks it}
+    delegation: [OracleCase.execute]
+    revocation: none
+    forge_path: an opener can pass a dummy name, but cannot use it to affect another subject.
+    hazard: a dummy or blocking apply can leave the case stuck in executing.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/30_oracle.rho:203-238
+  - id: CAP-033
+    name: private-helpers
+    kind: private-name
+    source: contracts/src/lib/KAsset.rho:15
+    source_atom: 'makeKAsset'
+    creator: each deploy term
+    holders: the defining term's closure
+    grant_path: none; not registered or returned
+    exposure: closure-only
+    attenuation: not bundled
+    authority_check: none
+    arms: []
+    delegation: []
+    revocation: none
+    forge_path: reading the public term does not reveal the name.
+    hazard: a helper that is accidentally bundled would publish its authority.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/deploy/20_claim.rho:84
+  - id: CAP-034
+    name: entity-state-cells
+    kind: private-name
+    source: contracts/src/deploy/10_identity.rho:13
+    source_atom: 'directoryState'
+    creator: each deploy term
+    holders: the defining term's closure
+    grant_path: none
+    exposure: closure-only
+    attenuation: not bundled; read only through the entity arms
+    authority_check: none
+    arms: []
+    delegation: []
+    revocation: none
+    forge_path: none; the cell name is unforgeable.
+    hazard: a name stored in a state map would leak the capability; the checker scans for it.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/deploy/10_identity.rho:27
+  - id: CAP-035
+    name: core-factory-closures
+    kind: factory
+    source: contracts/src/deploy/20_claim.rho:80
+    source_atom: 'for (CredentialFactory <- cfCh; ValuePropositionFactory <- vpCh; OracleFactory <- ofCh)'
+    creator: install-time registry lookup
+    holders: the Claim term closure
+    grant_path: the rendered term's placeholder URIs
+    exposure: closure-only
+    attenuation: the genuine factory names; no caller substitution
+    authority_check: none
+    arms: []
+    delegation: []
+    revocation: none
+    forge_path: a caller cannot replace the closed-over factory names.
+    hazard: a forged factory at a placeholder URI would capture the calls; the manifest and Root pin the URIs.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/deploy/20_claim.rho:80-83
+  - id: CAP-036
+    name: credential-issuance-registry
+    kind: registry-entry
+    source: contracts/src/deploy/11_credentials.rho:336
+    source_atom: 's.set("issued", s.get("issued").set(uri.toString()'
+    creator: CredentialFactory.issue
+    holders: public read via verify
+    grant_path: issue appends the record
+    exposure: registry-uri
+    attenuation: read-only verify
+    authority_check: installer
+    arms:
+      - {arm: verify, mutating: false, authority: none, rationale: existence-only; status is re-checked by prove/check}
+    delegation: []
+    revocation: none
+    forge_path: a forged credential URI has no issued record.
+    hazard: a client gating on verify alone treats a revoked credential as present.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/11_credentials.rho:109-116
+  - id: CAP-037
+    name: claim-registry
+    kind: registry-entry
+    source: contracts/src/deploy/20_claim.rho:409
+    source_atom: 'claimRegistryState'
+    creator: ClaimFactory.create
+    holders: public read via verify
+    grant_path: create appends the record
+    exposure: registry-uri
+    attenuation: read-only verify
+    authority_check: caller-subject
+    arms:
+      - {arm: verify, mutating: false, authority: none, rationale: existence-only claim index read}
+    delegation: []
+    revocation: none
+    forge_path: a forged claim URI has no record.
+    hazard: the record carries claimant and subjectRef, not status.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/deploy/20_claim.rho:86-93
+  - id: CAP-038
+    name: vp-registry
+    kind: registry-entry
+    source: contracts/src/deploy/22_value.rho:336
+    source_atom: 'vpRegistryState'
+    creator: ValuePropositionFactory.propose
+    holders: public read via verify
+    grant_path: propose appends the record
+    exposure: registry-uri
+    attenuation: read-only verify
+    authority_check: caller-subject
+    arms:
+      - {arm: verify, mutating: false, authority: none, rationale: existence-only VP index read}
+    delegation: []
+    revocation: none
+    forge_path: a forged VP URI has no record.
+    hazard: the record does not carry validation status.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/deploy/22_value.rho:50-57
+  - id: CAP-039
+    name: identity-directory-state
+    kind: registry-entry
+    source: contracts/src/deploy/10_identity.rho:227
+    source_atom: 'directoryState'
+    creator: 10_identity deploy
+    holders: public read via lookup
+    grant_path: IdentityFactory writes it
+    exposure: registry-uri
+    attenuation: read-only lookup
+    authority_check: caller-subject
+    arms:
+      - {arm: lookup, mutating: false, authority: none, rationale: address-to-URI read}
+    delegation: []
+    revocation: none
+    forge_path: none; only the factory writes.
+    hazard: an address is a data key, not a capability.
+    disposition: holds
+    finding: '-'
+    evidence: contracts/src/deploy/10_identity.rho:25-38
+  - id: CAP-040
+    name: manifest-designation
+    kind: data-reference
+    source: harness/install.py:192
+    source_atom: 'manifest'
+    creator: installer
+    holders: the web client and CLI
+    grant_path: deployments/devnet.json, copied to web/public
+    exposure: reply-value
+    attenuation: URI strings only; no names
+    authority_check: none
+    arms: []
+    delegation: []
+    revocation: none
+    forge_path: a substituted manifest points the client at a self-consistent fake Root.
+    hazard: the manifest is an unsigned designation; the Root URI is the trust anchor.
+    disposition: accepted
+    finding: RGA-051
+    evidence: harness/install.py:192-196
+  - id: CAP-041
+    name: root-installer-role
+    kind: issuer
+    source: contracts/src/deploy/00_root.rho:63
+    source_atom: 's.get("installer")'
+    creator: 00_root deploy
+    holders: the 00_root deployer address
+    grant_path: set once at deploy time
+    exposure: closure-only
+    attenuation: address comparison; no transfer arm
+    authority_check: installer
+    arms:
+      - {arm: register, mutating: true, authority: installer, atoms: ['authSubject', 's.get("installer")']}
+    delegation: []
+    revocation: root-immutable
+    forge_path: a non-installer register is refused; overwrite is refused.
+    hazard: the installer is also the genesis issuer; its key loss freezes both.
+    disposition: accepted
+    finding: '-'
+    evidence: contracts/src/deploy/00_root.rho:39-69

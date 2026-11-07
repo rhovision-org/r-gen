@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -109,6 +110,65 @@ def uri_map(value) -> dict[str, str]:
     return out
 
 
+COMPONENT_KEYS = [
+    "root",
+    "identity-factory",
+    "identity-directory",
+    "issuer",
+    "credential-factory",
+    "oracle-factory",
+    "provenance-factory",
+    "value-proposition-factory",
+    "claim-factory",
+]
+
+
+def resolve_key(root_uri: str, key: str, secret: str):
+    term = f"""
+new rl(`rho:registry:lookup`), ch, ret, deployId(`rho:rchain:deployId`) in {{
+  rl!(`{root_uri}`, *ch) |
+  for (Root <- ch) {{
+    Root!("resolve", "component:{key}", *ret) |
+    for (@r <- ret) {{ deployId!(r) }}
+  }}
+}}
+"""
+    _, result = node.deploy_and_wait(term, secret, phlo_limit=4_000_000)
+    decoded = decode(result)
+    if isinstance(decoded, list) and len(decoded) == 1:
+        return decoded[0]
+    return decoded
+
+
+def verify_components(root_uri: str, components: dict[str, str], secret: str) -> None:
+    """The installer must not write a manifest from a refused Root registration.
+
+    Each term emits its deployId even when GenRoot.register replied (false, reason). Resolve
+    every key through Root before writing the manifest; a missing or different URI is a failed
+    install, not a partial success.
+    """
+    problems: list[str] = []
+    for attempt in range(3):
+        problems = []
+        for key in COMPONENT_KEYS:
+            expected = components.get(key)
+            if not expected:
+                problems.append(f"{key}: no installer URI")
+                continue
+            reply = resolve_key(root_uri, key, secret)
+            if not (isinstance(reply, tuple) and len(reply) >= 2 and reply[0] is True):
+                problems.append(f"{key}: Root did not resolve it ({reply!r})")
+            elif str(reply[1]) != expected:
+                problems.append(f"{key}: Root has {reply[1]!r}, installer has {expected!r}")
+        if not problems:
+            print(f"install: Root resolves {len(COMPONENT_KEYS)}/{len(COMPONENT_KEYS)} keys")
+            return
+        if attempt < 2:
+            print("install: Root not consistent yet; retrying in 2s")
+            time.sleep(2)
+    raise SystemExit("install: Root verification failed: " + "; ".join(problems))
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--node", default=None)
@@ -160,6 +220,11 @@ def main(argv: list[str] | None = None) -> int:
                 f"install: {name} is {len(term.encode())} bytes after minification; "
                 "the node parses at most 65536"
             )
+        if not args.dry_run and "rho:id:dryrun" in term:
+            raise SystemExit(
+                f"install: {name} still contains a dry-run placeholder; "
+                "a component label was missing from the previous deploy"
+            )
 
         if args.dry_run:
             print(f"install: rendered {name} ({len(term.encode())} bytes minified)")
@@ -190,6 +255,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"install: {name} -> {found}")
 
     if not args.dry_run:
+        assert root_uri is not None
+        verify_components(root_uri, state["components"], secret)
         manifest = ROOT / cfg.get("manifest", "deployments/devnet.json")
         manifest.parent.mkdir(parents=True, exist_ok=True)
         manifest.write_text(json.dumps(state, indent=2) + "\n")

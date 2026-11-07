@@ -99,6 +99,25 @@ mark each finding `accepted`, `rejected`, or `accept-risk`. An auditor must not 
 proofs they authored. With one maintainer, the record must state the role separation and the
 independence limitation; external review is recommended for any S1.
 
+## Object-capability audit (2026-11-07)
+
+A separate capability-focused pass audits the seven terms as an object-capability system:
+the register `spec/audit/capabilities.yaml` (38 rows, 19 `bundle+` expressions, 3 proof kinds,
+2 private `Apply` capabilities, 7 ambient system channels), the live suite
+`harness/redteam_capabilities.py` (RT-024..RT-037), and the blind run
+`spec/hazop/runs/2026-11-07-capabilities/` (36 rows, 9 nodes). The gate is
+`tools/check_capabilities.py`; the findings are RGA-048..RGA-069. The public summary is the
+[object-capabilities](object-capabilities.md) page.
+
+The pass fixes the K-Asset child anchor (RGA-049), the Root register state order (RGA-061),
+`Issuer.authorize` (RGA-048), the K-Asset validator dispute parties (RGA-060), the K-Asset
+reply bundle (RGA-050), the issuer registry hold (RGA-069), and the installer/client checks
+(RGA-056..RGA-059). It accepts the remaining hazards with a reason in the register and the
+run's adjudication. It does not change the charter's boundary: no mechanized Rholang semantics,
+no refinement theorem, and no proof of name unforgeability. The Lean model
+`RGen.Model.Capability` is an abstract grant/bundle/Apply/proof model, not a capability
+semantics.
+
 ## What is not claimed
 
 - No mechanized Rholang semantics and no refinement theorem.

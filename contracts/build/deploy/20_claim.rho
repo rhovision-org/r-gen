@@ -552,41 +552,41 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
 
     contract childClaimFactoryReply(@vf, @child, @ref, @claimRef, ret2) = {
       match vf {
-        (true, _) => { fetchChildClaim!(claimRef, child, *ret2) }
+        (true, _) => { fetchChildClaim!(claimRef, child, ref, *ret2) }
         _ => { ret2!((false, "forged claim")) }
       }
     } |
 
-    contract fetchChildClaim(@claimRef, @child, ret2) = {
+    contract fetchChildClaim(@claimRef, @child, @ref, ret2) = {
       new ccCh in {
         rl!(claimRef.get("uri"), *ccCh) |
-        for (Claim <- ccCh) { readChildClaim!(*Claim, child, *ret2) }
+        for (Claim <- ccCh) { readChildClaim!(*Claim, child, ref, *ret2) }
       }
     } |
 
-    contract readChildClaim(Claim, @child, ret2) = {
+    contract readChildClaim(Claim, @child, @ref, ret2) = {
       new cgCh in {
         Claim!("get", *cgCh) |
-        for (@cg <- cgCh) { checkChildKasset!(cg, child, *ret2) }
+        for (@cg <- cgCh) { checkChildKasset!(cg, child, ref, *ret2) }
       }
     } |
 
-    contract checkChildKasset(@cg, @child, ret2) = {
+    contract checkChildKasset(@cg, @child, @ref, ret2) = {
       match cg {
-        (true, claim) => { checkChildKassetRef!(claim, child, *ret2) }
+        (true, claim) => { checkChildKassetRef!(claim, child, ref, *ret2) }
         _ => { ret2!((false, "unknown claim")) }
       }
     } |
 
-    contract checkChildKassetRef(@claim, @child, ret2) = {
+    contract checkChildKassetRef(@claim, @child, @ref, ret2) = {
       match claim.get("kassetRef") {
         Nil => { ret2!((false, "claim not validated")) }
-        kr => { checkChildKassetUri!(kr, child, *ret2) }
+        kr => { checkChildKassetUri!(kr, ref, *ret2) }
       }
     } |
 
-    contract checkChildKassetUri(@kr, @child, ret2) = {
-      if (kr.get("uri") == child.get("uri")) { ret2!((true, "ok")) }
+    contract checkChildKassetUri(@kr, @ref, ret2) = {
+      if (kr.get("uri").toString() == ref.get("uri").toString()) { ret2!((true, "ok")) }
       else { ret2!((false, "claim kasset mismatch")) }
     } |
 
@@ -697,7 +697,8 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
     } |
 
     contract nestProofCheck(@data, @ref, @tail, @prev, ret2) = {
-      if (data.get("id") == ref.get("id") && data.get("uri") == ref.get("uri")) {
+      if (data.get("id").toString() == ref.get("id").toString()
+          && data.get("uri").toString() == ref.get("uri").toString()) {
         nestProofOrder!(data, tail, prev, *ret2)
       } else { ret2!((false, "child proof")) }
     } |
@@ -809,7 +810,7 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
         oracleFactory!("open", *dId, s.get("claimRef"), {
           "kind": caseReq.get("kind"),
           "openedBy": who,
-          "parties": [s.get("claimant"), s.get("approver")],
+          "parties": [s.get("claimant"), s.get("validator"), s.get("approver")],
           "groundsHash": caseReq.get("groundsHash"),
           "requirement": {"ctype": "Oracle", "discipline": s.get("discipline"),
                           "jurisdiction": s.get("jurisdiction"),
@@ -901,7 +902,7 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
     rs!(bundle+{*KAsset}, *uriCh) |
     for (@uri <- uriCh) {
       for (@s <- kState) { kState!(s.set("uri", uri).set("id", uri.toString())) } |
-      ret!((true, bundle+{*KAsset}, uri))
+      ret!((true, uri))
     }
   }
 } |
@@ -1081,7 +1082,7 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
                       }, *OracleFactory, *ValuePropositionFactory, *ClaimFactory, *kaCh) |
                       for (@ka <- kaCh) {
                         match ka {
-                          (true, _, kassetUri) => {
+                          (true, kassetUri) => {
                             for (@s2 <- claimState) {
                               match s2.get("status") {
                                 "validating" => {

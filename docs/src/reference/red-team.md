@@ -68,12 +68,41 @@ callee that may not reply is a defect even though erroring deploys roll back. Se
 - **Deadline and retry edges.** The execute receipt records `attempts: 1`; a decided case with a
   permanently failing apply has no terminal close path. Both are accepted in the workflow HAZOP.
 
+## Object-capability suite (2026-11-07)
+
+`harness/redteam_capabilities.py` runs RT-024..RT-037 against the same devnet and writes
+`spec/audit/redteam-capabilities.yaml`:
+
+| ID | Probe | Result |
+|---|---|---|
+| RT-024 | unauthorized public-arm matrix (identity, claim, VP, provenance, KAsset approve) | all refused |
+| RT-025 | private helper names through a factory URI | not callable |
+| RT-026 | forward a proof channel to a third party | third party burns, cannot forge |
+| RT-029 | non-installer Root register; duplicate key | refused |
+| RT-030 | forged credential URI in Claim.validate | `forged credential` |
+| RT-031 | `Issuer.authorize` with a caller-nominated genesis address | fixed: `not issuer` |
+| RT-032 | self-registered fake child nested under a real parent | fixed: `claim kasset mismatch` |
+| RT-034 | revoke the approver credential after approval | approval persists |
+| RT-035 | public OracleCase arms as a non-party | evidence/decide refused; open clock arms accepted |
+| RT-036 | K-Asset validator opens a dispute | fixed: case opened |
+| RT-037 | malformed `dId` in Root.register, then `Root.keys` | fixed: directory readable |
+
+RT-031 and RT-032 were observed `vulnerable` in the pre-fix run; the artifact keeps those
+observations in `detail`. RT-036 and RT-037 were source-identified and are post-fix regression
+probes (RT-037 is destructive pre-fix, so it was not run against the old Root). RT-027 (the
+case passes only its own `uri` to `Apply`) and RT-033 (name/data substitution) are covered by
+the register and `tools/check_capabilities.py` rather than a live probe. The suite is wired into `make devnet-test-full` and the scheduled
+CI job.
+
 ## Reproduce
 
 ```bash
 make probe-deploy-semantics   # writes spec/audit/deploy-semantics.{json,md}
 make redteam                  # writes spec/audit/redteam.yaml and deployments/redteam-results.json
+make redteam-capabilities     # writes spec/audit/redteam-capabilities.yaml
 RGEN_EXPECT=fixed make redteam
+RGEN_EXPECT=fixed make redteam-capabilities
 ```
 
-`make redteam` exits 2 if the devnet is not healthy. It never treats a missing node as a pass.
+`make redteam` and `make redteam-capabilities` exit 2 if the devnet is not healthy. They never
+treat a missing node as a pass.

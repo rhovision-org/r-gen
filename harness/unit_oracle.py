@@ -83,7 +83,7 @@ def main() -> int:
     assertions.expect_ok("adjudicator evidence", reply)
     corpus.assert_row("ORACLE-evidence-party", reply)
     reply = fixtures.call_uri(third_case, "evidence", [__import__("terms").Raw("*dId"),
-                                                       {"hash": "ev"}], key="bob")
+                                                       {"hash": "ev"}], key="deployer")
     assertions.expect_refusal("non-party evidence refused", reply, "not a party")
 
     print("unit_oracle: pass")

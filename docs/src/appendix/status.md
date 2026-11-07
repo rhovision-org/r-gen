@@ -11,7 +11,7 @@
   update preserves omitted fields; oracle `execute` retries an `executing` case.
 - Ten behavioural suites pass after reinstall: identity, credentials, claim, K-asset, value,
   oracle, provenance, integration, vertical slice, and behavioural race regression.
-- Lean: 44 files, no `sorry`/axiom; 233 audited theorems axiom-clean; 123 Pareto checks covered;
+- Lean: 45 files, no `sorry`/axiom; 241 audited theorems axiom-clean; 129 Pareto checks covered;
   the new identity, claim-mint, proof-capability, nest-crash, deadline and composed-system
   modules build.
 - Deploy-semantics probe: reduction errors roll back; a blocked continuation commits the
@@ -42,11 +42,29 @@
 - Static gates: build, parse, arch, captures, placeholders, money, core boundary,
   concurrency, citations, flows, race matrix, arm guards, audit.
 - Phase 1 audit: 67 deployed arms dispositioned; 10 HAZOP nodes, 150 coverage cells, 146 rows;
-  27 findings (12 P0, 13 P1, 2 P2; no S1); 39 Pareto claim entries; 11 Rholang items and 9 Lean
+  62 findings (current priority split in spec/audit/findings.yaml); 45 Pareto claim entries; 13 Rholang items and 9 Lean
   items. The record is in `spec/audit`, `spec/hazop`, `spec/proofs`, and `spec/improvements`.
 - Oracle `open` now checks the `subjectRef` argument, not `caseReq.subjectRef`. The Phase 2
   check had made every K-Asset/VP `openDispute` refuse with `case fields`; `unit_core` now
   reaches dispute, decision, execution and provenance on the rebuilt contracts.
+
+## Object-capability audit (2026-11-07)
+
+- Register `spec/audit/capabilities.yaml`: 38 rows over 19 `bundle+` expressions, 3 proof
+  kinds, 2 private `Apply` capabilities and 7 ambient system channels; `make
+  capabilities-check` passes.
+- Live suite `harness/redteam_capabilities.py`: 12 probes (RT-024..RT-037). RT-031/032 were
+  observed `vulnerable` pre-fix; RT-036/037 are source-identified post-fix regressions; all
+  four are `fixed` and the rest are `accepted`. `make redteam-capabilities` is green under
+  `RGEN_EXPECT=fixed`.
+- Blind HAZOP `spec/hazop/runs/2026-11-07-capabilities/`: 36 rows, 9 nodes, 18 adjudication
+  decisions; `make hazop-check` validates both runs.
+- Fixed: K-Asset child anchor (RGA-049), Root register state order (RGA-061),
+  `Issuer.authorize` caller derivation (RGA-048), K-Asset validator dispute parties (RGA-060),
+  K-Asset reply bundle (RGA-050), issuer registry hold (RGA-069), installer Root check and
+  dry-run guard (RGA-058/059), client cache refresh and resolve-all wording (RGA-056/057).
+- Lean: `RGen.Model.Capability` adds 8 theorems; 45 files, 241 axiom-clean theorems, 129 Pareto
+  checks. The model is abstract and does not prove name unforgeability.
 
 ## Web client
 

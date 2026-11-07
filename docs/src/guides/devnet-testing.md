@@ -66,6 +66,7 @@ Adds:
 
 - `make unit-all` — 10 suites, ~450s, writes `deployments/suite-results.json`;
 - `RGEN_EXPECT=fixed make redteam` — no probe may classify `vulnerable`;
+- `RGEN_EXPECT=fixed make redteam-capabilities` — RT-024..RT-037, no `vulnerable`;
 - `make probe-deploy-semantics` — rollback-on-error and blocked-continuation commit;
 - `make demo-seed` and `make demo-verify` — 14 catalogue entries re-read and cross-checked;
 - `make web-test`, `web-typecheck`, `web-wasm-smoke`, `web-build`;
@@ -103,13 +104,13 @@ plan. Extension suites (payments, risk, panels, governance) are not implemented 
 | Identity | `unit_identity`, `concurrency_core` #11, RT-001; resume untested |
 | Credential | `unit_credentials`, RT-004/008; `check`, issuer arms untested |
 | Claim | `unit_claim`, `concurrency_core`, RT-002/006/007/023; resume untested |
-| K-Asset | `unit_kasset`, `concurrency_core`, RT-013/014; many nest guards untested |
+| K-Asset | `unit_kasset`, `concurrency_core`, RT-013/014/032/036; many nest guards untested |
 | Value proposition | `unit_value`, RT-020/021; comment/height/dispute refusals untested |
 | Oracle | `unit_oracle`, `concurrency_core`, RT-009/010/012/022; evidence/execute/expire/close gaps |
 | Provenance | `unit_provenance`, RT-011; create refusals untested |
 | End-to-end | `unit_core`, `integration_core` |
 | Web | `wasm-smoke`, `read.spec`, `handshake.spec`, 11 Vitest tests |
-| Installer/Root | `install.py`, `install_testnet.py`; devnet `devnet-verify` |
+| Installer/Root | `install.py` 9/9 Root check, `install_testnet.py`; devnet `devnet-verify`; RT-029/037 |
 
 ## Gaps
 
@@ -142,6 +143,8 @@ status. A test should record the behavior and its disposition.
 ## Artifacts
 
 - `deployments/devnet-test-<tier>.json` — step status, timings, pin, failures (gitignored).
-- `deployments/suite-results.json`, `deployments/redteam-results.json` (gitignored).
-- `spec/audit/redteam.yaml`, `spec/audit/deploy-semantics.{json,md}` (tracked audit records).
+- `deployments/suite-results.json`, `deployments/redteam-results.json`,
+  `deployments/redteam-capabilities.json` (gitignored).
+- `spec/audit/redteam.yaml`, `spec/audit/redteam-capabilities.yaml`,
+  `spec/audit/deploy-semantics.{json,md}` (tracked audit records).
 - `.devnet/`, `.demo/`, `web/test-results/`, `web/playwright-report/` (gitignored).

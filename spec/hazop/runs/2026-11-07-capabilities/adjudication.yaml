@@ -1,0 +1,109 @@
+schema: rgen.hazop-adjudication/v1
+run_id: 2026-11-07-capabilities
+adjudicator: owner
+decisions:
+- row: CHZ-001
+  decision: fixed; GenRoot.register authenticates before consuming rootState and answers
+    a failed auth with not installer
+  finding: RGA-061
+  disposition: fixed
+  evidence: contracts/src/deploy/00_root.rho; RT-037
+- row: CHZ-009
+  decision: fixed; issue consumes factoryState only after the URI reply, so a blocked
+    insert does not lose the registry
+  finding: RGA-069
+  disposition: fixed
+  evidence: contracts/src/deploy/11_credentials.rho
+- row: CHZ-013
+  decision: fixed; nest compares the claim kassetRef.uri with ref.uri and resolves
+    the child from that URI; RT-032 flips from (true, ok) to claim kasset mismatch
+  finding: RGA-049
+  disposition: fixed
+  evidence: contracts/src/lib/KAsset.rho; harness/redteam_capabilities.py RT-032
+- row: CHZ-014
+  decision: accepted; the approval proof is a permissionless read capability, one-shot
+    and caller-paid, and parent-owned nesting uses it
+  finding: RGA-040
+  disposition: accepted
+  evidence: contracts/src/lib/KAsset.rho:199
+- row: CHZ-015
+  decision: accepted; nesting is a forest by design, with per-parent duplicate checks
+    and no global child uniqueness
+  finding: RGA-030
+  disposition: accepted
+  evidence: contracts/src/lib/KAsset.rho; docs/src/reference/kasset-conventions.md
+- row: CHZ-016
+  decision: accepted; passing a dId delegates the caller's identity for as long as
+    the receiver holds the name, which is the intended ocap semantics of a name
+  finding: '-'
+  disposition: accepted
+  evidence: contracts/src/lib/Auth.rho; docs/src/reference/object-capabilities.md
+- row: CHZ-017
+  decision: accepted; subjectRef is an unverified reference, but approval requires
+    a verified VP and a validated proof
+  finding: RGA-046
+  disposition: accepted
+  evidence: contracts/src/lib/KAsset.rho:51
+- row: CHZ-018
+  decision: accepted under the installer trust anchor; the genesis factory stores
+    Apply in the case closure and execute passes only the case's own uri
+  finding: '-'
+  disposition: accepted
+  evidence: contracts/src/deploy/30_oracle.rho:217; RT-027
+- row: CHZ-024
+  decision: accepted; upheld is documented as attestation-only and is not an approved
+    status
+  finding: '-'
+  disposition: accepted
+  evidence: docs/src/reference/kasset-conventions.md:61
+- row: CHZ-025
+  decision: accepted; a decision is a durable adjudication, like an approval; revocation
+    after decide does not retroactively invalidate it
+  finding: RGA-055
+  disposition: accepted
+  evidence: contracts/src/deploy/30_oracle.rho:217
+- row: CHZ-026
+  decision: accepted; validation is a durable state transition, recorded as RGA-062;
+    devalidation is a separate policy
+  finding: RGA-062
+  disposition: accepted
+  evidence: contracts/src/deploy/22_value.rho:190
+- row: CHZ-027
+  decision: accepted; atHeight is the mint height, not the validation height; the
+    status is durable and the consumer checks the current height
+  finding: '-'
+  disposition: accepted
+  evidence: contracts/src/deploy/22_value.rho:196
+- row: CHZ-029
+  decision: accepted; provenance is advisory and no core arm uses it as authority
+  finding: RGA-022
+  disposition: accepted
+  evidence: contracts/src/deploy/40_provenance.rho
+- row: CHZ-030
+  decision: accepted under the installer trust anchor; the factory name is rendered
+    at install time and the case binds Apply to its own case id
+  finding: '-'
+  disposition: accepted
+  evidence: contracts/src/deploy/22_value.rho:245
+- row: CHZ-032
+  decision: accepted; the manifest is an unsigned designation and the Root URI is
+    the trust anchor; signing or pinning is a client extension
+  finding: RGA-051
+  disposition: accepted
+  evidence: crates/rgen-core/src/manifest.rs
+- row: CHZ-034
+  decision: fixed; Client::refresh_components now clears the component cache
+  finding: RGA-057
+  disposition: fixed
+  evidence: crates/rgen-sdk/src/client.rs
+- row: CHZ-035
+  decision: fixed; install.py resolves 9/9 keys through Root before writing the manifest
+  finding: RGA-058
+  disposition: fixed
+  evidence: harness/install.py; Root resolves 9/9 keys
+- row: CHZ-036
+  decision: accepted; execute is a retryable crank and Apply is idempotent; the status-regression
+    window is recorded under RGA-024
+  finding: RGA-024
+  disposition: accepted
+  evidence: contracts/src/deploy/30_oracle.rho:203; harness/concurrency_core.py

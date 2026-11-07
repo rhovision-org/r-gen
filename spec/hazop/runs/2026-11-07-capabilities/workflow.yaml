@@ -1,0 +1,883 @@
+schema: rgen.hazop-workflow/v1
+run_id: 2026-11-07-capabilities
+scope: 'object capabilities: grants, bundles, delegation, authority, revocation, serialization
+  and client designation'
+rows:
+- id: CHZ-001
+  node: cap-authority
+  guide_word: No/Not
+  parameter: GenRoot.register rootState
+  deviation: The Root directory cell is consumed before the caller is authenticated.
+  cause: GenRoot.register takes rootState linearly and only reaches authSubject after
+    the consume; a fresh channel in the dId position can block the auth continuation.
+  consequence: A blocked register continuation commits the consumed cell and every
+    resolve/get/keys call blocks; the Root directory is dead.
+  safeguard: Installer equality after the consume; no fallback re-post.
+  safeguard_status: partial
+  severity: S2
+  likelihood: A
+  evidence: contracts/src/deploy/00_root.rho:39
+  trigger: new fresh in { GenRoot!("register", "component:x", "rho:id:x", 1, "k",
+    *fresh, *ret) } then GenRoot!("keys", *r).
+  falsifier: Source-identified; RT-037 is the post-fix keys check (the pre-fix probe is
+    destructive). The arm now authenticates before consuming rootState.
+  confidence: high
+  authors:
+  - cap-analyst-root-credential
+  - redteam-operator
+  finding: RGA-061
+  disposition: fixed
+  register: CAP-010
+- id: CHZ-002
+  node: cap-publication
+  guide_word: More
+  parameter: bundle+{*GenRoot} register arm
+  deviation: The single public bundle exposes the installer-only register arm alongside
+    the read arms.
+  cause: bundle+{*GenRoot} publishes the whole contract; register is distinguished
+    only by an installer equality check.
+  consequence: Every deployer can invoke register; the write arm is one equality check
+    away from total and is the entry point to the state-loss path.
+  safeguard: authSubject-derived installer equality.
+  safeguard_status: partial
+  severity: S3
+  likelihood: A
+  evidence: contracts/src/deploy/00_root.rho:64
+  trigger: A non-installer invokes register and gets (false, 'not installer').
+  falsifier: RT-029; a read-only bundle design would make register unreachable.
+  confidence: high
+  authors:
+  - cap-analyst-root-credential
+  finding: '-'
+  disposition: accepted
+  register: CAP-010
+- id: CHZ-003
+  node: cap-designation
+  guide_word: Substitute/confused-deputy
+  parameter: Root entry.uri
+  deviation: The component URI is an unvalidated caller-supplied string stored as
+    data.
+  cause: register accepts @uri and stores it verbatim; no scheme, resolvability or
+    kind check exists.
+  consequence: A compromised installer key or typo permanently maps a trusted key
+    to an arbitrary or unresolvable URI, with no replace path.
+  safeguard: Installer authentication and first-writer-wins duplicate refusal.
+  safeguard_status: partial
+  severity: S3
+  likelihood: C
+  evidence: contracts/src/deploy/00_root.rho:49
+  trigger: Installer registers component:credential-factory with a foreign bundle
+    URI; resolve returns it.
+  falsifier: A static URI/kind check; the installer now resolves all nine keys through
+    Root but does not validate the term at the URI.
+  confidence: high
+  authors:
+  - cap-analyst-root-credential
+  finding: '-'
+  disposition: accepted
+  register: CAP-010
+- id: CHZ-004
+  node: cap-designation
+  guide_word: Substitute/confused-deputy
+  parameter: proveAndCheck credentialUri
+  deviation: The proof helper treats a caller-supplied URI as the credential capability
+    and trusts whatever contract answers.
+  cause: Proof.rho resolves credentialUri and calls prove; checkCredentialProof compares
+    only the returned payload, not factory membership.
+  consequence: A caller that omits CredentialFactory.verify can self-certify with
+    a fake credential and fake Proof.
+  safeguard: Every in-tree consumer calls CredentialFactory.verify first; the helper
+    is private.
+  safeguard_status: partial
+  severity: S3
+  likelihood: C
+  evidence: contracts/src/lib/Proof.rho:26
+  trigger: Deploy fake Credential and fake Proof, call proveAndCheck without verify.
+  falsifier: RT-030; a helper-level factory check would close it.
+  confidence: medium
+  authors:
+  - cap-analyst-root-credential
+  finding: RGA-068
+  disposition: accepted
+  register: CAP-017
+- id: CHZ-005
+  node: cap-authority
+  guide_word: Other than
+  parameter: Credential.check caller and atHeight
+  deviation: The check arm authorises a caller-supplied address, not the caller, at
+    a caller-chosen height.
+  cause: Credential.check declares @caller/@atHeight as data and compares caller to
+    the credential subject.
+  consequence: Any holder of the bundle can ask whether an arbitrary address holds
+    a credential and backdate atHeight to a pre-expiry height.
+  safeguard: Current-state status is checked; the arm is advisory and check_concurrency.py
+    forbids it as a commit authority.
+  safeguard_status: partial
+  severity: S3
+  likelihood: A
+  evidence: contracts/src/deploy/11_credentials.rho:166
+  trigger: Read a credential with get, then call check with the victim address and
+    atHeight 0.
+  falsifier: An authenticated check arm would settle it; the core uses prove, not
+    check, for authority.
+  confidence: high
+  authors:
+  - cap-analyst-root-credential
+  finding: '-'
+  disposition: accepted
+  register: CAP-016
+- id: CHZ-006
+  node: cap-authority
+  guide_word: Substitute/confused-deputy
+  parameter: Issuer.authorize caller
+  deviation: The authorize arm substitutes a caller-supplied address for the requester.
+  cause: authorize took @caller as data and compared it to issuerState.subject.
+  consequence: Any deployer could read the genesis address and obtain (true, true)
+    for a covered requirement.
+  safeguard: The factory derived the caller correctly; the arm itself was public and
+    unauthenticated.
+  safeguard_status: none
+  severity: S3
+  likelihood: A
+  evidence: contracts/src/deploy/11_credentials.rho:69
+  trigger: Call Issuer.authorize with the genesis address from Issuer.get.
+  falsifier: 'RT-031: data-caller returned (true, true) before the fix; the arm now
+    takes a dId and returns not issuer for mallory.'
+  confidence: high
+  authors:
+  - cap-analyst-root-credential
+  - redteam-operator
+  finding: RGA-048
+  disposition: fixed
+  register: CAP-014
+- id: CHZ-007
+  node: cap-publication
+  guide_word: Bearer
+  parameter: Proof payload requirement
+  deviation: The proof is a bearer bundle and the consumer check does not compare
+    the minted requirement with the consumer requirement.
+  cause: checkCredentialProof compares subject, credentialUri and atHeight but not
+    data.requirement.
+  consequence: A proof minted against a weaker requirement can be accepted by a consumer
+    that takes it out of band.
+  safeguard: proveAndCheck passes the consumer requirement into prove; every in-tree
+    consumer uses it.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  evidence: contracts/src/lib/Proof.rho:10
+  trigger: Mint with minLevel 0 and call checkCredentialProof with a level-3 consumer
+    requirement.
+  falsifier: A requirement comparison in the helper; RT-026 shows the bearer/burn
+    path.
+  confidence: high
+  authors:
+  - cap-analyst-root-credential
+  finding: RGA-067
+  disposition: accepted
+  register: CAP-017
+- id: CHZ-008
+  node: cap-authority
+  guide_word: More
+  parameter: Credential.attest
+  deviation: Attestation accepts any authenticated address other than the subject,
+    with no qualification, cap or active-status check.
+  cause: attest only rejects who == subject and dedupes per address.
+  consequence: Many keys can append one attestation each to any credential, growing
+    the cell and inflating an evidence list.
+  safeguard: Per-address dedupe.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  evidence: contracts/src/deploy/11_credentials.rho:320
+  trigger: N fresh keys each attest to the same credential.
+  falsifier: A bounded attestation list or a role check; a probe counting two attestations
+    confirms the growth.
+  confidence: high
+  authors:
+  - cap-analyst-root-credential
+  finding: '-'
+  disposition: accepted
+  register: CAP-016
+- id: CHZ-009
+  node: cap-authority
+  guide_word: Partial commit
+  parameter: CredentialFactory.issue factoryState
+  deviation: issue consumed factoryState across the asynchronous registry insert.
+  cause: The linear factoryState receive preceded rs!; the re-post happened in the
+    uriCh continuation.
+  consequence: A blocked rs! left the issuance registry empty while the Credential
+    cell existed; verify/count/issue block.
+  safeguard: Deploy rollback covers a failed deploy, not a blocked insert.
+  safeguard_status: none
+  severity: S2
+  likelihood: C
+  evidence: contracts/src/deploy/11_credentials.rho:138
+  trigger: Fault-inject insertArbitrary to drop the reply after rs!.
+  falsifier: A blocked-insert probe; the consume now follows the URI reply.
+  confidence: medium
+  authors:
+  - cap-analyst-root-credential
+  finding: RGA-069
+  disposition: fixed
+  register: CAP-015
+- id: CHZ-010
+  node: cap-authority
+  guide_word: Before
+  parameter: IdentityFactory.create reservation
+  deviation: Create commits a reservation before the mint completes and does not bind
+    the mint to the reservation token.
+  cause: The reservation is written before mintIdentity; activateMint can return reservation
+    lost or superseded.
+  consequence: A stalled first mint past expiry can leave an orphan Identity cell
+    while a second create wins the directory entry.
+  safeguard: Reservation status/expiry and the byAddress duplicate check; at most
+    one byAddress entry.
+  safeguard_status: partial
+  severity: S3
+  likelihood: C
+  evidence: contracts/src/deploy/10_identity.rho:146
+  trigger: Stall the first mint past height+100, then create again for the same address.
+  falsifier: IdentityReservation.at_most_one_identity_per_address and a fault-injection
+    run; the directory has one entry, the orphan is not reachable through it.
+  confidence: medium
+  authors:
+  - cap-analyst-root-credential
+  finding: RGA-031
+  disposition: accepted
+  register: CAP-011
+- id: CHZ-011
+  node: cap-authority
+  guide_word: Revoke
+  parameter: Proof take after revoke
+  deviation: Revocation changes the credential cell but not an already-minted Proof
+    cell.
+  cause: take checks only the used bit; checkCredentialProof does not re-read the
+    credential.
+  consequence: A proof minted at height H remains redeemable after a revoke at H.
+  safeguard: Active check at mint time; documented as a pre-revoke snapshot.
+  safeguard_status: partial
+  severity: S3
+  likelihood: C
+  evidence: contracts/src/deploy/11_credentials.rho:227
+  trigger: Prove while active, revoke, then take.
+  falsifier: RT-004/RT-026; ProofCap.private_capability_no_bearer_dos and the snapshot
+    tests.
+  confidence: medium
+  authors:
+  - cap-analyst-root-credential
+  finding: RGA-002
+  disposition: accepted
+  register: CAP-017
+- id: CHZ-012
+  node: cap-designation
+  guide_word: Substitute/confused-deputy
+  parameter: install.py placeholders
+  deviation: A missing component label left a dry-run placeholder in dependent terms
+    and install could still exit 0.
+  cause: The installer updated common only when a label was found and had no failure
+    branch; only the Root URI had a presence check.
+  consequence: Dependents rendered against rho:id:dryrun-* block forever; the manifest
+    omitted the component.
+  safeguard: Root URI presence check; the new verify_components and placeholder guard.
+  safeguard_status: partial
+  severity: S3
+  likelihood: C
+  evidence: harness/install.py:182
+  trigger: Drop the credential-factory tuple from 11_credentials output and run install.
+  falsifier: The installer now rejects a rendered dry-run placeholder and verifies
+    9/9 Root keys before writing the manifest.
+  confidence: high
+  authors:
+  - cap-analyst-root-credential
+  finding: RGA-059
+  disposition: fixed
+  register: CAP-040
+- id: CHZ-013
+  node: cap-delegation
+  guide_word: Substitute/confused-deputy
+  parameter: KAsset.nest child proof
+  deviation: Phase 1 bound the child to the claim's kassetRef, but phase 2 resolved
+    the caller-supplied ref.uri and trusted the proof from that process; the two lookups
+    were never required to be the same K-Asset.
+  cause: checkChildKassetUri compared kr.uri with child.get('uri') while nestProofCheck
+    compared the proof with ref; a registered non-KAsset could answer get with a real
+    K-Asset URI and proveApproved with its own fake URI.
+  consequence: A parent claimant could nest a child that was not the approved K-Asset
+    named by the claim, forging the nesting and risk-transfer record.
+  safeguard: Phase 1 approve/scope/order and claim kassetRef check; no equality between
+    the claim URI and ref.uri.
+  safeguard_status: partial
+  severity: S1
+  likelihood: B
+  evidence: contracts/src/lib/KAsset.rho:293
+  trigger: Register fake F answering get with uri=R and proveApproved with id/uri=F;
+    nest F under parent P where C is a real claim whose kassetRef is R.
+  falsifier: 'RT-032: the pre-fix nest returned (true, ''ok''); after the anchor fix
+    it returns claim kasset mismatch.'
+  confidence: high
+  authors:
+  - cap-analyst-claim-kasset
+  - redteam-operator
+  finding: RGA-049
+  disposition: fixed
+  register: CAP-027
+- id: CHZ-014
+  node: cap-delegation
+  guide_word: Delegate
+  parameter: KAsset.proveApproved proofCh
+  deviation: The approval proof is minted on demand onto any caller-supplied proofCh;
+    it is not a capability held by the approved party.
+  cause: proveApproved has no authSubject or credential check and sends the bundle
+    to whatever proofCh the caller provides.
+  consequence: An arbitrary party who knows the K-Asset URI can obtain a bearer approval
+    proof.
+  safeguard: Status must be approved; the proof is one-shot and has no registry URI.
+  safeguard_status: partial
+  severity: S2
+  likelihood: A
+  evidence: contracts/src/lib/KAsset.rho:199
+  trigger: An unrelated deploy calls proveApproved on an approved K-Asset URI.
+  falsifier: RT-013; the proof is accepted as a read capability and parent-owned nesting
+    uses it.
+  confidence: high
+  authors:
+  - cap-analyst-claim-kasset
+  finding: RGA-040
+  disposition: accepted
+  register: CAP-028
+- id: CHZ-015
+  node: cap-delegation
+  guide_word: Amplify
+  parameter: Child K-Asset proof and proofState
+  deviation: The one-shot flag is per proof instance, not per child K-Asset; an approved
+    child can mint a fresh proof for every parent.
+  cause: proveApprovedMint creates a new proofState on each call; the child KAsset
+    has no parentRefs or consumed flag.
+  consequence: One child can be nested into many parents, double-counting it in any
+    transfer or coverage accounting.
+  safeguard: Per-parent duplicate check and the cumulative 64-child limit; no cross-parent
+    uniqueness.
+  safeguard_status: partial
+  severity: S2
+  likelihood: A
+  evidence: contracts/src/lib/KAsset.rho:226
+  trigger: Nest child X under P1 and P2 with different claimants.
+  falsifier: RGA-030 and the forest documentation; a global child-to-parent uniqueness
+    invariant would settle it.
+  confidence: medium
+  authors:
+  - cap-analyst-claim-kasset
+  finding: RGA-030
+  disposition: accepted
+  register: CAP-027
+- id: CHZ-016
+  node: cap-confused-deputy
+  guide_word: Substitute/confused-deputy
+  parameter: dId (authSubject)
+  deviation: Every public arm takes a caller-supplied DeployerId and resolves it to
+    an identity; the identity is not bound to the deploy executing the call.
+  cause: authSubject runs rho:rchain:deployerId:ops on the supplied GDeployerId; a
+    contract that captures the name can replay it later.
+  consequence: A helper contract that receives a user's dId can later call withdraw,
+    validate, nest or approve as that user.
+  safeguard: GDeployerId is unforgeable and obtainable only from the runtime; no in-contract
+    equality check.
+  safeguard_status: partial
+  severity: S2
+  likelihood: C
+  evidence: contracts/src/deploy/20_claim.rho:335
+  trigger: User passes *deployerId to a helper; the helper is later invoked by an
+    attacker and sends a Claim arm with the captured dId.
+  falsifier: A harness helper that captures and replays a dId; this is the intended
+    delegation semantics of a name, so the disposition is accepted and documented.
+  confidence: medium
+  authors:
+  - cap-analyst-claim-kasset
+  finding: '-'
+  disposition: accepted
+  register: CAP-003
+- id: CHZ-017
+  node: cap-confused-deputy
+  guide_word: Substitute/confused-deputy
+  parameter: Claim subjectRef
+  deviation: subjectRef is caller-nominated, copied into the public claim registry
+    and returned by verify as registry truth.
+  cause: claimReqOk checks only a non-empty uri; create writes it into claimRegistryState.
+  consequence: A claimant can attribute a claim to any subject URI; consumers that
+    treat verify as authority accept the attribution.
+  safeguard: Type and emptiness check only.
+  safeguard_status: none
+  severity: S2
+  likelihood: A
+  evidence: contracts/src/deploy/20_claim.rho:37
+  trigger: Create a claim with subjectRef pointing at a victim URI and read it through
+    ClaimFactory.verify.
+  falsifier: RGA-046; the reference does not authorize approval, which needs a VP
+    proof.
+  confidence: high
+  authors:
+  - cap-analyst-claim-kasset
+  finding: RGA-046
+  disposition: accepted
+  register: CAP-018
+- id: CHZ-018
+  node: cap-delegation
+  guide_word: Delegate
+  parameter: KAsset Apply
+  deviation: The private Apply capability is passed unattenuated to OracleFactory,
+    and applyDecision authenticates only the caseId.
+  cause: openOracleCase sends *Apply to the factory; Apply checks d.id == caseId and
+    then applies any outcomeStatus target.
+  consequence: A replacement or forwarding OracleFactory that receives Apply can apply
+    revoke or partial without an adjudicator.
+  safeguard: The genuine factory stores Apply in the case closure; execute replays
+    only the stored decision; the caseId must match.
+  safeguard_status: partial
+  severity: S2
+  likelihood: C
+  evidence: contracts/src/lib/KAsset.rho:525
+  trigger: A stub factory whose open returns the Apply on a caller channel; invoke
+    Apply with a revoke decision.
+  falsifier: Installer trust and the case-bound check; RT-027 records that execute
+    passes only the case's own uri.
+  confidence: medium
+  authors:
+  - cap-analyst-claim-kasset
+  finding: '-'
+  disposition: accepted
+  register: CAP-030
+- id: CHZ-019
+  node: cap-attenuation
+  guide_word: Attenuate
+  parameter: bundle+{*KAsset} and bundle+{*Claim}
+  deviation: Private helpers are excluded, but every public arm is in one bundle;
+    the holder cannot narrow it to read-only or one arm.
+  cause: bundle+{*KAsset} and bundle+{*Claim} publish the whole contract; Rholang
+    cannot project a bundle and no read-only proxy exists.
+  consequence: A consumer given the capability for one purpose also holds proveApproved,
+    openDispute, approve and nest attempts, and reads the full state.
+  safeguard: Per-arm dId, credential and status checks; get and proveApproved are
+    ungated.
+  safeguard_status: partial
+  severity: S3
+  likelihood: A
+  evidence: contracts/src/lib/KAsset.rho:606
+  trigger: Give a consumer the KAsset URI for children and call proveApproved with
+    it.
+  falsifier: Enumerate the bundle arms; a read-only proxy or separate read capability
+    would attenuate.
+  confidence: high
+  authors:
+  - cap-analyst-claim-kasset
+  finding: '-'
+  disposition: accepted
+  register: CAP-027
+- id: CHZ-020
+  node: cap-attenuation
+  guide_word: Stale
+  parameter: approval.credentialUri and proveApproved
+  deviation: An approval proof is not revalidated against the approver credential
+    or the approval conditions.
+  cause: proveApprovedStatus mints whenever status is approved; no arm re-checks approval.credentialUri
+    or conditionsHash.
+  consequence: A K-Asset approved by a since-revoked approver remains provable and
+    nestable indefinitely.
+  safeguard: Status must be approved; the conflict check ran at approval time.
+  safeguard_status: partial
+  severity: S3
+  likelihood: C
+  evidence: contracts/src/lib/KAsset.rho:204
+  trigger: Approve with credential X, revoke X, then call proveApproved.
+  falsifier: RGA-055; the approval is a durable snapshot and de-approval is a separate
+    policy.
+  confidence: medium
+  authors:
+  - cap-analyst-claim-kasset
+  finding: RGA-055
+  disposition: accepted
+  register: CAP-028
+- id: CHZ-021
+  node: cap-confused-deputy
+  guide_word: Other than
+  parameter: KAsset.openDispute parties
+  deviation: The KAsset admits the validator as a dispute opener but passed parties=[claimant,
+    approver], so the oracle refused the validator.
+  cause: openDisputeGate allowed claimant or validator; openOracleCase omitted the
+    validator from parties; caseReqOk requires the opener in parties.
+  consequence: Only the claimant could open a dispute; the validator's dispute path
+    was dead.
+  safeguard: The oracle party check, which rejected the validator.
+  safeguard_status: none
+  severity: S3
+  likelihood: A
+  evidence: contracts/src/lib/KAsset.rho:517
+  trigger: Validator calls KAsset.openDispute with an adjudicator.
+  falsifier: 'Source-identified: the pre-fix parties omitted the validator; RT-036
+    is the post-fix regression.'
+  confidence: high
+  authors:
+  - cap-analyst-claim-kasset
+  - redteam-operator
+  finding: RGA-060
+  disposition: fixed
+  register: CAP-027
+- id: CHZ-022
+  node: cap-attenuation
+  guide_word: Revoke
+  parameter: status disputed
+  deviation: Opening a dispute withdraws proveApproved, nest and approve with no path
+    back if the case expires undecided.
+  cause: openDisputeReply sets disputed; only Apply.applyDecision leaves it; OracleCase.expire
+    changes only the case.
+  consequence: A claimant can freeze an approved K-Asset permanently by opening and
+    abandoning a dispute.
+  safeguard: None; no timeout or expire notification to the K-Asset.
+  safeguard_status: none
+  severity: S3
+  likelihood: A
+  evidence: contracts/src/lib/KAsset.rho:533
+  trigger: Open a dispute, let the case expire, then call proveApproved and nest.
+  falsifier: RGA-064; a timeout transition or an expire notification through Apply
+    would restore the asset.
+  confidence: high
+  authors:
+  - cap-analyst-claim-kasset
+  finding: RGA-064
+  disposition: accepted
+  register: CAP-027
+- id: CHZ-023
+  node: cap-delegation
+  guide_word: Duplicate/Replay
+  parameter: Claim.validate and Claim.resume
+  deviation: A concurrent validate and resume can each run makeKAsset and register
+    a K-Asset.
+  cause: finalizeWith writes a validating receipt before makeKAsset; resume with kassetRef
+    Nil re-drives finalizeValidation.
+  consequence: One claim can have a second orphaned K-Asset with a claimRef to the
+    same claim; the claim records one URI.
+  safeguard: The finalizeWith continuation commits only while validating; this prevents
+    two claim refs, not two registry inserts.
+  safeguard_status: partial
+  severity: S3
+  likelihood: B
+  evidence: contracts/src/deploy/20_claim.rho:224
+  trigger: In one deploy, validate and resume the same claim while the first mint
+    is in flight.
+  falsifier: RGA-065; a one-shot mint gate or an idempotent KAsset registry keyed
+    by claim would close it.
+  confidence: medium
+  authors:
+  - cap-analyst-claim-kasset
+  finding: RGA-065
+  disposition: accepted
+  register: CAP-019
+- id: CHZ-024
+  node: cap-attenuation
+  guide_word: Reverse
+  parameter: outcomeStatus uphold
+  deviation: An uphold decision maps to upheld, which proveApproved treats as not
+    approved.
+  cause: outcomeStatus maps uphold to upheld; proveApprovedStatus mints only for approved;
+    no arm maps upheld back.
+  consequence: An adjudicated uphold permanently disables proveApproved and nest for
+    the asset.
+  safeguard: The kasset-conventions page documents upheld as attestation-only.
+  safeguard_status: partial
+  severity: S2
+  likelihood: A
+  evidence: contracts/src/lib/Status.rho:6
+  trigger: Dispute an approved K-Asset; decide uphold; execute; call proveApproved.
+  falsifier: The documented convention settles the intent; if uphold should confirm
+    approval, the outcome table and restore transition must change.
+  confidence: medium
+  authors:
+  - cap-analyst-claim-kasset
+  finding: '-'
+  disposition: accepted
+  register: CAP-027
+- id: CHZ-025
+  node: cap-revocation
+  guide_word: After
+  parameter: adjudicator credential and stored decision
+  deviation: execute applies a decision after the adjudicator credential is revoked;
+    the decision is not revalidated.
+  cause: proveAndCheck runs in decide only; execute calls the stored subjectApply
+    without re-reading the credential.
+  consequence: A revoked or expired adjudicator's decision can be executed by anyone
+    at a later height.
+  safeguard: Credential status is checked at decide time.
+  safeguard_status: partial
+  severity: S2
+  likelihood: A
+  evidence: contracts/src/deploy/30_oracle.rho:217
+  trigger: Decide at H, revoke the adjudicator credential at H+1, execute.
+  falsifier: RGA-055; the decision is a durable adjudication, like an approval.
+  confidence: high
+  authors:
+  - cap-analyst-vp-oracle-provenance
+  finding: RGA-055
+  disposition: accepted
+  register: CAP-024
+- id: CHZ-026
+  node: cap-revocation
+  guide_word: Revoke
+  parameter: validation status and validated proof
+  deviation: A validated VP and its proofs are durable; they are not invalidated when
+    the validator credential is revoked.
+  cause: validate checks the credential once and writes validated; proveValidated
+    mints from the stored status.
+  consequence: A revoked validator can mint a fresh proof at a later height and authorize
+    downstream approval.
+  safeguard: Credential checked only in validate.
+  safeguard_status: partial
+  severity: S2
+  likelihood: A
+  evidence: contracts/src/deploy/22_value.rho:190
+  trigger: Validate at H, revoke the validator credential, call proveValidated.
+  falsifier: RGA-062; devalidation needs a new transition.
+  confidence: high
+  authors:
+  - cap-analyst-vp-oracle-provenance
+  finding: RGA-062
+  disposition: accepted
+  register: CAP-021
+- id: CHZ-027
+  node: cap-revocation
+  guide_word: Stale
+  parameter: proof atHeight
+  deviation: The proof atHeight is the caller-supplied current height and is not compared
+    with the recorded validation height.
+  cause: proveValidated copies the caller's atHeight into the proof; s.validation.at
+    is stored but never read.
+  consequence: A consumer cannot tell a stale validation from a current one; the proof
+    overclaims freshness.
+  safeguard: status validated and atHeight == now; no binding to validation.at.
+  safeguard_status: partial
+  severity: S2
+  likelihood: A
+  evidence: contracts/src/deploy/22_value.rho:196
+  trigger: Validate at H, call proveValidated at H+1000, take the proof.
+  falsifier: Proof data.atHeight equals the mint height, not validation.at; the status
+    is durable, so the statement is current.
+  confidence: medium
+  authors:
+  - cap-analyst-vp-oracle-provenance
+  finding: '-'
+  disposition: accepted
+  register: CAP-022
+- id: CHZ-028
+  node: cap-revocation
+  guide_word: Attenuate
+  parameter: provenance writers list
+  deviation: Provenance write authority is an immutable identity list; there is no
+    revoke, remove-writer or attenuate arm.
+  cause: writers is set once at create and every later arm only reads it.
+  consequence: A compromised writer keeps appending anchors and comments for the cell's
+    lifetime.
+  safeguard: None; provenance is advisory and no core arm uses it as authority.
+  safeguard_status: none
+  severity: S3
+  likelihood: C
+  evidence: contracts/src/deploy/40_provenance.rho:36
+  trigger: Lose control of a writer key; no arm can remove it.
+  falsifier: RGA-063; a removeWriter arm would add a transition and a writer-consent
+    policy.
+  confidence: high
+  authors:
+  - cap-analyst-vp-oracle-provenance
+  finding: RGA-063
+  disposition: accepted
+  register: CAP-026
+- id: CHZ-029
+  node: cap-serialization
+  guide_word: Substitute/confused-deputy
+  parameter: assetRef and provenance cell
+  deviation: The asset reference is a caller-supplied URI with no uniqueness or owner
+    binding.
+  cause: ProvenanceFactory.create checks only non-empty uri and writers; a fresh pState
+    is allocated per call.
+  consequence: An attacker creates a parallel provenance record for a victim asset
+    under chosen writers.
+  safeguard: None; provenance is advisory.
+  safeguard_status: none
+  severity: S2
+  likelihood: A
+  evidence: contracts/src/deploy/40_provenance.rho:30
+  trigger: Create a second provenance for the same assetRef with the attacker as a
+    writer.
+  falsifier: RT-011; RGA-022 accepts the advisory binding.
+  confidence: high
+  authors:
+  - cap-analyst-vp-oracle-provenance
+  finding: RGA-022
+  disposition: accepted
+  register: CAP-025
+- id: CHZ-030
+  node: cap-serialization
+  guide_word: Delegate
+  parameter: VP Apply to installer-wired factory
+  deviation: The VP delegates its private Apply to whatever contract the installer-wired
+    oracle-factory URI addresses.
+  cause: openVpDispute sends *Apply to OracleFactory.open; Apply validates only the
+    case id returned by that factory.
+  consequence: A counterfeit or mis-bound factory receives Apply and can invoke it
+    with an arbitrary outcome.
+  safeguard: Install-time wiring only; no runtime proof that the factory is the Root-registered
+    component.
+  safeguard_status: partial
+  severity: S1
+  likelihood: C
+  evidence: contracts/src/deploy/22_value.rho:245
+  trigger: Render 22_value with an oracle-factory URI that replies with its own case
+    id and calls Apply.
+  falsifier: Installer trust and the genesis factory closure; a runtime Root check
+    would close it.
+  confidence: medium
+  authors:
+  - cap-analyst-vp-oracle-provenance
+  finding: '-'
+  disposition: accepted
+  register: CAP-031
+- id: CHZ-031
+  node: cap-serialization
+  guide_word: Leak
+  parameter: assetRef and decision maps
+  deviation: Caller-supplied maps are stored verbatim and returned by public get arms;
+    the schema does not forbid quoted names.
+  cause: Provenance stores assetRef and OracleCase stores decision wholesale; get
+    returns the state unfiltered.
+  consequence: A client that places a capability in an assetRef or decision field
+    leaks it to every get reader.
+  safeguard: Shape checks only; no name-free schema.
+  safeguard_status: partial
+  severity: S3
+  likelihood: D
+  evidence: contracts/src/deploy/30_oracle.rho:184
+  trigger: Decide with a decision map containing a name; read it back through get.
+  falsifier: RGA-066; a schema that rejects name-bearing maps would settle it; no
+    exploit was reproduced.
+  confidence: low
+  authors:
+  - cap-analyst-vp-oracle-provenance
+  finding: RGA-066
+  disposition: accept-risk
+  register: CAP-024
+- id: CHZ-032
+  node: cap-client-manifest
+  guide_word: Substitute/confused-deputy
+  parameter: manifest root_uri
+  deviation: The manifest root_uri is an unsigned designation accepted verbatim as
+    the trust anchor.
+  cause: Manifest::from_json validates only the rho:id prefix; Client::resolve trusts
+    the reply; no signature or pin exists.
+  consequence: A substituted manifest points the client at an attacker Root; every
+    component resolve yields attacker URIs and signed writes land on attacker contracts.
+  safeguard: RegistryUri prefix validation only.
+  safeguard_status: partial
+  severity: S1
+  likelihood: C
+  evidence: crates/rgen-core/src/manifest.rs:30
+  trigger: Replace deployments/devnet.json root_uri with an attacker Root and run
+    a write.
+  falsifier: RGA-051; signing or pinning the Root URI is a client/extension concern.
+  confidence: high
+  authors:
+  - cap-analyst-vp-oracle-provenance
+  finding: RGA-051
+  disposition: accepted
+  register: CAP-040
+- id: CHZ-033
+  node: cap-client-manifest
+  guide_word: Other than
+  parameter: components map versus Root
+  deviation: The documented comparison of resolved URIs with the manifest copies is
+    not implemented.
+  cause: Client::resolve_all only inserts Root answers; Manifest::component returns
+    the unverified copy.
+  consequence: A consumer calling Manifest::component treats an unsigned installer
+    copy as the component URI.
+  safeguard: Documentation claim only; no production caller uses Manifest::component.
+  safeguard_status: none
+  severity: S3
+  likelihood: B
+  evidence: crates/rgen-sdk/src/client.rs:213
+  trigger: Use a manifest whose components map differs from Root and call Manifest::component.
+  falsifier: RGA-056; the doc now states the boundary and rgen-cli manifest verify
+    performs the comparison.
+  confidence: high
+  authors:
+  - cap-analyst-vp-oracle-provenance
+  finding: RGA-056
+  disposition: fixed
+  register: CAP-040
+- id: CHZ-034
+  node: cap-client-manifest
+  guide_word: Stale
+  parameter: resolved component cache
+  deviation: Resolved components are cached for the client lifetime; the named refresh
+    method did not exist.
+  cause: Client::resolve returns cache hits; the comment referenced refresh_components,
+    which was absent.
+  consequence: A long-lived client keeps addressing the old factory and credential
+    URIs after a reinstall or Root rotation.
+  safeguard: None implemented.
+  safeguard_status: none
+  severity: S2
+  likelihood: C
+  evidence: crates/rgen-sdk/src/client.rs:183
+  trigger: Resolve OracleFactory, rotate Root, resolve again on the same Client.
+  falsifier: RGA-057; Client::refresh_components now clears the cache.
+  confidence: high
+  authors:
+  - cap-analyst-vp-oracle-provenance
+  finding: RGA-057
+  disposition: fixed
+  register: CAP-040
+- id: CHZ-035
+  node: cap-client-manifest
+  guide_word: Partial commit
+  parameter: installer deployId and uri_map
+  deviation: The installer derived component URIs from unauthenticated deploy output
+    and wrote the manifest without checking Root.
+  cause: install.py rebuilt its map from decode(result); contracts emitted deployId
+    even when register returned false.
+  consequence: A refused registration still produced a manifest entry; a client pinned
+    a URI the Root did not resolve.
+  safeguard: None before the audit; the Root acknowledgement was discarded.
+  safeguard_status: none
+  severity: S2
+  likelihood: C
+  evidence: harness/install.py:180
+  trigger: Force Root.register to refuse, then run install.
+  falsifier: RGA-058; verify_components now resolves 9/9 keys through Root before
+    writing the manifest.
+  confidence: medium
+  authors:
+  - cap-analyst-vp-oracle-provenance
+  finding: RGA-058
+  disposition: fixed
+  register: CAP-040
+- id: CHZ-036
+  node: cap-revocation
+  guide_word: Duplicate/Replay
+  parameter: OracleCase execute
+  deviation: execute is unauthenticated and admits status executing, so two concurrent
+    callers can both invoke the private Apply.
+  cause: The guard admits executing; the arm writes executing and yields to subjectApply;
+    commitExecution later overwrites from a fresh read.
+  consequence: subjectApply is invoked more than once and the case status can regress
+    to failed/decided.
+  safeguard: The Apply is idempotent and the case is retryable; no in-flight token.
+  safeguard_status: partial
+  severity: S2
+  likelihood: B
+  evidence: contracts/src/deploy/30_oracle.rho:208
+  trigger: Two execute deploys in one block after decide.
+  falsifier: RT-028 and the oracle_execute race pair; RGA-024 accepts the retry window.
+  confidence: medium
+  authors:
+  - cap-analyst-vp-oracle-provenance
+  finding: RGA-024
+  disposition: accepted
+  register: CAP-024

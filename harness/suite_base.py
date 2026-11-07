@@ -95,9 +95,10 @@ def validated_kasset(addrs: dict[str, str], validator: str, claimant: str = "ali
 
 def approved_kasset(addrs: dict[str, str], validator: str = "bob",
                     approver: str = "carol", vp_uri: str | None = None,
-                    quality: dict | None = None) -> tuple[str, str]:
-    claim_uri, kasset_uri, _ = validated_kasset(addrs, validator, vp_uri=vp_uri,
-                                                quality=quality)
+                    quality: dict | None = None,
+                    claimant: str = "alice") -> tuple[str, str]:
+    claim_uri, kasset_uri, _ = validated_kasset(addrs, validator, claimant=claimant,
+                                                vp_uri=vp_uri, quality=quality)
     approver_cred = issue(addrs, approver, "Approver", "approver")
     reply = fixtures.kasset_approve(kasset_uri, approver_cred, approver,
                                     approval(approver_cred, addrs[approver]))

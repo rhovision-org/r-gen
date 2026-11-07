@@ -19,11 +19,13 @@ cell and the proof a one-shot capability, not a caller-supplied boolean.
 ## How the Rholang expresses it
 
 - `contracts/src/deploy/11_credentials.rho` — the genesis `Issuer` is immutable and has no
-  revoke arm. `Issuer@"authorize"` and `"covers"` are monotone reads of `issuerState`.
+  revoke arm. `Issuer@"authorize"` takes a `dId` name and derives the caller with
+  `authSubject`; `"covers"` is a monotone read of `issuerState`.
 - `CredentialFactory@"issue"` rejects self-issue and appends the credential to
   `factoryState`; `CredentialFactory@"verify"` reads that append-only registry.
 - `Credential@"prove"` consumes `credState`, checks subject/active/scope/issuer, creates a
-  one-shot `Proof` cell, re-posts the credential, and returns the proof URI.
+  one-shot `Proof` cell, re-posts the credential, and sends `bundle+{*Proof}` on the caller's
+  `proofCh`.
 - `Credential@"revoke"`, `"renew"`, and `"attest"` consume the same cell.
 
 ## What the Lean proves

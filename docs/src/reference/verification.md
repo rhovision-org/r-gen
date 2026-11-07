@@ -39,13 +39,13 @@
 
 ## Lean model (2026-11-07)
 
-- `cd spec/lean && lake build`: 44 Lean files build on Lean `v4.12.0`, no Mathlib.
-- `tools/check_lean.py`: 44 files, no `sorry`, `admit`, `native_decide`, or declared
+- `cd spec/lean && lake build`: 45 Lean files build on Lean `v4.12.0`, no Mathlib.
+- `tools/check_lean.py`: 45 files, no `sorry`, `admit`, `native_decide`, or declared
   axioms.
-- `tools/check_lean.py --audit`: the 233 theorems listed in `RGen/Audit.lean`, only
+- `tools/check_lean.py --audit`: the 241 theorems listed in `RGen/Audit.lean`, only
   `propext` and `Quot.sound`; no `Classical.choice` use in the audited set. The list is
   hand-maintained (RGA-006).
-- `tools/check_lean.py --audit-coverage`: 123 Pareto theorem checks are covered by
+- `tools/check_lean.py --audit-coverage`: 129 Pareto theorem checks are covered by
   `Audit.lean`.
 - `tools/check_core_vectors.py`: 46 emitted rows match `spec/vectors/core.tsv`.
 - New composed results: `RGen/Model/IdentityReservation.lean`,
@@ -65,7 +65,7 @@
 - `tools/check_race_matrix.py`: 32 pairs (19 exclusive, 11 ordered, 2 independent).
 - `tools/check_arm_guards.py`: the mutating arms are tied to a consumed cell.
 - `tools/check_audit.py --strict`: 67 arms dispositioned, 10 HAZOP nodes, 150 coverage cells,
-  146 rows, 39 claims, 27 findings, 11 Rholang items. Review status is `approved` by the owner; independent technical review has not been performed. The reviewed
+  146 rows, 45 claims, 62 findings, 13 Rholang items. Review status is `approved` by the owner; independent technical review has not been performed. The reviewed
   pages start at the [audit charter](audit-charter.md); the findings are in
   [`spec/audit/findings.yaml`](https://github.com/rhovision-org/r-gen/blob/main/spec/audit/findings.yaml).
 
@@ -79,8 +79,9 @@ proof: no mechanized Rholang semantics and no refinement theorem.
 ## Local-devnet test tiers (2026-11-07)
 
 - `make devnet-test-smoke` — preflight, install, `devnet-verify`, identity/credentials/claim.
-- `make devnet-test-full` — smoke + all ten suites, red team, deploy-semantics probe, demo
-  seed/verify, web tests and both Playwright journeys, `make check`, `make lean-check`.
+- `make devnet-test-full` — smoke + all ten suites, red team, capability red team,
+  deploy-semantics probe, demo seed/verify, web tests and both Playwright journeys,
+  `make check`, `make lean-check`.
 - `make devnet-test-nightly` — full + reinstall check + 20-deploy soak; fault injection is
   recorded as skipped until the recovery harness lands.
 - `make devnet-verify` resolves all nine Root keys through the deployed manifest and exits 4 on
@@ -108,6 +109,30 @@ proof: no mechanized Rholang semantics and no refinement theorem.
   branch-only boolean channel, index-recursive list walk and match deeper than dispatch depth 2
   is gone. `List.rho` is list-pattern recursion; `KAsset.rho` is fully flat helper chains. The
   inventory is `spec/audit/rholang-control-flow.yaml`.
+
+## Object-capability audit (2026-11-07)
+
+- `spec/audit/capabilities.yaml`: 38 capability rows over 19 `bundle+` expressions, 3 proof
+  kinds, 2 private `Apply` capabilities, 7 ambient system channels. `tools/check_capabilities.py`
+  checks the register against the source and passes with 0 errors.
+- `harness/redteam_capabilities.py`: RT-024..RT-037. Pre-fix RT-031 (`Issuer.authorize` with a
+  caller-nominated address) and RT-032 (self-registered fake child nested under a real parent)
+  were observed `vulnerable`; RT-036 (validator dispute) and RT-037 (malformed `dId` in
+  Root.register) were source-identified and are post-fix regression probes. Post-fix the suite
+  is `RGEN_EXPECT=fixed` green: RT-031/032/036/037 `fixed`, the rest `accepted`.
+- Blind run `spec/hazop/runs/2026-11-07-capabilities/`: 36 rows over 9 capability nodes,
+  18 adjudication decisions. `tools/check_hazop_runs.py` validates both runs.
+- Fixed: K-Asset child anchor (RGA-049), Root register state order (RGA-061), `Issuer.authorize`
+  caller derivation (RGA-048), K-Asset validator dispute parties (RGA-060), K-Asset reply
+  bundle (RGA-050), issuer registry hold (RGA-069), installer Root check and dry-run guard
+  (RGA-058/059), client cache refresh and resolve-all wording (RGA-056/057).
+- Accepted with the reasons in the register and adjudication: proof bearer burn, permissionless
+  `proveApproved`/`execute`, durable approval and validation across credential revocation,
+  forest nesting, disputed-asset freeze on an expired case, provenance writer immutability,
+  unsigned manifest Root designation, and `dId` delegation.
+- Lean: `RGen.Model.Capability` adds 8 theorems; `make lean-check` reports 45 files, 241
+  axiom-clean theorems and 129 Pareto checks. The model is abstract; name unforgeability is
+  ASM-003/ASM-011, not a theorem.
 
 ## Baseline
 

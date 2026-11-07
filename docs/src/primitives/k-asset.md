@@ -28,8 +28,11 @@ without minting a token.
 - `KAsset@"reject"` requires the same qualification and records the rejection.
 - `KAsset@"proveApproved"` creates a one-shot approval proof.
 - `KAsset@"nest"` is two-phase: a read-only pre-pass, child `proveApproved` proofs, then a
-  consume of the parent and a final duplicate/scope/order check.
-- `KAsset@"openDispute"` passes the private `Apply` capability to an oracle case.
+  consume of the parent and a final duplicate/scope/order check. The pre-pass compares the
+  genuine Claim's `kassetRef.uri` with the caller's `ref.uri`; the child is resolved from that
+  URI, so a self-registered fake child cannot be nested.
+- `KAsset@"openDispute"` passes the private `Apply` capability to an oracle case. The parties
+  are the claimant, the validator and the approver, so either party can open the dispute.
 
 ## What the Lean proves
 

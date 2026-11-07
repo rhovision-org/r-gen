@@ -1,0 +1,93 @@
+schema: rgen.hazop-run/v1
+run_id: 2026-11-07-capabilities
+date: 2026-11-07
+baseline: 38d0003
+worktree: object-capability audit, pre-fix tree
+method: >-
+  Blind multi-agent HAZOP. Each analyst received only its node scope, the contract source,
+  the guide words and the row schema. The capability register, findings ledger, red-team
+  results and other analysts' rows were withheld until adjudication. The red-team operator
+  ran harness/redteam_capabilities.py against the local devnet and recorded RT-025..RT-035.
+agreement_rule: >-
+  Every new S1 or S2 row has at least two independent authors, or an adjudication decision
+  with a reproduced counterexample. S3/S4 rows may be single-author.
+nodes:
+  - cap-designation
+  - cap-publication
+  - cap-authority
+  - cap-delegation
+  - cap-confused-deputy
+  - cap-attenuation
+  - cap-revocation
+  - cap-serialization
+  - cap-client-manifest
+guide_words:
+  - No/Not
+  - More
+  - Less
+  - As well as
+  - Part of
+  - Reverse
+  - Other than
+  - Late
+  - Early
+  - Before
+  - After
+  - Duplicate/Replay
+  - Stale
+  - Substitute/confused-deputy
+  - Partial commit
+  - Delegate
+  - Amplify
+  - Leak
+  - Bearer
+  - Revoke
+  - Attenuate
+agents:
+  - id: cap-analyst-root-credential
+    scope: [cap-designation, cap-publication, cap-authority]
+    blind_inputs:
+      - contracts/src/deploy/00_root.rho
+      - contracts/src/deploy/10_identity.rho
+      - contracts/src/deploy/11_credentials.rho
+      - contracts/src/lib/Auth.rho
+      - contracts/src/lib/Scope.rho
+      - contracts/src/lib/Proof.rho
+      - harness/install.py
+  - id: cap-analyst-claim-kasset
+    scope: [cap-delegation, cap-confused-deputy, cap-attenuation]
+    blind_inputs:
+      - contracts/src/deploy/20_claim.rho
+      - contracts/src/lib/KAsset.rho
+      - contracts/src/lib/Proof.rho
+      - contracts/src/lib/Status.rho
+  - id: cap-analyst-vp-oracle-provenance
+    scope: [cap-revocation, cap-serialization, cap-client-manifest]
+    blind_inputs:
+      - contracts/src/deploy/22_value.rho
+      - contracts/src/deploy/30_oracle.rho
+      - contracts/src/deploy/40_provenance.rho
+      - harness/install.py
+      - crates/rgen-core/src/manifest.rs
+      - crates/rgen-sdk/src/client.rs
+      - crates/rgen-sdk/src/wire.rs
+      - web/scripts/sync-manifest.mjs
+  - id: redteam-operator
+    scope: [live-devnet capability probes]
+    blind_inputs:
+      - harness/redteam_capabilities.py
+adjudicator: owner
+findings: []
+inputs_sha256:
+  00_root.rho: 548f1fdde1e8178e6cbee4eecd0e0452362bbd274c56b3473787c6a1e224d298
+  10_identity.rho: 1987ec24d5cf884c969f1f2355739cfda9cc4a687b90202423aa26a23778a9b7
+  11_credentials.rho: 424f689bf65fee6fb492e7723fb17f6831bd60c4e0fac76c10abde51c100e560
+  20_claim.rho: 2f7484fa3dc624456daeb39efef6e89fa16872cbcfa205039482965519f29787
+  22_value.rho: 4f6f81d08066f176197edeb38bc3aa0702591ce757ce8e8b10956eb96d0916df
+  30_oracle.rho: f49235b6df02dae5b1149a2e4ea7d00438db1cf1c5bc3f171f5a80747052909f
+  40_provenance.rho: 7defbb70d066d84130b6cca1c30afff72e82d0e2118fee422947ac58c4fde98b
+  KAsset.rho: 36b683b43c42d24b4f5b052fba249e551c72d48d09617d19675e77712b7250c8
+  Proof.rho: 9fa51bb3c16b60d1998a2d9fea907aef833f9748f054363fbf90dd528acece31
+  Auth.rho: e0f13b6b835dbedd44615814ef723bd558d1a8fd81ce1669dded66b43e825d4c
+  Scope.rho: f63ec4eb0f1801b980d30017a2cec3167f3df24647d3d087c2fd45f5ef0bc81a
+  install.py: 282d3f853829fc8dca6e5e51594da2bf3f64b9e14d9e7e5ce1c3e2372f0dd93b

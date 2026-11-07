@@ -74,6 +74,12 @@ theorems:
   - core_arm_authority
   - cross_cell_read_not_authority
   - proof_take_once_versioned
+  - Cap.no_holder_without_grant
+  - Cap.bundle_excludes_private
+  - Cap.apply_case_bound
+  - Cap.forward_burns_but_cannot_forge
+  - Cap.anchored_nest_requires_issued_child
+  - Cap.issuer_authorize_requires_issuer
   - C1_prove_requires_active
   - C2_revoke_blocks_prove
   - C3_issuer_immutable
