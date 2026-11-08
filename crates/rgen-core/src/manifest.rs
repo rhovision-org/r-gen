@@ -43,6 +43,23 @@ impl Manifest {
         })
     }
 
+    /// Parse a manifest and, when a Root is pinned, refuse a substituted Root. Pinning is
+    /// the client-side defence against an unsigned manifest (RGA-051); a signed manifest
+    /// would remove the need to configure it.
+    pub fn from_json_pinned(document: &str, expected_root: Option<&str>) -> Result<Self> {
+        let manifest = Self::from_json(document)?;
+        if let Some(expected) = expected_root {
+            if manifest.root_uri.as_str() != expected {
+                return Err(RgenError::Manifest(format!(
+                    "Root mismatch: manifest names {}, pinned {}",
+                    manifest.root_uri.as_str(),
+                    expected
+                )));
+            }
+        }
+        Ok(manifest)
+    }
+
     pub fn to_json(&self) -> String {
         serde_json::to_string(self).expect("manifest serializes")
     }
@@ -99,5 +116,13 @@ mod tests {
     #[test]
     fn refuses_a_non_registry_root() {
         assert!(Manifest::from_json(r#"{"root_uri":"http://example.com"}"#).is_err());
+    }
+
+    #[test]
+    fn pinned_root_rejects_a_substituted_manifest() {
+        let substituted = r#"{"root_uri":"rho:id:attacker"}"#;
+        assert!(Manifest::from_json_pinned(substituted, Some("rho:id:genuine")).is_err());
+        assert!(Manifest::from_json_pinned(substituted, Some("rho:id:attacker")).is_ok());
+        assert!(Manifest::from_json_pinned(substituted, None).is_ok());
     }
 }

@@ -573,6 +573,8 @@ roadmap:
   - RGA-004
   - RGA-012
   status: partial
+  note: All 32 mutating proved-model arms have guard_eq; the 35 owed arms (read-only, creation registries, extensions) have
+    no deployed guard obligation in the model.
 - id: LR-02
   title: Versioned VWorld algebra and run commute
   priority: P1
@@ -581,8 +583,10 @@ roadmap:
   - spec/lean/RGen/Linear/Exec.lean
   findings:
   - RGA-003
-  status: partial
-  note: set/commit/event commute and runExec_append added; a full runExec commute theorem remains.
+  status: done
+  note: set/commit/event commute, runExec_append, runExec_some_iff_cells and runExec_commute_disjoint are proved;
+    core_independent_cells_commute is the versioned theorem and the plain-Store result is kept as
+    core_independent_stores_commute.
 - id: LR-03
   title: Wire proofCells to arm consumption and prove no cross-arm reuse
   priority: P1
@@ -603,7 +607,8 @@ roadmap:
   - RGA-001
   - RGA-012
   status: done
-  note: Independent arm events commute; the Store alias remains as a compatibility name.
+  note: Independent arm events commute; core_independent_cells_commute is the versioned theorem and the Store result is kept
+    as core_independent_stores_commute.
 - id: LR-05
   title: Close the pair matrix over modeled cells
   priority: P2
@@ -623,7 +628,7 @@ roadmap:
   findings:
   - RGA-005
   status: done
-  note: check_conformance.py enforces theorem + vector + suite; all 35 proved arms promoted; 30 owed arms remain outside the
+  note: check_conformance.py enforces theorem + vector + suite; all 35 proved arms promoted; 35 owed arms remain outside the
     model.
 - id: LR-07
   title: Automate audit coverage for every public theorem
@@ -643,7 +648,7 @@ roadmap:
   findings:
   - RGA-004
   - RGA-013
-  status: proposed
+  status: partial
 model_only:
 - arm: Claim.reject
   reason: No deployed Claim(@"reject") arm; rejection is folded into Claim.validate via finalizeValidation.

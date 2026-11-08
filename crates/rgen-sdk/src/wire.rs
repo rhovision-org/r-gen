@@ -82,6 +82,26 @@ pub fn call_term_signed(uri: &RegistryUri, arm: &str, args: &[String]) -> Result
     Ok(term)
 }
 
+/// Build a signed `ProvenanceFactory.createBound` call. The subject is resolved to a
+/// capability and passed as a name, so the factory can bind the record to the subject's
+/// own `uri` rather than a caller-supplied asset reference (RGA-022).
+pub fn create_bound_term_signed(
+    factory: &RegistryUri,
+    subject: &RegistryUri,
+    writers: &str,
+) -> Result<String> {
+    let term = format!(
+        "new rl(`rho:registry:lookup`), factoryCh, subjectCh, resultCh, \
+         deployerId(`rho:rchain:deployerId`), deployId(`rho:rchain:deployId`) in {{ \
+         rl!(`{factory}`, *factoryCh) | rl!(`{subject}`, *subjectCh) | \
+         for (ProvenanceFactory <- factoryCh; Subject <- subjectCh) {{ \
+         ProvenanceFactory!(\"createBound\", *deployerId, *Subject, {writers}, *resultCh) | \
+         for (@replyValue <- resultCh) {{ deployId!(replyValue) }} }} }}"
+    );
+    check_project_size(&term)?;
+    Ok(term)
+}
+
 /// Build a native REV vault balance read.
 pub fn native_rev_balance_term(address: &str) -> Result<String> {
     let address = quote_string(address)?;

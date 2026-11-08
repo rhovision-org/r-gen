@@ -424,3 +424,220 @@ theorem runExec_unique_accepted_per_generation {α : Type} {w : VWorld α}
   runExec_no_same_expected h c
 
 end RGen
+
+namespace RGen
+
+/-! ### Independence of disjoint traces -/
+
+/-- Two event lists act on disjoint sets of cells. -/
+def DisjointEvents {α : Type} (es1 es2 : List (Event α)) : Prop :=
+  ∀ e1 ∈ es1, ∀ e2 ∈ es2, e1.cell ≠ e2.cell
+
+theorem runCell_no_cell {α : Type} {c : CellId} {vc : Option (VCell α)}
+    {es : List (Event α)} (h : ∀ e ∈ es, e.cell ≠ c) :
+    runCell c vc es = some vc := by
+  induction es generalizing vc with
+  | nil => rfl
+  | cons e es ih =>
+      have he : e.cell ≠ c := h e (by simp)
+      simp only [runCell, if_neg he]
+      exact ih (fun e' hm => h e' (by simp [hm]))
+
+theorem runCell_append_of_skip_left {α : Type} {c : CellId} {vc : Option (VCell α)}
+    {es1 es2 : List (Event α)} (h : ∀ e ∈ es1, e.cell ≠ c) :
+    runCell c vc (es1 ++ es2) = runCell c vc es2 := by
+  induction es1 generalizing vc with
+  | nil => simp
+  | cons e es ih =>
+      have he : e.cell ≠ c := h e (by simp)
+      rw [List.cons_append]
+      simp only [runCell, if_neg he]
+      exact ih (fun e' hm => h e' (by simp [hm]))
+
+theorem runCell_append_of_skip_right {α : Type} {c : CellId} {vc : Option (VCell α)}
+    {es1 es2 : List (Event α)} (h : ∀ e ∈ es2, e.cell ≠ c) :
+    runCell c vc (es1 ++ es2) = runCell c vc es1 := by
+  induction es1 generalizing vc with
+  | nil =>
+      simp only [List.nil_append]
+      exact runCell_no_cell h
+  | cons e es ih =>
+      rw [List.cons_append]
+      by_cases hec : e.cell = c
+      · cases vc with
+        | none => simp [runCell, hec]
+        | some v =>
+            by_cases hgen : v.gen = e.expected
+            · cases hs : e.step v.val <;> simp [runCell, hec, hgen, hs, ih]
+            · simp [runCell, hec, hgen, ih]
+      · simp [runCell, hec, ih]
+
+end RGen
+
+namespace RGen
+
+/-- A run succeeds exactly when every cell's projection succeeds. -/
+theorem runExec_some_iff_cells {α : Type} {w : VWorld α} {es : List (Event α)}
+    {w' : VWorld α} :
+    runExec w es = some w' ↔ ∀ c, runCell c (w.cell c) es = some (w'.cell c) := by
+  constructor
+  · intro h c
+    exact runExec_projection h c
+  · intro h
+    induction es generalizing w with
+    | nil =>
+        have hw : w = w' := by
+          cases w with
+          | mk wc =>
+            cases w' with
+            | mk wc' =>
+              simp only [VWorld.mk.injEq]
+              funext c
+              have hc := h c
+              simpa [runCell] using hc
+        subst hw
+        rfl
+    | cons e es ih =>
+        have hc := h e.cell
+        cases hcell : w.cell e.cell with
+        | none => simp [runCell, hcell] at hc
+        | some vc =>
+            by_cases hgen : vc.gen = e.expected
+            · cases hs : e.step vc.val with
+              | none =>
+                  let w1 := w.set e.cell vc.val (e.expected + 1)
+                  have htail : ∀ c, runCell c (w1.cell c) es = some (w'.cell c) := by
+                    intro c
+                    by_cases hce : c = e.cell
+                    · subst hce
+                      simpa [runCell, hcell, hgen, hs, w1] using h e.cell
+                    · have hother : w1.cell c = w.cell c :=
+                        VWorld.set_other w e.cell c vc.val (e.expected + 1) hce
+                      rw [hother]
+                      have hne : e.cell ≠ c := fun h' => hce h'.symm
+                      simpa [runCell, hne] using h c
+                  have hrun := ih htail
+                  simp [runExec, Event.apply, hcell, hgen, hs, w1, hrun]
+              | some v' =>
+                  let w1 := w.set e.cell v' (e.expected + 1)
+                  have htail : ∀ c, runCell c (w1.cell c) es = some (w'.cell c) := by
+                    intro c
+                    by_cases hce : c = e.cell
+                    · subst hce
+                      simpa [runCell, hcell, hgen, hs, w1] using h e.cell
+                    · have hother : w1.cell c = w.cell c :=
+                        VWorld.set_other w e.cell c v' (e.expected + 1) hce
+                      rw [hother]
+                      have hne : e.cell ≠ c := fun h' => hce h'.symm
+                      simpa [runCell, hne] using h c
+                  have hrun := ih htail
+                  simp [runExec, Event.apply, hcell, hgen, hs, w1, hrun]
+            · simp [runCell, hcell, hgen] at hc
+
+end RGen
+
+namespace RGen
+
+/-- A run fails exactly when some cell's projection fails. -/
+theorem runExec_none_iff_cells {α : Type} {w : VWorld α} {es : List (Event α)} :
+    runExec w es = none ↔ ∃ c, runCell c (w.cell c) es = none := by
+  constructor
+  · intro h
+    by_cases hexists : ∃ c, runCell c (w.cell c) es = none
+    · exact hexists
+    · exfalso
+      have hex : ∀ c, ∃ vc, runCell c (w.cell c) es = some vc := by
+        intro c
+        cases hcell : runCell c (w.cell c) es with
+        | none => exact False.elim (hexists ⟨c, hcell⟩)
+        | some vc => exact ⟨vc, rfl⟩
+      let w' : VWorld α := ⟨fun c => Classical.choose (hex c)⟩
+      have hv : ∀ c, runCell c (w.cell c) es = some (w'.cell c) := by
+        intro c
+        simpa [w'] using Classical.choose_spec (hex c)
+      have hsome : runExec w es = some w' := by
+        rw [runExec_some_iff_cells]
+        exact hv
+      rw [h] at hsome
+      simp at hsome
+  · intro hc
+    obtain ⟨c, hc⟩ := hc
+    by_cases hsome : runExec w es = none
+    · exact hsome
+    · exfalso
+      cases hrun : runExec w es with
+      | none => exact hsome hrun
+      | some w' =>
+          have hcell := (runExec_some_iff_cells).mp hrun c
+          rw [hc] at hcell
+          simp at hcell
+
+/-- Traces on disjoint cells commute: the interleaving order does not change the outcome. -/
+theorem runExec_commute_disjoint {α : Type} (w : VWorld α) (es1 es2 : List (Event α))
+    (hdisj : DisjointEvents es1 es2) :
+    runExec w (es1 ++ es2) = runExec w (es2 ++ es1) := by
+  cases h12 : runExec w (es1 ++ es2) with
+  | none =>
+      rw [runExec_none_iff_cells] at h12
+      obtain ⟨c, hc⟩ := h12
+      symm
+      rw [runExec_none_iff_cells]
+      refine ⟨c, ?_⟩
+      by_cases h1 : ∃ e ∈ es1, e.cell = c
+      · obtain ⟨e, he, hec⟩ := h1
+        have hskip : ∀ e' ∈ es2, e'.cell ≠ c := by
+          intro e' he' hc'
+          exact hdisj e he e' he' (hec.trans hc'.symm)
+        rw [runCell_append_of_skip_right (es1 := es1) (es2 := es2) hskip] at hc
+        rw [runCell_append_of_skip_left (es1 := es2) (es2 := es1) hskip]
+        exact hc
+      · have hskip1 : ∀ e ∈ es1, e.cell ≠ c := by
+          intro e he hc'
+          exact h1 ⟨e, he, hc'⟩
+        by_cases h2 : ∃ e ∈ es2, e.cell = c
+        · rw [runCell_append_of_skip_left (es1 := es1) (es2 := es2) hskip1] at hc
+          rw [runCell_append_of_skip_right (es1 := es2) (es2 := es1) hskip1]
+          exact hc
+        · have hskip2 : ∀ e ∈ es2, e.cell ≠ c := by
+            intro e he hc'
+            exact h2 ⟨e, he, hc'⟩
+          rw [runCell_append_of_skip_left (es1 := es1) (es2 := es2) hskip1] at hc
+          rw [runCell_no_cell hskip2] at hc
+          simp at hc
+  | some w12 =>
+      rw [runExec_some_iff_cells] at h12
+      symm
+      rw [runExec_some_iff_cells]
+      intro c
+      by_cases h1 : ∃ e ∈ es1, e.cell = c
+      · obtain ⟨e, he, hec⟩ := h1
+        have hskip : ∀ e' ∈ es2, e'.cell ≠ c := by
+          intro e' he' hc'
+          exact hdisj e he e' he' (hec.trans hc'.symm)
+        have hc := h12 c
+        rw [runCell_append_of_skip_right (es1 := es1) (es2 := es2) hskip] at hc
+        rw [runCell_append_of_skip_left (es1 := es2) (es2 := es1) hskip]
+        exact hc
+      · have hskip1 : ∀ e ∈ es1, e.cell ≠ c := by
+          intro e he hc'
+          exact h1 ⟨e, he, hc'⟩
+        by_cases h2 : ∃ e ∈ es2, e.cell = c
+        · have hc := h12 c
+          rw [runCell_append_of_skip_left (es1 := es1) (es2 := es2) hskip1] at hc
+          rw [runCell_append_of_skip_right (es1 := es2) (es2 := es1) hskip1]
+          exact hc
+        · have hskip2 : ∀ e ∈ es2, e.cell ≠ c := by
+            intro e he hc'
+            exact h2 ⟨e, he, hc'⟩
+          have hboth : runCell c (w.cell c) (es1 ++ es2) = some (w.cell c) := by
+            rw [runCell_append_of_skip_left (es1 := es1) (es2 := es2) hskip1]
+            rw [runCell_no_cell hskip2]
+          have hboth2 : runCell c (w.cell c) (es2 ++ es1) = some (w.cell c) := by
+            rw [runCell_append_of_skip_left (es1 := es2) (es2 := es1) hskip2]
+            rw [runCell_no_cell hskip1]
+          rw [hboth2]
+          have hc := h12 c
+          rw [hboth] at hc
+          exact hc
+
+end RGen

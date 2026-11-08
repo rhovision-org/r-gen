@@ -127,3 +127,12 @@ semantics.
 - A negative HAZOP row means the considered deviation had a holding safeguard; it does not mean the
   node is hazard-free.
 - Phase 1 is read-only against `contracts/` and `spec/lean/`; it does not fix what it finds.
+
+## Close-out
+
+The terminal record for every P0/P1 finding is
+[`spec/audit/closeout.yaml`](../../spec/audit/closeout.yaml), summarized in the
+[close-out ledger](closeout.md). Each row ends in `fixed`, `risk-accepted` or
+`narrowed-claim`; `make check-closeout` fails on a missing row, a non-terminal decision,
+a missing evidence path, or an expired acceptance. The ledger is owner-authorized; it
+records the single-maintainer limitation rather than replacing independent review.

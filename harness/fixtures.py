@@ -60,6 +60,22 @@ def issue(subject: str, ctype: str, discipline: str, jurisdiction: str, role: st
     return call_uri(comp("credential-factory"), "issue", [Raw("*dId"), req], key=issuer)
 
 
+def cred_check_as(cred_uri: str, caller: str, requirement: dict):
+    """Call the advisory `check` arm with an explicit caller address (RGA-027)."""
+    term = f"""
+new rl(`rho:registry:lookup`), cCh, ret, bd(`rho:block:data`), hCh,
+    deployId(`rho:rchain:deployId`) in {{
+  rl!(`{cred_uri}`, *cCh) |
+  bd!(*hCh) |
+  for (Cred <- cCh; @height, @sender, @ts <- hCh) {{
+    Cred!("check", "{caller}", {enc(requirement)}, height, *ret) |
+    for (@r <- ret) {{ deployId!(r) }}
+  }}
+}}
+"""
+    return _one(term, key="deployer")
+
+
 def cred_check(cred_uri: str, subject_key: str, requirement: dict):
     term = f"""
 new rl(`rho:registry:lookup`), cCh, ret, bd(`rho:block:data`), hCh,
@@ -148,9 +164,20 @@ new rl(`rho:registry:lookup`), c1, ret,
     return _one(term, key=validator)
 
 
-def provenance_create(asset_ref: dict, writers: list, key: str = "deployer"):
-    return call_uri(comp("provenance-factory"), "create",
-                    [Raw("*dId"), asset_ref, writers], key=key)
+def provenance_create(subject_uri: str, writers: list, key: str = "deployer"):
+    """Create provenance bound to a real subject capability (RGA-022)."""
+    term = f"""
+new rl(`rho:registry:lookup`), sCh, fCh, ret,
+    dId(`rho:rchain:deployerId`), deployId(`rho:rchain:deployId`) in {{
+  rl!(`{subject_uri}`, *sCh) |
+  rl!(`{comp("provenance-factory")}`, *fCh) |
+  for (Subject <- sCh; ProvenanceFactory <- fCh) {{
+    ProvenanceFactory!("createBound", *dId, *Subject, {enc(writers)}, *ret) |
+    for (@r <- ret) {{ deployId!(r) }}
+  }}
+}}
+"""
+    return _one(term, key=key)
 
 
 def provenance_anchor(prov_uri: str, writer: str, doc: dict):
@@ -403,6 +430,18 @@ new rl(`rho:registry:lookup`), c1, ret,
 
 def kasset_nest(kasset_uri: str, claimant: str, child_refs: list):
     return call_uri(kasset_uri, "nest", [Raw("*dId"), child_refs], key=claimant)
+
+
+def kasset_resume_nest(kasset_uri: str, claimant: str):
+    return call_uri(kasset_uri, "resumeNest", [Raw("*dId")], key=claimant)
+
+
+def kasset_abort_nest(kasset_uri: str, claimant: str):
+    return call_uri(kasset_uri, "abortNest", [Raw("*dId")], key=claimant)
+
+
+def claim_resume(claim_uri: str, who: str):
+    return call_uri(claim_uri, "resume", [Raw("*dId")], key=who)
 
 
 def vp_withdraw(vp_uri: str, proposer: str):

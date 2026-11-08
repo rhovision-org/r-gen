@@ -1,9 +1,9 @@
 schema: rgen.redteam/v1
-measured_at: '2026-11-07T15:41:56.714915+00:00'
+measured_at: '2026-11-08T17:45:46.508918+00:00'
 node:
   api: '1'
   node: RChain Node 0.1.0 (e2d073dcd02f1e560ccb84749937138a1e184b0b)
-expectation: fixed
+expectation: any
 scope: object capabilities
 results:
 - id: RT-025
@@ -73,7 +73,7 @@ results:
   finding: '-'
   observed: validate=(False, 'forged credential')
   detail:
-    fake_credential: rho:id:cqu3r6ctz1fi4994ewfjpkwpzycgnoxn4tbyusyzowmxi7omfsdo
+    fake_credential: rho:id:n85dnhto5zuqp4pgabgmbky7dw5rb6r4oqihaxkpiwxp7qw1adpy
     validate:
     - false
     - forged credential
@@ -81,11 +81,11 @@ results:
   name: a self-registered fake child is refused by KAsset nest
   classification: fixed
   finding: RGA-049
-  observed: fake='rho:id:tmj9sf5wqfmajeow44zikbjkokp8funayw4m83ks15b1rds7qw8o'; nest=(False,
+  observed: fake='rho:id:8ykeao17zo17ofy8xhzck64uqeer5coqfrd6d6pb1mfksbwf978y'; nest=(False,
     'claim kasset mismatch')
   detail:
-    parent: rho:id:ez44w7jympawn38okmkjqoiu7sbkfiui7zswunbcpnq7nscdf85y
-    fake: rho:id:tmj9sf5wqfmajeow44zikbjkokp8funayw4m83ks15b1rds7qw8o
+    parent: rho:id:t4szeekeu1gud9ihaydq8a35ju7zmu3dss9ufsew53fooaxxod1y
+    fake: rho:id:8ykeao17zo17ofy8xhzck64uqeer5coqfrd6d6pb1mfksbwf978y
     nest:
     - false
     - claim kasset mismatch
@@ -124,17 +124,17 @@ results:
   name: approval survives the approver credential revocation
   classification: accepted
   finding: RGA-055
-  observed: 'approve=(True, {''approvalVersion'': 2, ''approvedAt'': 1242, ''liability'':
-    {''basisHash'': ''liability'', ''responsible'': ''11112utC5BqFMSTefiSd3xFaWFkwndvtEHdBm5phPcvtyvPVUmURxo'',
+  observed: 'approve=(True, {''approvalVersion'': 2, ''approvedAt'': 963, ''liability'':
+    {''basisHash'': ''liability'', ''responsible'': ''1111tv5UwtArZ4Fojd2ZAbdDQZRfM7RAmzqKkZdA5NfGXjWiqEALf'',
     ''shareBps'': 10000}}); revoke=(True,); status=''approved'''
   detail:
     approve:
     - true
     - approvalVersion: 2
-      approvedAt: 1242
+      approvedAt: 963
       liability:
         basisHash: liability
-        responsible: 11112utC5BqFMSTefiSd3xFaWFkwndvtEHdBm5phPcvtyvPVUmURxo
+        responsible: 1111tv5UwtArZ4Fojd2ZAbdDQZRfM7RAmzqKkZdA5NfGXjWiqEALf
         shareBps: 10000
     revoke:
     - true
@@ -143,17 +143,17 @@ results:
   name: a forwarded proof can be burned but not forged
   classification: accepted
   finding: RGA-035
-  observed: 'mallory=(True, {''atHeight'': 1247, ''credentialUri'': ''rho:id:ag86m9fw86x5zgi9jzfx664c7gtogpybz3eiwy1wixzndcn616ay'',
+  observed: 'mallory=(True, {''atHeight'': 968, ''credentialUri'': ''rho:id:ak3myrzxx3gk79hug1nur7r9jywj9z6jrijpb3ineszaeacfgmeo'',
     ''level'': 1, ''requirement'': {''ctype'': ''Validator'', ''discipline'': ''structural'',
     ''jurisdiction'': ''US-TX'', ''minLevel'': 1, ''role'': ''validator''}, ''subject'':
-    ''11112uzDWFsN37BsEo64bbz1SyvQKX51K5hjqjoL7fZpnEd7FVBzUb'', ''uri'': ''proof:rho:id:ag86m9fw86x5zgi9jzfx664c7gtogpybz3eiwy1wixzndcn616ay:1247''});
-    bob=(False, ''used''); subject=''11112uzDWFsN37BsEo64bbz1SyvQKX51K5hjqjoL7fZpnEd7FVBzUb'''
+    ''11112938kUtkNUpSHSGKNEeWptH6BNZEeNMYoCqo1VvrRSGrAojTfb'', ''uri'': ''proof:rho:id:ak3myrzxx3gk79hug1nur7r9jywj9z6jrijpb3ineszaeacfgmeo:968''});
+    bob=(False, ''used''); subject=''11112938kUtkNUpSHSGKNEeWptH6BNZEeNMYoCqo1VvrRSGrAojTfb'''
   detail:
-    proof: rho:id:9pduygmj653gcf1by61wxtgc5bfszqme7whho55q1xeieym164do
+    proof: rho:id:qm8k518tny6bwgnixorddsksyssudrmkia3n99ioqkhe46s9xemy
     mallory:
     - true
-    - atHeight: 1247
-      credentialUri: rho:id:ag86m9fw86x5zgi9jzfx664c7gtogpybz3eiwy1wixzndcn616ay
+    - atHeight: 968
+      credentialUri: rho:id:ak3myrzxx3gk79hug1nur7r9jywj9z6jrijpb3ineszaeacfgmeo
       level: 1
       requirement:
         ctype: Validator
@@ -161,8 +161,8 @@ results:
         jurisdiction: US-TX
         minLevel: 1
         role: validator
-      subject: 11112uzDWFsN37BsEo64bbz1SyvQKX51K5hjqjoL7fZpnEd7FVBzUb
-      uri: proof:rho:id:ag86m9fw86x5zgi9jzfx664c7gtogpybz3eiwy1wixzndcn616ay:1247
+      subject: 11112938kUtkNUpSHSGKNEeWptH6BNZEeNMYoCqo1VvrRSGrAojTfb
+      uri: proof:rho:id:ak3myrzxx3gk79hug1nur7r9jywj9z6jrijpb3ineszaeacfgmeo:968
     bob:
     - false
     - used
@@ -170,14 +170,14 @@ results:
   name: a K-Asset validator can open a dispute
   classification: fixed
   finding: RGA-060
-  observed: 'openDispute as bob=(True, {''id'': ''rho:id:9rzxizhgynctfpu6md45oucgfy5duwpyuj5wmrkeq193d3p446by'',
-    ''uri'': ''rho:id:9rzxizhgynctfpu6md45oucgfy5duwpyuj5wmrkeq193d3p446by''})'
+  observed: 'openDispute as bob=(True, {''id'': ''rho:id:q17ynurafmtbnbqkjoiykyrc395bn5a5tdxzgqh1txuddqngjs1o'',
+    ''uri'': ''rho:id:q17ynurafmtbnbqkjoiykyrc395bn5a5tdxzgqh1txuddqngjs1o''})'
   detail:
-    kasset: rho:id:167f6agofmud4zdc8agio79gazdwu3ubjk7zrmu19qu7dw7z17iy
+    kasset: rho:id:6p5p55qq17mdcqgkjnh5mj73piz7ec18n3yn74a6bth4qgmw6gno
     open:
     - true
-    - id: rho:id:9rzxizhgynctfpu6md45oucgfy5duwpyuj5wmrkeq193d3p446by
-      uri: rho:id:9rzxizhgynctfpu6md45oucgfy5duwpyuj5wmrkeq193d3p446by
+    - id: rho:id:q17ynurafmtbnbqkjoiykyrc395bn5a5tdxzgqh1txuddqngjs1o
+      uri: rho:id:q17ynurafmtbnbqkjoiykyrc395bn5a5tdxzgqh1txuddqngjs1o
     pre_fix: source-identified; parties omitted the validator
 - id: RT-037
   name: a malformed register dId leaves the Root directory readable

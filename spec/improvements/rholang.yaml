@@ -21,8 +21,10 @@ items:
   compatibility: Breaking for unauthenticated openers. Reads of old cases are unchanged.
   tests:
   - harness/unit_oracle.py
-  status: partial
-  note: Opener auth, openedBy match, and case-field presence added; party/subject registry binding remains.
+  - harness/unit_kasset.py
+  status: fixed
+  note: The raw open arm is gone; openBound consumes a one-shot subject snapshot and derives subjectRef, parties and the
+    oracle requirement. The subject closure is the only producer in the core path.
 - id: RR-02
   priority: P1
   title: Authenticate and bind provenance creation; reject empty writers
@@ -44,8 +46,10 @@ items:
   compatibility: Breaking for anonymous creation and empty writer lists. Old records remain readable.
   tests:
   - harness/unit_provenance.py
-  status: partial
-  note: Creator auth, non-empty writers, and asset URI presence added; asset registry binding remains.
+  status: fixed
+  note: createBound takes a subject capability, reads the subject cell and derives assetRef from the subject uri; the raw
+    free assetRef arm is gone. Anchors require a non-empty hash and an existing parentHash; comments refuse an empty hash.
+    Provenance remains advisory, and a third party can still create a record for a public subject.
 - id: RR-03
   priority: P1
   title: Bind validated proofs to the chain height
@@ -165,8 +169,9 @@ items:
   - harness/unit_claim.py
   - harness/unit_value.py
   - harness/unit_oracle.py
-  status: partial
-  note: Claim and VP future deadlines and claim comment ordering are checked; oracle future-ness remains.
+  status: fixed
+  note: Claim and VP future deadlines and claim comment ordering are checked; the oracle case guard rejects a past deadline.
+    unit_oracle adds the past-dispute refusal and confirms the K-Asset remains approved.
 - id: RR-08
   priority: P1
   title: Make oracle execution retry-safe and outcome-blind
@@ -243,7 +248,9 @@ items:
   - harness/unit_kasset.py
   - harness/concurrency_core.py
   status: partial
-  note: Claim validation and identity-create receipts/resume arms added; nest proof-consumption recovery remains.
+  note: Claim validation (RR-16) and nest proof-consumption (RR-15) recovery are fixed. Identity-create recovery remains -
+    identityState and the bundle registration precede the directoryState write, so a failure before that write still needs
+    a pending/finalized directory record.
 - id: RR-10
   priority: P2
   title: Cap or measure registry growth and create serialization
@@ -300,8 +307,9 @@ items:
   - harness/unit_kasset.py
   - harness/unit_claim.py
   - harness/redteam_capabilities.py
-  status: proposed
-  note: Proposed by the object-capability audit. The pre-fix probes are RT-031 (Issuer authorize) and RT-032 (fake child).
+  status: fixed
+  note: RGA-049 is fixed - the child is anchored to the claim kassetRef, the K-Asset bundle is no longer in the reply, and
+    Issuer.authorize derives the caller through authSubject. RT-031/RT-032 pass.
 - id: RR-13
   priority: P0
   title: Authenticate Root.register before consuming rootState and verify installs through Root
@@ -324,3 +332,95 @@ items:
   - harness/redteam_capabilities.py
   status: fixed
   note: The installer reports Root resolves 9/9 keys on the normal path. A blocked dId no longer loses the Root directory.
+- id: RR-14
+  priority: P0
+  title: Verify the value proposition reference at claim creation
+  files:
+  - path: contracts/src/deploy/20_claim.rho
+    function: claimVpGate
+    lines: 90-111
+  - path: contracts/src/deploy/20_claim.rho
+    function: ClaimFactory.create
+    lines: 120-160
+  finding: RGA-046
+  hazop: []
+  action: Resolve valuePropositionRef through ValuePropositionFactory.verify before the claim state is created; refuse an
+    unknown or malformed reference. Keep the validated-at-approval check in the K-Asset library.
+  compatibility: Additive for a Nil reference; breaking only for a claim that references a VP the genuine factory did not
+    issue.
+  tests:
+  - harness/unit_claim.py
+  status: fixed
+  note: claimVpGate resolves the reference; unit_claim refuses a self-registered URI with "value proposition".
+- id: RR-15
+  priority: P0
+  title: Reserve and record child proofs before a nest commit
+  files:
+  - path: contracts/src/lib/KAsset.rho
+    function: nestReserve
+    lines: 482-504
+  - path: contracts/src/lib/KAsset.rho
+    function: recordNestProof
+    lines: 416-431
+  - path: contracts/src/lib/KAsset.rho
+    function: nestCommit
+    lines: 521-580
+  - path: contracts/src/lib/KAsset.rho
+    function: KAsset
+    lines: 586-665
+  finding: RGA-033
+  hazop:
+  - HZ-KASSET-015
+  action: Write a nest receipt before consuming any child proof, record each consumed proof in the receipt, commit only from
+    the receipt and without external calls, and expose resumeNest/abortNest so a failed batch is recoverable.
+  compatibility: Additive state field and two new arms. A nest that fails after taking proofs now leaves a receipt; a retry
+    must resume or abort, which is an explicit recovery rather than a burned proof.
+  tests:
+  - harness/unit_kasset.py
+  status: fixed
+  note: unit_kasset drives an unsorted batch through reserve, partial take, refused retry, failed resume, abort and a
+    successful re-nest. NestCrash.lean proves the reservation discipline; mid-deploy crash injection remains skipped.
+- id: RR-16
+  priority: P1
+  title: Resume a claim receipt without minting
+  files:
+  - path: contracts/src/deploy/20_claim.rho
+    function: finalizeWith
+    lines: 249-312
+  - path: contracts/src/deploy/20_claim.rho
+    function: resumeFinalize
+    lines: 345-366
+  finding: RGA-065
+  hazop: []
+  action: Keep finalizeWith as the only minter. A resume commits only a receipt that names a kassetRef and only while the
+    claim is validating; a Nil kassetRef is refused as not minted. Carry validationRef in the receipt so the commit is
+    complete.
+  compatibility: A claim whose validation receipt never received a K-Asset is no longer resumable; that is the intended
+    safety-over-liveness choice. Normal validation and completed resumes are unchanged.
+  tests:
+  - harness/unit_claim.py
+  status: fixed
+  note: unit_claim refuses resume on open and final claims and asserts the kassetRef is unchanged. ClaimMint.lean proves
+    resume_cannot_mint; recovering a stranded pre-mint receipt needs a separate lease protocol.
+- id: RR-17
+  priority: P0
+  title: Verify the oracle-factory wiring against Root before handing private Apply
+  files:
+  - path: contracts/src/lib/KAsset.rho
+    function: makeKAsset
+    lines: 14-30
+  - path: contracts/src/deploy/22_value.rho
+    function: ValuePropositionFactory
+    lines: 49-57
+  finding: RGA-070
+  hazop: []
+  action: Resolve component:oracle-factory from Root before a K-Asset is created, compare it with the installer-wired URI,
+    and refuse on mismatch. Publish the VP factory only when the same comparison holds.
+  compatibility: Additive to the K-Asset creation path and the VP deploy. A mismatched manifest now fails closed instead of
+    wiring private Apply to a counterfeit factory.
+  tests:
+  - harness/unit_core.py
+  - harness/unit_value.py
+  status: fixed
+  note: unit_core and unit_value create K-Assets and VPs through the Root-matched wiring. The mismatched-manifest refusal
+    is a deploy-time path and needs external review; CHZ-030 is a HAZOP run row, so hazop is empty.

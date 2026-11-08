@@ -1,5 +1,8 @@
 schema: rgen.flows/v1
 subsystem: oracle
+status: legacy
+note: This maps the pre-Pareto OracleBook/PaymentBook architecture. It is not the deployed core; the authoritative arm map is
+  spec/flows/core.yaml.
 rules:
   - {id: O-open, arm: 'OracleBook@"open"', status: implemented}
   - {id: O-evidence, arm: 'OracleBook@"evidence"', status: implemented}

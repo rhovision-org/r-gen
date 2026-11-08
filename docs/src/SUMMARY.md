@@ -33,6 +33,7 @@
 - [Adversarial review](reference/adversarial-review.md)
 - [Object capabilities](reference/object-capabilities.md)
 - [Audit charter](reference/audit-charter.md)
+- [Close-out ledger](reference/closeout.md)
 - [HAZOP](reference/hazop.md)
 - [Workflow HAZOP: multi-agent run](reference/workflow-hazop.md)
 - [Red team](reference/red-team.md)

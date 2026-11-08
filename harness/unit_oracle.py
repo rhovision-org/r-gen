@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "harness"))
 
+import actors
 import assertions
 import corpus
 import fixtures
@@ -20,6 +21,20 @@ def main() -> int:
         return 2
     addrs = suite_base.setup(("alice", "bob", "carol", "dave"))
     _, kasset_uri = suite_base.approved_kasset(addrs, "bob", "carol")
+
+    # A past deadline is refused at open (RGA-026); the K-Asset stays approved,
+    # so the valid dispute below still opens.
+    past_cred = suite_base.issue(addrs, "dave", "Oracle", "oracle")
+    past = {
+        "kind": "dispute",
+        "groundsHash": "grounds",
+        "adjudicator": addrs["dave"],
+        "adjudicatorCredentialUri": past_cred,
+        "deadlineHeight": 1,
+    }
+    reply = fixtures.kasset_open_dispute(kasset_uri, "alice", past)
+    assertions.expect_refusal("past oracle deadline refused", reply, "case fields")
+
     case_uri, adjudicator_cred = suite_base.open_case(addrs, kasset_uri, "dave")
 
     reply = fixtures.read(case_uri, "get")
@@ -71,6 +86,19 @@ def main() -> int:
     assertions.expect_refusal("forged adjudicator credential refused", reply,
                               "adjudicator credential")
 
+    # A credential that expires before the case deadline is refused at open.
+    expired_cred = suite_base.issue(addrs, "dave", "Oracle", "oracle", expires_at=1)
+    expired_req = {
+        "kind": "dispute",
+        "groundsHash": "grounds",
+        "adjudicator": addrs["dave"],
+        "adjudicatorCredentialUri": expired_cred,
+        "deadlineHeight": 1000000,
+    }
+    reply = fixtures.kasset_open_dispute(second, "alice", expired_req)
+    assertions.expect_refusal("expired adjudicator credential refused", reply,
+                              "adjudicator credential")
+
     # An open case cannot close.
     third_case, _ = suite_base.open_case(addrs, second, "dave")
     reply = fixtures.call_uri(third_case, "close", [], deployer=False)
@@ -82,6 +110,28 @@ def main() -> int:
                                                        {"hash": "ev"}], key="dave")
     assertions.expect_ok("adjudicator evidence", reply)
     corpus.assert_row("ORACLE-evidence-party", reply)
+
+    # An expired dispute restores the subject's prior status (RGA-064).
+    _, expiry_kasset = suite_base.approved_kasset(addrs, "bob", "carol")
+    expiry_cred = suite_base.issue(addrs, "dave", "Oracle", "oracle")
+    deadline = actors.block_height() + 3
+    expiry_req = {
+        "kind": "dispute",
+        "groundsHash": "grounds",
+        "adjudicator": addrs["dave"],
+        "adjudicatorCredentialUri": expiry_cred,
+        "deadlineHeight": deadline,
+    }
+    reply = fixtures.kasset_open_dispute(expiry_kasset, "alice", expiry_req)
+    assertions.expect_ok("short-deadline dispute opened", reply)
+    expiry_case = reply[1]["uri"]
+    for _ in range(20):
+        if actors.block_height() > deadline:
+            break
+    reply = fixtures.call_uri(expiry_case, "expire", [], deployer=False)
+    assertions.expect_ok("expire dispute", reply)
+    assertions.expect("expired dispute restores K-Asset",
+                      fixtures.read(expiry_kasset, "get")[1].get("status"), "approved")
     reply = fixtures.call_uri(third_case, "evidence", [__import__("terms").Raw("*dId"),
                                                        {"hash": "ev"}], key="deployer")
     assertions.expect_refusal("non-party evidence refused", reply, "not a party")

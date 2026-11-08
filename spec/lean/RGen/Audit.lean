@@ -125,6 +125,9 @@ This file is not imported by `RGen.lean`; it is an audit artefact.
 #print axioms RGen.core_races_not_representable
 #print axioms RGen.core_same_cell_serialization
 #print axioms RGen.core_independent_cells_commute
+#print axioms RGen.core_independent_stores_commute
+#print axioms RGen.runExec_commute_disjoint
+#print axioms RGen.runExec_some_iff_cells
 #print axioms RGen.credential_prove_arm_authority
 #print axioms RGen.credential_revoke_arm_authority
 #print axioms RGen.credential_renew_arm_authority

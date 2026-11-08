@@ -52,6 +52,20 @@ def main() -> int:
     assertions.expect_refusal("non-subject prove refused", reply, "not subject")
     corpus.assert_row("C1-prove-wrong-subject", reply)
 
+    # `check` is advisory and caller-nominated: it compares the supplied address
+    # with the stored subject. It is not a signature and no commit may use it
+    # (RGA-027).
+    reply = fixtures.cred_check_as(bob_cred, addrs["bob"], req)
+    assertions.expect("advisory check true", reply[1], True)
+    assertions.expect("advisory check names the credential", reply[2], bob_cred)
+    reply = fixtures.cred_check_as(bob_cred, addrs["alice"], req)
+    assertions.expect("advisory check wrong caller", reply[1], False)
+    assertions.expect("advisory check wrong caller reason", reply[2], "not subject")
+    reply = fixtures.cred_check_as(bob_cred, addrs["bob"],
+                                   suite_base.requirement("Approver", "approver"))
+    assertions.expect("advisory check scope", reply[1], False)
+    assertions.expect("advisory check scope reason", reply[2], "scope")
+
     self_issue = fixtures.issue(actors.address("deployer"), "Validator", "structural",
                                 "US-TX", "validator", 1)
     assertions.expect_refusal("self issue refused", self_issue, "self issue")

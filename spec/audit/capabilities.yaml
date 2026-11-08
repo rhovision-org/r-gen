@@ -475,29 +475,29 @@ capabilities:
   - id: CAP-023
     name: OracleFactory
     kind: factory
-    source: contracts/src/deploy/30_oracle.rho:288
+    source: contracts/src/deploy/30_oracle.rho:326
     source_atom: 'bundle+{*OracleFactory}'
     creator: 30_oracle deploy
     holders: anyone with the factory URI
     grant_path: Root component:oracle-factory
     exposure: registry-uri
-    attenuation: 'bundle+{*OracleFactory}; excludes openCaseCheck, caseReqOk and the per-case closure'
+    attenuation: 'bundle+{*OracleFactory}; excludes openCaseCheck, caseReqOk, openBoundGo/Body and the per-case closure'
     authority_check: party
     arms:
-      - {arm: open, mutating: true, authority: party, atoms: ['authSubject', 'opener == caseReq.get("openedBy")', 'listHas!(parties, opener', 'not isAdj', 'openCaseCheck', '"not opener"', '"case fields"']}
+      - {arm: openBound, mutating: true, authority: party, atoms: ['authSubject', 'for (Proof <- subjectProof)', 'Proof!("take"', '"subject proof"', 'caseReq.set("subjectRef"', '.set("parties"', 'openCaseCheck', 'opener == caseReq.get("openedBy")', '"not opener"', '"case fields"']}
     delegation: [subjectApply]
     revocation: none
-    forge_path: a non-party opener is refused; an adjudicator who is a party is refused.
-    hazard: parties and subjectRef are caller-supplied; a victim can be named a party.
-    disposition: accepted
-    finding: '-'
-    evidence: contracts/src/deploy/30_oracle.rho:81-120
+    forge_path: a non-party opener is refused; the subjectRef and parties come from a one-shot subject snapshot, not the caller. A forged snapshot can create an advisory case, but its Apply is the forger's own.
+    hazard: the raw open arm is gone; a subject closure is the only producer of the snapshot. A caller-supplied adjudicator is still checked against the derived parties and its credential.
+    disposition: holds
+    finding: RGA-023
+    evidence: contracts/src/deploy/30_oracle.rho:81-124
   - id: CAP-024
     name: OracleCase
     kind: published-contract
-    source: contracts/src/deploy/30_oracle.rho:273
+    source: contracts/src/deploy/30_oracle.rho:311
     source_atom: 'bundle+{*OracleCase}'
-    creator: OracleFactory.open
+    creator: OracleFactory.openBound
     holders: anyone with the case URI
     grant_path: open returns the URI
     exposure: registry-uri
@@ -516,33 +516,33 @@ capabilities:
     hazard: the public case URI is a capability to crank execute/expire/close; the Apply is case-bound.
     disposition: accepted
     finding: '-'
-    evidence: contracts/src/deploy/30_oracle.rho:115-271
+    evidence: contracts/src/deploy/30_oracle.rho:119-311
   - id: CAP-025
     name: ProvenanceFactory
     kind: factory
-    source: contracts/src/deploy/40_provenance.rho:141
+    source: contracts/src/deploy/40_provenance.rho:162
     source_atom: 'bundle+{*ProvenanceFactory}'
     creator: 40_provenance deploy
     holders: anyone with the factory URI
     grant_path: Root component:provenance-factory
     exposure: registry-uri
-    attenuation: 'bundle+{*ProvenanceFactory}; excludes the per-provenance pState'
+    attenuation: 'bundle+{*ProvenanceFactory}; excludes the per-provenance pState and the subject resolution helpers'
     authority_check: caller-subject
     arms:
-      - {arm: create, mutating: true, authority: caller-subject, atoms: ['authOwner', 'writers.length() == 0', '"writers or asset"']}
+      - {arm: createBound, mutating: true, authority: caller-subject, atoms: ['authOwner', 'subjectCap!("get"', '"asset"', 'writers.length() == 0', '"writers or asset"']}
     delegation: []
     revocation: none
-    forge_path: create for another creator requires that creator's deployerId; assetRef is unverified.
-    hazard: provenance is advisory; any assetRef can be named.
-    disposition: accepted
-    finding: '-'
-    evidence: contracts/src/deploy/40_provenance.rho:24-139
+    forge_path: createBound requires the creator's deployerId and a subject capability; assetRef is derived from the subject's own uri. A third party can still create an advisory record for a public subject.
+    hazard: provenance is advisory; the binding is to the subject the creator holds, not a registry attestation.
+    disposition: holds
+    finding: RGA-022
+    evidence: contracts/src/deploy/40_provenance.rho:24-160
   - id: CAP-026
     name: Provenance
     kind: published-contract
-    source: contracts/src/deploy/40_provenance.rho:127
+    source: contracts/src/deploy/40_provenance.rho:154
     source_atom: 'bundle+{*Provenance}'
-    creator: ProvenanceFactory.create
+    creator: ProvenanceFactory.createBound
     holders: anyone with the provenance URI
     grant_path: create returns the URI
     exposure: registry-uri
@@ -564,7 +564,7 @@ capabilities:
   - id: CAP-027
     name: KAsset
     kind: published-contract
-    source: contracts/src/lib/KAsset.rho:607
+    source: contracts/src/lib/KAsset.rho:778
     source_atom: 'bundle+{*KAsset}'
     creator: makeKAsset (Claim term)
     holders: anyone with the K-Asset URI
@@ -577,17 +577,19 @@ capabilities:
       - {arm: approve, mutating: true, authority: credential-proof, atoms: ['authSubject', 'approver == s.get("claimant") || approver == s.get("validator")', 'proveAndCheck', '"conflict"']}
       - {arm: reject, mutating: true, authority: credential-proof, atoms: ['authSubject', 'proveAndCheck', '"not qualified"']}
       - {arm: proveApproved, mutating: true, authority: none, rationale: 'permissionless read capability; mints a one-shot approval proof'}
-      - {arm: nest, mutating: true, authority: caller-subject, atoms: ['authSubject', 'snap.get("claimant") == who', '"not claimant"', 'kr.get("uri").toString() == ref.get("uri").toString()', '"claim kasset mismatch"', '"order"']}
+      - {arm: nest, mutating: true, authority: caller-subject, atoms: ['authSubject', 'snap.get("claimant") == who', '"not claimant"', 'kr.get("uri").toString() == ref.get("uri").toString()', '"claim kasset mismatch"', '"order"', '"nest in progress"']}
+      - {arm: resumeNest, mutating: true, authority: caller-subject, atoms: ['authSubject', 's.get("claimant") == who', '"not claimant"', '"no receipt"', '"receipt"', '"order"']}
+      - {arm: abortNest, mutating: true, authority: caller-subject, atoms: ['authSubject', '"not claimant"', '"no receipt"']}
       - {arm: openDispute, mutating: true, authority: party, atoms: ['who == s.get("claimant") || who == s.get("validator")', '"not a party"', '"not disputable"']}
       - {arm: children, mutating: false, authority: none, rationale: public children read}
       - {arm: revocation, mutating: false, authority: none, rationale: public revocation read}
     delegation: [Apply]
     revocation: credential
-    forge_path: approve/reject require a credential proof; nest requires the parent claimant; openDispute requires a party.
-    hazard: nest trusts a registry-resolved child and a self-minted proof; fixed by RT-032.
+    forge_path: approve/reject require a credential proof; nest/resumeNest/abortNest require the parent claimant; openDispute requires a party.
+    hazard: nest trusts a registry-resolved child and a self-minted proof; fixed by RT-032. The receipt bounds a failed batch to a resumable or abortable state (RGA-033).
     disposition: holds
     finding: RGA-049
-    evidence: contracts/src/lib/KAsset.rho:88-604
+    evidence: contracts/src/lib/KAsset.rho:88-776
   - id: CAP-028
     name: kasset-proof
     kind: proof
@@ -614,11 +616,11 @@ capabilities:
   - id: CAP-030
     name: kasset-apply-decision
     kind: apply-decision
-    source: contracts/src/lib/KAsset.rho:550
+    source: contracts/src/lib/KAsset.rho:738
     source_atom: 'contract Apply(@"applyDecision"'
     creator: makeKAsset
     holders: the KAsset closure; the OracleCase closure after openDispute
-    grant_path: KAsset.openDispute sends *Apply to OracleFactory.open
+    grant_path: KAsset.openDispute sends *Apply to OracleFactory.openBound
     exposure: closure-only
     attenuation: case-bound; no dId; only the stored dispute case id
     authority_check: case-id
@@ -634,11 +636,11 @@ capabilities:
   - id: CAP-031
     name: vp-apply-decision
     kind: apply-decision
-    source: contracts/src/deploy/22_value.rho:323
+    source: contracts/src/deploy/22_value.rho:338
     source_atom: 'contract Apply(@"applyDecision"'
     creator: ValuePropositionFactory.propose
     holders: the VP closure; the OracleCase closure after openDispute
-    grant_path: ValueProposition.openDispute sends *Apply to OracleFactory.open
+    grant_path: ValueProposition.openDispute sends *Apply to OracleFactory.openBound
     exposure: closure-only
     attenuation: case-bound; no dId; only the stored dispute case id
     authority_check: case-id
@@ -654,11 +656,11 @@ capabilities:
   - id: CAP-032
     name: oracle-subject-apply
     kind: apply-decision
-    source: contracts/src/deploy/30_oracle.rho:81
+    source: contracts/src/deploy/30_oracle.rho:85
     source_atom: 'subjectApply'
-    creator: OracleFactory.open parameter
+    creator: OracleFactory.openBound parameter
     holders: the OracleCase closure
-    grant_path: the opener passes a name; the case stores it in its closure
+    grant_path: the subject closure mints a one-shot snapshot and passes *Apply; the case stores it in its closure
     exposure: closure-only
     attenuation: case-bound; invoked only with s.get("uri") and s.get("decision")
     authority_check: case-id
@@ -666,11 +668,11 @@ capabilities:
       - {arm: applyDecision, mutating: true, authority: case-id, rationale: the case always passes its own uri; the Apply re-checks it}
     delegation: [OracleCase.execute]
     revocation: none
-    forge_path: an opener can pass a dummy name, but cannot use it to affect another subject.
+    forge_path: the raw open arm is gone; a forged subject snapshot can create an advisory case, but its Apply cannot affect a real subject.
     hazard: a dummy or blocking apply can leave the case stuck in executing.
-    disposition: accepted
-    finding: '-'
-    evidence: contracts/src/deploy/30_oracle.rho:203-238
+    disposition: holds
+    finding: RGA-023
+    evidence: contracts/src/deploy/30_oracle.rho:85-280
   - id: CAP-033
     name: private-helpers
     kind: private-name

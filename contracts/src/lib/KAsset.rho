@@ -1,17 +1,18 @@
-// K-Asset as a private library used by the Claim cell. Only the Claim may create one; a public
-// factory would let an attacker create a K-Asset with a fake claim. The cell owns approval,
-// two-phase nesting, and the private applyDecision capability that an Oracle case receives.
-//
-// Paper: @robles2020innovation p.4-5 (claim+validation pair is the K-Asset);
-//        @zhong2019bridge p.4 (approval), p.6 (nesting/risk transfer).
-// r-gen decision: parent-owned nesting edges with a strict (approvedAt,id) order make cycles
-// non-representable without graph traversal. Nesting phase 1 is a read-only hint; the child
-// `proveApproved` proof is the authority. Phase 2 acquires child proofs in ascending order
-// without holding the parent. Phase 3 consumes the parent and re-checks duplicates.
-//
-// Every arm is a flat helper chain: one match or one if per helper, no nested dispatch.
+// K-Asset private library. Only the Claim may create one; a public factory would allow a fake claim.
+// Paper: @robles2020innovation p.4-5; @zhong2019bridge p.4, p.6.
+// r-gen decision: parent-owned strict-order nesting; the child proof is the authority; a receipt
+// makes a failed batch resumable. Every arm is a flat helper chain.
 
-contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
+contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, @expectedOracleUri, root, ret) = {
+  // Verify the oracle wiring against Root before the K-Asset exists (RGA-070).
+  new gateCh in {
+    root!("resolve", "component:oracle-factory", *gateCh) |
+    for (@r <- gateCh) {
+      match r {
+        (true, oracleUri, _) => {
+      if (oracleUri.toString() != expectedOracleUri.toString()) {
+        ret!((false, "oracle factory"))
+      } else {
   new kState, KAsset, Apply, uriCh,
       commitApproval, checkApprovalVp,
       verifyVpThenProve, proveVpThenDecide, commitApprovalOrRefuse,
@@ -23,11 +24,14 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
       nestChildCheck, readNestChild, checkNestChild, checkNestChildGate,
       nestOne, nestCheck, nestCheckOne,
       nestProofs, nestProofChild, nestProofProve, nestProofTake, nestProofReply,
-      nestProofCheck, nestProofOrder, nestProofAfter,
-      nestGate, nestPhase1, nestPhase2, nestPhase3, nestCommit, nestPhase3Check,
+      nestProofCheck, recordNestProof, nestProofOrder, nestProofAfter,
+      nestGate, nestPhase1, nestReserve, nestPhase2, nestPhase3, nestCommit,
+      nestCommitGate, nestCommitVerify, nestTakenMatch, nestTakenOrder, nestCommitWrite,
+      resumeNestGate, resumeNestRun, nestProofsSkip, abortNestGate,
       openDisputeGate, openOracleCase, openDisputeReply,
       applyDecisionDispute, applyDecisionCase, applyDecisionStatus,
-      applyDecisionIdempotent, alreadyAppliedCheck, applyDecisionDo in {
+      applyDecisionIdempotent, alreadyAppliedCheck, applyDecisionDo,
+      applyExpireCase, applyExpireStatus, applyExpireDo in {
     kState!(init) |
 
     contract commitApproval(@s, @approver, @height, @approval, ret2) = {
@@ -129,7 +133,7 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
 
     contract proveApprover(@s, dId, @approver, @credentialUri, @approval, @height, ret2) = {
       new okCh in {
-        proveAndCheck!(credentialUri, *dId,
+        proveAndCheck!(*CredentialFactory, credentialUri, *dId,
           {"ctype": "Approver", "discipline": s.get("discipline"),
            "jurisdiction": s.get("jurisdiction"), "role": "approver",
            "minLevel": 1}, approver, height, *okCh) |
@@ -180,7 +184,7 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
 
     contract proveRejecter(@s, dId, @approver, @credentialUri, @approval, @height, ret2) = {
       new okCh in {
-        proveAndCheck!(credentialUri, *dId,
+        proveAndCheck!(*CredentialFactory, credentialUri, *dId,
           {"ctype": "Approver", "discipline": s.get("discipline"),
            "jurisdiction": s.get("jurisdiction"), "role": "approver",
            "minLevel": 1}, approver, height, *okCh) |
@@ -404,8 +408,28 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
     contract nestProofCheck(@data, @ref, @tail, @prev, ret2) = {
       if (data.get("id").toString() == ref.get("id").toString()
           && data.get("uri").toString() == ref.get("uri").toString()) {
-        nestProofOrder!(data, tail, prev, *ret2)
+        recordNestProof!(data, tail, prev, *ret2)
       } else { ret2!((false, "child proof")) }
+    } |
+
+    // Record a consumed child proof; resumeNest can commit from the recorded prefix.
+    contract recordNestProof(@data, @tail, @prev, ret2) = {
+      for (@s <- kState) {
+        match s.get("nestReceipt") {
+          Nil => { kState!(s) | ret2!((false, "no receipt")) }
+          r => {
+            match r.get("status") {
+              "taking" => {
+                kState!(s.set("nestReceipt",
+                           r.set("taken", r.get("taken") ++ [data])
+                            .set("lastTaken", data))) |
+                nestProofOrder!(data, tail, prev, *ret2)
+              }
+              _ => { kState!(s) | ret2!((false, "receipt")) }
+            }
+          }
+        }
+      }
     } |
 
     contract nestProofOrder(@data, @tail, @prev, ret2) = {
@@ -422,31 +446,55 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
     } |
 
     contract KAsset(@"nest", dId, @childRefs, ret2) = {
-      new aCh in {
+      new aCh, hCh in {
         authSubject!(*dId, *aCh) |
-        for (@(true, who) <- aCh) {
-          for (@snap <<- kState) { nestGate!(snap, who, childRefs, *ret2) }
+        nowHeight!(*hCh) |
+        for (@(true, who) <- aCh; @height <- hCh) {
+          for (@snap <<- kState) { nestGate!(snap, who, childRefs, height, *ret2) }
         }
       }
     } |
 
-    contract nestGate(@snap, @who, @childRefs, ret2) = {
+    contract nestGate(@snap, @who, @childRefs, @height, ret2) = {
       match (snap.get("claimant") == who, snap.get("status") == "approved",
-             childRefs.length() <= 32) {
-        (true, true, true) => { nestPhase1!(snap, who, childRefs, *ret2) }
-        (false, _, _) => { ret2!((false, "not claimant")) }
+             childRefs.length() <= 32, snap.get("nestReceipt") == Nil) {
+        (true, true, true, true) => { nestPhase1!(snap, who, childRefs, height, *ret2) }
+        (false, _, _, _) => { ret2!((false, "not claimant")) }
+        (_, _, _, false) => { ret2!((false, "nest in progress")) }
         _ => { ret2!((false, "parent not approved or limit")) }
       }
     } |
 
-    contract nestPhase1(@snap, @who, @childRefs, ret2) = {
+    contract nestPhase1(@snap, @who, @childRefs, @height, ret2) = {
       new preCh in {
         nestCheck!(childRefs, snap, *preCh) |
         for (@p <- preCh) {
           match p {
-            (true, "ok") => { nestPhase2!(who, childRefs, *ret2) }
+            (true, "ok") => { nestReserve!(who, childRefs, height, *ret2) }
             _ => { ret2!(p) }
           }
+        }
+      }
+    } |
+
+    // Reserve the parent before any proof is consumed.
+    contract nestReserve(@who, @childRefs, @height, ret2) = {
+      for (@s <- kState) {
+        match (s.get("claimant") == who, s.get("status") == "approved",
+               s.get("nestReceipt") == Nil) {
+          (true, true, true) => {
+            kState!(s.set("nestReceipt", {
+                      "status": "taking",
+                      "childRefs": childRefs,
+                      "taken": [],
+                      "lastTaken": Nil,
+                      "at": height})
+                    .set("version", s.get("version") + 1)) |
+            nestPhase2!(who, childRefs, *ret2)
+          }
+          (false, _, _) => { kState!(s) | ret2!((false, "not claimant")) }
+          (_, _, false) => { kState!(s) | ret2!((false, "nest in progress")) }
+          _ => { kState!(s) | ret2!((false, "parent changed")) }
         }
       }
     } |
@@ -456,37 +504,154 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
         nestProofs!(childRefs, "none", *prCh) |
         for (@pr <- prCh) {
           match pr {
-            (true, "ok") => { nestPhase3!(who, childRefs, *ret2) }
+            (true, "ok") => { nestPhase3!(who, *ret2) }
             _ => { ret2!(pr) }
           }
         }
       }
     } |
 
-    contract nestPhase3(@who, @childRefs, ret2) = {
-      for (@s <- kState) { nestCommit!(s, who, childRefs, *ret2) }
+    contract nestPhase3(@who, ret2) = {
+      for (@s <- kState) { nestCommit!(s, who, *ret2) }
     } |
 
-    contract nestCommit(@s, @who, @childRefs, ret2) = {
+    // Commit from the receipt without external calls.
+    contract nestCommit(@s, @who, ret2) = {
+      match s.get("nestReceipt") {
+        Nil => { kState!(s) | ret2!((false, "no receipt")) }
+        r => { nestCommitGate!(s, r, who, *ret2) }
+      }
+    } |
+
+    contract nestCommitGate(@s, @r, @who, ret2) = {
       match (s.get("claimant") == who, s.get("status") == "approved",
-             childRefs.length() <= 32,
-             s.get("childRefs").length() + childRefs.length() <= 64) {
-        (true, true, true, true) => { nestPhase3Check!(s, childRefs, *ret2) }
+             r.get("status") == "taking",
+             s.get("childRefs").length() + r.get("childRefs").length() <= 64,
+             r.get("childRefs").length() <= 32,
+             r.get("taken").length() == r.get("childRefs").length()) {
+        (true, true, true, true, true, true) => { nestCommitVerify!(s, r, *ret2) }
         _ => { kState!(s) | ret2!((false, "parent changed or limit")) }
       }
     } |
 
-    contract nestPhase3Check(@s, @childRefs, ret2) = {
-      new finalCh in {
-        nestCheck!(childRefs, s, *finalCh) |
-        for (@f <- finalCh) {
-          match f {
-            (true, "ok") => {
-              kState!(s.set("childRefs", s.get("childRefs") ++ childRefs)
-                        .set("version", s.get("version") + 1)) |
-              ret2!((true, "ok"))
+    contract nestCommitVerify(@s, @r, ret2) = {
+      new cCh in {
+        nestTakenMatch!(r.get("taken"), r.get("childRefs"), *cCh) |
+        for (@ok <- cCh) {
+          match ok {
+            (true, "ok") => { nestCommitWrite!(s, r, *ret2) }
+            _ => { kState!(s) | ret2!(ok) }
+          }
+        }
+      }
+    } |
+
+    contract nestTakenMatch(@taken, @refs, ret2) = {
+      match (taken, refs) {
+        ([], []) => { ret2!((true, "ok")) }
+        ([t, ...tt], [ref, ...rt]) => {
+          if (t.get("id").toString() == ref.get("id").toString()
+              && t.get("uri").toString() == ref.get("uri").toString()) {
+            nestTakenOrder!(t, tt, rt, *ret2)
+          } else { ret2!((false, "child proof")) }
+        }
+        _ => { ret2!((false, "receipt mismatch")) }
+      }
+    } |
+
+    contract nestTakenOrder(@t, @tt, @rt, ret2) = {
+      match tt {
+        [] => { nestTakenMatch!(tt, rt, *ret2) }
+        [next, ..._] => {
+          if (next.get("approvedAt") > t.get("approvedAt")) {
+            nestTakenMatch!(tt, rt, *ret2)
+          } else { ret2!((false, "order")) }
+        }
+        _ => { ret2!((false, "order")) }
+      }
+    } |
+
+    contract nestCommitWrite(@s, @r, ret2) = {
+      kState!(s.set("childRefs", s.get("childRefs") ++ r.get("childRefs"))
+                .set("nestReceipt", Nil)
+                .set("version", s.get("version") + 1)) |
+      ret2!((true, "ok"))
+    } |
+
+    // Re-drive only the missing suffix of a reserved nest.
+    contract KAsset(@"resumeNest", dId, ret2) = {
+      new aCh in {
+        authSubject!(*dId, *aCh) |
+        for (@(true, who) <- aCh) {
+          for (@s <<- kState) { resumeNestGate!(s, who, *ret2) }
+        }
+      }
+    } |
+
+    contract resumeNestGate(@s, @who, ret2) = {
+      match s.get("nestReceipt") {
+        Nil => { ret2!((false, "no receipt")) }
+        r => {
+          match (s.get("claimant") == who, r.get("status") == "taking") {
+            (true, true) => {
+              match r.get("lastTaken") {
+                Nil => {
+                  resumeNestRun!(r.get("childRefs"), r.get("taken").length(),
+                                 "none", who, *ret2)
+                }
+                p => {
+                  resumeNestRun!(r.get("childRefs"), r.get("taken").length(),
+                                 p, who, *ret2)
+                }
+              }
             }
-            _ => { kState!(s) | ret2!(f) }
+            (false, _) => { ret2!((false, "not claimant")) }
+            _ => { ret2!((false, "receipt")) }
+          }
+        }
+      }
+    } |
+
+    contract resumeNestRun(@refs, @skip, @prev, @who, ret2) = {
+      new prCh in {
+        nestProofsSkip!(refs, skip, prev, *prCh) |
+        for (@pr <- prCh) {
+          match pr {
+            (true, "ok") => { nestPhase3!(who, *ret2) }
+            _ => { ret2!(pr) }
+          }
+        }
+      }
+    } |
+
+    contract nestProofsSkip(@refs, @skip, @prev, ret2) = {
+      match (refs, skip) {
+        (rs, 0) => { nestProofs!(rs, prev, *ret2) }
+        ([_, ...tail], n) => { nestProofsSkip!(tail, n - 1, prev, *ret2) }
+        _ => { ret2!((false, "receipt mismatch")) }
+      }
+    } |
+
+    // Abort discards the receipt; proveApproved can mint fresh proofs.
+    contract KAsset(@"abortNest", dId, ret2) = {
+      new aCh in {
+        authSubject!(*dId, *aCh) |
+        for (@(true, who) <- aCh) {
+          for (@s <- kState) { abortNestGate!(s, who, *ret2) }
+        }
+      }
+    } |
+
+    contract abortNestGate(@s, @who, ret2) = {
+      match s.get("nestReceipt") {
+        Nil => { kState!(s) | ret2!((false, "no receipt")) }
+        _ => {
+          if (s.get("claimant") != who) {
+            kState!(s) | ret2!((false, "not claimant"))
+          } else {
+            kState!(s.set("nestReceipt", Nil)
+                      .set("version", s.get("version") + 1)) |
+            ret2!((true, Nil))
           }
         }
       }
@@ -511,15 +676,31 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
     } |
 
     contract openOracleCase(@s, @who, @caseReq, dId, ret2) = {
-      new oCh in {
-        oracleFactory!("open", *dId, s.get("claimRef"), {
+      new proofState, Proof, proofCh, oCh in {
+        proofState!({
+          "data": {
+            "kind": "kasset",
+            "subjectRef": s.get("claimRef"),
+            "subjectUri": s.get("uri").toString(),
+            "parties": [s.get("claimant"), s.get("validator"), s.get("approver")],
+            "discipline": s.get("discipline"),
+            "jurisdiction": s.get("jurisdiction")},
+          "used": false}) |
+        contract Proof(@"take", ret3) = {
+          for (@p <- proofState) {
+            if (p.get("used")) {
+              proofState!(p) | ret3!((false, "used"))
+            } else {
+              proofState!(p.set("used", true)) |
+              ret3!((true, p.get("data")))
+            }
+          }
+        } |
+        proofCh!(bundle+{*Proof}) |
+        oracleFactory!("openBound", *dId, *proofCh, {
           "kind": caseReq.get("kind"),
           "openedBy": who,
-          "parties": [s.get("claimant"), s.get("validator"), s.get("approver")],
           "groundsHash": caseReq.get("groundsHash"),
-          "requirement": {"ctype": "Oracle", "discipline": s.get("discipline"),
-                          "jurisdiction": s.get("jurisdiction"),
-                          "role": "oracle", "minLevel": 1},
           "adjudicator": caseReq.get("adjudicator"),
           "adjudicatorCredentialUri": caseReq.get("adjudicatorCredentialUri"),
           "deadlineHeight": caseReq.get("deadlineHeight")
@@ -533,6 +714,7 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
         (true, caseRef) => {
           kState!(s.set("status", "disputed")
                     .set("dispute", caseRef)
+                    .set("disputePrevStatus", s.get("status"))
                     .set("version", s.get("version") + 1)) |
           ret2!((true, caseRef))
         }
@@ -604,10 +786,49 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, ret) = {
       }
     } |
 
+    contract Apply(@"expireCase", @caseId, ret2) = {
+      for (@s <- kState) { applyExpireCase!(s, caseId, *ret2) }
+    } |
+
+    contract applyExpireCase(@s, @caseId, ret2) = {
+      match s.get("dispute") {
+        Nil => { kState!(s) | ret2!((false, "no dispute")) }
+        d => {
+          if (d.get("id") != caseId) {
+            kState!(s) | ret2!((false, "case mismatch"))
+          } else {
+            if (s.get("status") != "disputed") {
+              kState!(s) | ret2!((true, "already"))
+            } else { applyExpireStatus!(s, d, *ret2) }
+          }
+        }
+      }
+    } |
+
+    contract applyExpireStatus(@s, @d, ret2) = {
+      match s.get("disputePrevStatus") {
+        Nil => { applyExpireDo!(s, d, "approved", *ret2) }
+        p => { applyExpireDo!(s, d, p, *ret2) }
+      }
+    } |
+
+    contract applyExpireDo(@s, @d, @prev, ret2) = {
+      kState!(s.set("status", prev)
+                .set("dispute", d.set("status", "expired"))
+                .set("version", s.get("version") + 1)) |
+      ret2!((true, prev))
+    } |
+
     rs!(bundle+{*KAsset}, *uriCh) |
     for (@uri <- uriCh) {
       for (@s <- kState) { kState!(s.set("uri", uri).set("id", uri.toString())) } |
       ret!((true, uri))
+    }
+  }
+      }
+      }
+        _ => { ret!((false, "oracle factory")) }
+      }
     }
   }
 } |

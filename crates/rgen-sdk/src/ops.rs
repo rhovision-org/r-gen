@@ -575,24 +575,23 @@ impl Client {
     pub async fn provenance_create(&self, request_json: &str) -> Result<WriteOutcome<Value>> {
         let request = parse(request_json, "provenanceCreate")?;
         check("provenanceCreate", &request, 0)?;
-        let asset_ref = request
+        let subject = request
             .get("assetRef")
-            .cloned()
-            .ok_or_else(|| SdkError::Validation("assetRef is required".into()))?;
+            .and_then(|asset_ref| asset_ref.get("uri"))
+            .and_then(Value::as_str)
+            .or_else(|| request.get("subject").and_then(Value::as_str))
+            .ok_or_else(|| SdkError::Validation("assetRef.uri is required".into()))?;
         let writers = request
             .get("writers")
             .cloned()
             .ok_or_else(|| SdkError::Validation("writers is required".into()))?;
-        self.write_component(
-            ComponentKey::ProvenanceFactory,
-            "create",
-            &[
-                "*deployerId".into(),
-                rendered(&asset_ref)?,
-                rendered(&writers)?,
-            ],
-        )
-        .await
+        let factory = self.resolve(ComponentKey::ProvenanceFactory).await?;
+        let term = crate::wire::create_bound_term_signed(
+            &factory.uri,
+            &uri(subject)?,
+            &rendered(&writers)?,
+        )?;
+        self.write_term(&term).await
     }
 
     pub async fn provenance_anchor(

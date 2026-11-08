@@ -249,10 +249,11 @@
 - file: contracts/src/deploy/20_claim.rho
   contract: Claim
   arm: resume
-  lean: -
+  lean: RGen.ClaimMintState.resume_cannot_mint
   cell: claimState
-  status: owed
-  note: recovery arm for a validating claim receipt; the receipt is not yet formalized in Lean
+  status: proved-model
+  suite: harness/unit_claim.py
+  note: resume commits a receipt and never mints (ClaimMint.lean); unit_claim refuses resume on open and final claims and asserts the kassetRef is unchanged (RGA-065).
 
 - file: contracts/src/deploy/20_claim.rho
   contract: ClaimFactory
@@ -273,6 +274,14 @@
   status: proved-conformance
   suite: harness/unit_value.py
   note: suite asserts the VP-applyDecision vector row
+
+- file: contracts/src/deploy/22_value.rho
+  contract: Apply
+  arm: expireCase
+  lean: -
+  cell: vpState
+  status: owed
+  note: expiry notification restores disputePrevStatus; the case must be expired before the oracle calls it
 
 - file: contracts/src/deploy/22_value.rho
   contract: ValueProposition
@@ -425,11 +434,11 @@
 
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleFactory
-  arm: open
+  arm: openBound
   lean: -
   cell: caseState
   status: owed
-  note: creation; the stored adjudicator credential is checked by decide
+  note: creation from a one-shot subject snapshot; subjectRef and parties are derived, not caller-supplied; the stored adjudicator credential is checked by decide
 
 - file: contracts/src/deploy/40_provenance.rho
   contract: Provenance
@@ -481,11 +490,11 @@
 
 - file: contracts/src/deploy/40_provenance.rho
   contract: ProvenanceFactory
-  arm: create
+  arm: createBound
   lean: -
   cell: pState
   status: owed
-  note: creation; no transition modeled
+  note: creation bound to a subject capability; assetRef derives from the subject uri; no transition modeled
 
 - file: contracts/src/lib/KAsset.rho
   contract: Apply
@@ -498,6 +507,14 @@
   status: proved-conformance
   suite: harness/unit_oracle.py
   note: suite asserts the KASSET-applyDecision vector row
+
+- file: contracts/src/lib/KAsset.rho
+  contract: Apply
+  arm: expireCase
+  lean: -
+  cell: kState
+  status: owed
+  note: expiry notification restores disputePrevStatus; unit_oracle asserts the approved status returns
 
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset
@@ -537,9 +554,25 @@
   authority: RGen.core_arm_authority
   status: proved-conformance
   suite: harness/unit_kasset.py
-  note: suite asserts the K3-nest-unsorted vector row; child anchored to the claim kassetRef (RGA-049)
+  note: suite asserts the K3-nest-unsorted vector row; child anchored to the claim kassetRef (RGA-049); the receipt is written before proofs are taken and a failed batch resumes or aborts (RGA-033).
   consumedProofs: [childApprovedProof]
   classification: RGen.kasset_nest_same_never_after_arm
+
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: resumeNest
+  lean: -
+  cell: kState
+  status: owed
+  note: recovery arm; it re-drives the missing suffix of the same nest transition and commits from the stored receipt; no separate model transition, and unit_kasset covers the refused and re-driven cases.
+
+- file: contracts/src/lib/KAsset.rho
+  contract: KAsset
+  arm: abortNest
+  lean: -
+  cell: kState
+  status: owed
+  note: recovery arm; it clears the receipt without changing childRefs or status; no separate model transition, and unit_kasset covers the no-receipt refusal and the post-abort re-nest.
 
 - file: contracts/src/lib/KAsset.rho
   contract: KAsset

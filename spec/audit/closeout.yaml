@@ -1,0 +1,991 @@
+schema_version: rgen.closeout/v1
+baseline: '2026-11-08'
+standard: 'Every P0/P1 has exactly one terminal decision: fixed, risk-accepted, or narrowed-claim.'
+review:
+  owner: patrick
+  independence: single maintainer; external review is required for every S1 and remains outstanding
+  s1:
+  - RGA-051
+  - RGA-070
+items:
+- id: RGA-001
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: 'The theorem is per cell and per valid Run trace: no two same-cell events share an expected generation.
+    It does not cover cross-cell races, proof reuse across arms, deployed guards, or scheduler/interleaving semantics.'
+  evidence:
+  - kind: theorem
+    ref: spec/lean/RGen/RaceFreedom.lean:45
+  - kind: theorem
+    ref: spec/lean/RGen/Linear/Exec.lean:63
+  - kind: doc
+    ref: docs/src/reference/race-freedom-proof.md:8
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-002
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: 'Phase 3 adds Linear/Consumption.lean: a well-formed trace consumes every declared proof cell before
+    the arm commit and cannot consume a proof cell twice. This is a model-level trace discipline, not a refinement
+    of the deployed private capability.'
+  evidence:
+  - kind: theorem
+    ref: spec/lean/RGen/Linear/Lift.lean:16
+  - kind: theorem
+    ref: spec/lean/RGen/Linear/Lift.lean:23
+  - kind: theorem
+    ref: spec/lean/RGen/RaceFreedom.lean:57
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-003
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: runExec_some_iff_cells characterizes success by per-cell projections; runExec_commute_disjoint proves
+    runExec w (es1++es2) = runExec w (es2++es1) for DisjointEvents, including stale and rejected traces. core_independent_cells_commute
+    is now the versioned theorem; the plain-Store result remains as core_independent_stores_commute. Both are in
+    the axiom audit.
+  evidence:
+  - kind: theorem
+    ref: spec/lean/RGen/Linear/Exec.lean:480
+  - kind: theorem
+    ref: spec/lean/RGen/Linear/Exec.lean:576
+  - kind: theorem
+    ref: spec/lean/RGen/RaceFreedom.lean:65
+  - kind: theorem
+    ref: spec/lean/RGen/RaceFreedom.lean:75
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-004
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: Phase 2 adds guard_eq for all 32 mutating proved-model arms, aligns credential revoke/expiry, requires
+    the Approver credential type and an approved parent, and uses strict approvedAt order. The remaining model/code
+    divergences are in the ledger.
+  evidence:
+  - kind: theorem
+    ref: spec/lean/RGen/Model/Credential.lean:79
+  - kind: theorem
+    ref: spec/lean/RGen/Model/KAsset.lean:67
+  - kind: theorem
+    ref: spec/lean/RGen/Model/KAsset.lean:131
+  - kind: theorem
+    ref: spec/lean/RGen/Model/Oracle.lean:79
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:243
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:67
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:335
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:96
+  - kind: gate
+    ref: tools/check_arm_guards.py:109
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-005
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: Phase 2 promotes all 35 proved arms; the 32 owed arms are outside the model and remain unpromoted.
+  evidence:
+  - kind: code
+    ref: spec/flows/core.yaml:2
+  - kind: code
+    ref: spec/vectors/core.tsv:1
+  - kind: doc
+    ref: docs/src/reference/formal-model.md:108
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-006
+  priority: P1
+  decision: risk-accepted
+  owner: patrick
+  rationale: 'Phase 2 adds check_lean.py --audit-coverage: every Pareto #check must appear in Audit.lean. The audit
+    is now 86 Pareto theorems and 196 axiom checks, but public theorems outside the Pareto vocabulary can still
+    escape the list.'
+  evidence:
+  - kind: theorem
+    ref: spec/lean/RGen/Audit.lean:15
+  - kind: gate
+    ref: tools/check_lean.py:62
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: '2027-05-08'
+- id: RGA-007
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: Coverage is 32 rows over six modeled cells; the distinct cross-product is 48 pairs. The model-only
+    finish/execute row was removed and the provenance anchor/comment pair was added in Phase 2; several cross-primitive
+    pairs remain unproved.
+  evidence:
+  - kind: code
+    ref: spec/flows/races.yaml:1
+  - kind: gate
+    ref: tools/check_race_matrix.py:1
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-008
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: Phase 2 adds Arm values for Identity.update, IdentityFactory.create, and ValueProposition.comment.
+    claimReject and the oracle finish/rollback arms remain model-only and are recorded in the rigor ledger.
+  evidence:
+  - kind: theorem
+    ref: spec/lean/RGen/Arms/Instances.lean:30
+  - kind: code
+    ref: spec/flows/core.yaml
+  - kind: code
+    ref: spec/flows/races.yaml
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-009
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: Issuer.revoke is not deployed. KAsset Apply.applyDecision declared RGen.vpDecision instead of RGen.kassetDecision.
+    Phase 1 removes the phantom and corrects the transition.
+  evidence:
+  - kind: code
+    ref: spec/flows/core.yaml:406
+  - kind: code
+    ref: spec/flows/core.yaml:410
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:45
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-011
+  priority: P1
+  decision: risk-accepted
+  owner: patrick
+  rationale: Static, docs, Lean, Rust, and parse gates run on every push; devnet suites are nightly because they
+    need a node. Phase 2 adds targeted negative tests to the nightly job.
+  evidence:
+  - kind: code
+    ref: .github/workflows/ci.yml:70
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: '2027-05-08'
+- id: RGA-012
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: The theorem says the decision function depends only on the cell value. Who may invoke the arm and which
+    proof must be consumed are guard concerns, not consequences of this theorem.
+  evidence:
+  - kind: theorem
+    ref: spec/lean/RGen/Linear/Lift.lean:31
+  - kind: theorem
+    ref: spec/lean/RGen/RaceFreedom.lean:29
+  - kind: doc
+    ref: docs/src/reference/race-freedom-proof.md:33
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-013
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: Phase 2 adds ProfileState.updateProfile and maps Identity.update to it; updateOwner is retained for
+    the ownership model only.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/10_identity.rho:60
+  - kind: theorem
+    ref: spec/lean/RGen/Model/Identity.lean:68
+  - kind: code
+    ref: spec/flows/core.yaml:44
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-020
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: 'Phase 2 aligns claimStatus and kassetStatus: valid -> validated/validated, partial -> validated/conditional,
+    invalid/unknown -> rejected/rejected. The claim still writes a rejected K-Asset for an unknown verdict; the
+    inconsistency is gone but pre-write rejection remains a follow-up.'
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:48
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:55
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:192
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-021
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: Phase 2 adds a nowHeight read and rejects proveValidated when the supplied height differs from chain
+    height, so the proof payload can no longer carry an arbitrary height.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/22_value.rho:183
+  - kind: code
+    ref: contracts/src/lib/Proof.rho:54
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:43
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-022
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: createBound requires authOwner, takes a subject capability, reads the subject cell, and derives assetRef
+    from the subject's own uri; the raw free assetRef arm is gone. Empty writers are refused and unit_provenance
+    asserts the stored assetRef equals the K-Asset uri. Residual is that a third party can still create an advisory
+    record for a public subject; the record is bound to that subject but is not an attestation that the subject
+    is a genuine K-Asset.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/40_provenance.rho:28
+  - kind: code
+    ref: contracts/src/deploy/40_provenance.rho:56
+  - kind: code
+    ref: contracts/src/deploy/40_provenance.rho:162
+  - kind: test
+    ref: harness/unit_provenance.py
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-023
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: The raw open arm is removed. KAsset.openDispute and ValueProposition.openDispute mint a one-shot snapshot
+    containing subjectRef, subjectUri, parties and discipline/jurisdiction and pass the private Apply. openBound
+    consumes the snapshot, derives subjectRef/parties/requirement, checks the opener is a party and the adjudicator
+    is credentialed, and stores the subjectUri. Residual is that a forged snapshot can create an advisory case,
+    but it carries the forger's own Apply and cannot affect a real subject.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:85
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:119
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:684
+  - kind: code
+    ref: contracts/src/deploy/22_value.rho:231
+  - kind: test
+    ref: harness/unit_oracle.py
+  - kind: test
+    ref: harness/unit_kasset.py
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-024
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: Phase 3 records an execution receipt (pending/applied/failed, caseId, decision, outcome) and Apply.applyDecision
+    is idempotent for a matching terminal status, so a retry can record success after a partial cross-contract failure.
+    The devnet suite cannot inject a crash; the receipt remains the recovery evidence.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:152
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:438
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-025
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: Phase 2 caps a nest batch at 32 children and the parent list at 64, rejecting larger batches before
+    proof consumption.
+  evidence:
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:260
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:279
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:330
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-026
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: Claim and VP creation require a future deadline; with RGA-023 the oracle's caseReqOk receives a bound
+    case and rejects deadline <= now. unit_claim refuses a past claim deadline and unit_oracle refuses a past dispute
+    deadline without changing the K-Asset state.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:30
+  - kind: code
+    ref: contracts/src/deploy/22_value.rho:23
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:57
+  - kind: test
+    ref: harness/unit_oracle.py
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-027
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: The advisory arm compares the caller argument to the stored subject. It is not signature-derived and
+    no core commit may use it; the static gate forbids X!("check") as a commit authority. unit_credentials now exercises
+    the true, wrong caller and wrong scope cases with an explicit caller address. The residual hazard is a future
+    caller treating the advisory result as a signature; the gate and the documentation are the control.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:139
+  - kind: gate
+    ref: tools/check_concurrency.py:30
+  - kind: test
+    ref: harness/unit_credentials.py
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-028
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: Permissionless participation is the documented policy. Claim and comment authenticate a REV address
+    but do not require an Identity record; unit_claim exercises an unregistered commenter, and validation still
+    requires a credential proof. Identity enforcement remains an extension decision, not a core requirement.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:120
+  - kind: test
+    ref: harness/unit_claim.py:31
+  - kind: test
+    ref: harness/unit_claim.py
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-029
+  priority: P1
+  decision: risk-accepted
+  owner: patrick
+  rationale: Registries are append-only maps and directoryState/factoryState are documented serialization points.
+    Every identity or credential create consumes the same root cell. No cap, sharding, or load metric exists.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/00_root.rho:39
+  - kind: code
+    ref: contracts/src/deploy/10_identity.rho:40
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:111
+  - kind: code
+    ref: contracts/components.json:8
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: '2027-05-08'
+- id: RGA-031
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: Phase 3 writes a pending directory entry after bundle registration and adds IdentityFactory.resume
+    to complete it. A failure before the pending write remains the residual window; the devnet suite cannot inject
+    it.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/10_identity.rho:40
+  - kind: code
+    ref: contracts/src/deploy/10_identity.rho:81
+  - kind: code
+    ref: contracts/src/deploy/10_identity.rho:86
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-032
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: Phase 3 writes a validating receipt (claim status, validationRef, kassetRef) before the final claim
+    write and adds Claim.resume to complete it. A failure before the receipt write remains the residual window;
+    the devnet suite cannot inject it.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:192
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:200
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:227
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-033
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: nestReserve writes a receipt before any proof is taken; recordNestProof records each consumed proof
+    in the receipt; nestCommit commits from the receipt without external calls; resumeNest re-drives the missing
+    suffix and abortNest clears the receipt. NestCrash.lean proves the reservation discipline. unit_kasset drives
+    an unsorted batch through reserve, partial take, refused retry, failed resume, abort and a successful re-nest;
+    mid-deploy crash injection remains skipped.
+  evidence:
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:416
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:482
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:521
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:586
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:642
+  - kind: test
+    ref: harness/unit_kasset.py
+  - kind: theorem
+    ref: spec/lean/RGen/Model/NestCrash.lean
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-035
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: prove sent bundle+{*Proof} on the caller's proofCh and no longer inserts a proof URI into the registry.
+    A forwarded proof can still be burned by the first taker; it cannot be forged. RT-004 and ProofCap.private_capability_no_bearer_dos
+    record the model-level evidence.
+  evidence:
+  - kind: code
+    ref: contracts/src/lib/Proof.rho:1
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:238
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-036
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: resumeFinalize now refuses who != claimant && who != validator with "not party". The window needs a
+    blocked mint, so the probe is a unit case rather than a live exploit.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:309
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:376
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-037
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: A Nil window normalizes to deadlineHeight; a legacy Nil refuses cleanly. RT-006 and Deadline.nil_comment_window_total
+    record the fix.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:145
+  - kind: code
+    ref: contracts/src/lib/Time.rho:1
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-038
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: credentialReqOk rejects a missing or negative level and the other required fields. RT-008 records the
+    refusal.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:29
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:122
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-039
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: 'claimReqOk matches Nil or {"uri": uri, ..._}; any other value is refused with "fields". RT-007 records
+    the refusal.'
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:36
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-040
+  priority: P1
+  decision: risk-accepted
+  owner: patrick
+  rationale: Any deployer can mint a fresh one-shot proof for an approved K-Asset. The proof carries approval data,
+    no registry entry and no victim state; the caller pays. Parent-owned nesting uses this proof as its authority.
+  evidence:
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:199
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: '2027-05-08'
+- id: RGA-041
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: openVpDispute passed *dId (the proposer) instead of *dId2 (the caller). It now passes *dId2 and parties
+    excludes Nil. RT-020 records the validator's successful dispute.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/22_value.rho:231
+  - kind: code
+    ref: contracts/src/deploy/22_value.rho:260
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-042
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: The ("proposed", _, true) arm refuses with "deadline". RT-021 records the refusal.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/22_value.rho:146
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-043
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: The (_, _, true) arm refuses with "expired"; expire remains available. RT-022 and Deadline.deadline_boundary_deterministic
+    record the fix.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:147
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-044
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: finalizeValidation receives the proved credentialUri and writes it into validationRef. RT-023 records
+    the fix.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:287
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:335
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-045
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: openCaseCheck now requires status active and requires the credential to remain valid through the case
+    deadline (expiresAt 0 means no expiry). decide still re-proves at the current height, so a credential revoked
+    after open cannot decide. unit_oracle refuses an expired adjudicator credential at open.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:33
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:47
+  - kind: test
+    ref: harness/unit_oracle.py
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-046
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: claimVpGate resolves valuePropositionRef through ValuePropositionFactory.verify before the claim state
+    is created and refuses an unknown or malformed reference. Approval still requires a validated VP proof, so the
+    reference cannot authorize approval on its own. unit_claim refuses a self-registered URI with "value proposition".
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:90
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:120
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:51
+  - kind: test
+    ref: harness/unit_claim.py
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-047
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: patchOr keeps the old value when the patch field is Nil. The update no longer silently loses displayNameHash,
+    orgHash or contactHash.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/10_identity.rho:40
+  - kind: code
+    ref: contracts/src/deploy/10_identity.rho:67
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-048
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: The arm was published in bundle+{*Issuer} and compared a caller-supplied address to issuerState.subject.
+    Any deployer could pass the genesis address and receive (true, true). The factory derived the caller correctly,
+    so no state changed, but the arm was not an authority check. It now takes a dId name and derives the caller
+    with authSubject. RT-031 records the pre-fix (true, true) and the post-fix refusal.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:69
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:134
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-049
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: The pre-pass compared the genuine Claim's kassetRef.uri to the child's self-reported get().uri, while
+    phase 2 resolved the caller-supplied ref.uri and trusted the proof minted by that process. A fake child that
+    answered get/proveApproved could be nested. The fix compares the Claim's kassetRef.uri to ref.uri, resolves
+    the child from that URI, and requires the proof id/uri to match. RT-032 records the pre-fix (true, "ok") and
+    the post-fix refusal.
+  evidence:
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:293
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:369
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:404
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-051
+  priority: P0
+  decision: risk-accepted
+  owner: patrick
+  rationale: The manifest is an unsigned file of URI designations. Pinning is now implemented and tested, not merely
+    proposed. Manifest::from_json_pinned refuses a substituted Root, and the web client refuses a fetched, cached
+    or pasted manifest whose Root differs from VITE_RGEN_ROOT_URI. The default build remains trust-on-first-use
+    because pinning is opt-in; a signed manifest is still the stronger fix. Risk accepted until an S1 external review
+    or 2027-05-08, whichever is first.
+  evidence:
+  - kind: code
+    ref: crates/rgen-core/src/manifest.rs:47
+  - kind: code
+    ref: crates/rgen-core/src/manifest.rs:110
+  - kind: code
+    ref: web/src/lib/store.ts:79
+  - kind: test
+    ref: crates/rgen-core/src/manifest.rs
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: '2027-05-08'
+- id: RGA-052
+  priority: P1
+  decision: risk-accepted
+  owner: patrick
+  rationale: The 00_root deployer becomes the installer and the 11_credentials deployer becomes the genesis Issuer.
+    In the installer they are one key. Loss of that key freezes Root updates and new qualifications; there is no
+    rotate arm. A governance extension must separate or rotate them.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/00_root.rho:63
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:48
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: '2027-05-08'
+- id: RGA-053
+  priority: P1
+  decision: risk-accepted
+  owner: patrick
+  rationale: Any deploy can insert an arbitrary term and receive a fresh URI. The core compensates with installer-gated
+    Root entries and factory issuance registries. Every consumer must verify factory membership before treating
+    a URI as an entity; the pre-fix KAsset.nest was the one place that did not.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:333
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:109
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: '2027-05-08'
+- id: RGA-054
+  priority: P1
+  decision: risk-accepted
+  owner: patrick
+  rationale: These are open clock/transition arms. execute replays only the adjudicator's stored decision through
+    the case-bound Apply; expire refuses before the deadline; close refuses until executed or expired; Claim.expire
+    refuses before the deadline. A third party can pay phlo to advance them, which is a crank, not a decision.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:203
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:240
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:261
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:200
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: '2027-05-08'
+- id: RGA-055
+  priority: P1
+  decision: risk-accepted
+  owner: patrick
+  rationale: The credential proof is checked at the approval height; the approved status is a durable state transition.
+    A later revocation does not de-approve. The proof is height-bound, so it cannot be reused at a later height,
+    but the approval remains. De-approval would need a new transition and a policy for the liability record.
+  evidence:
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:33
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:258
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: '2027-05-08'
+- id: RGA-057
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: The comment named refresh_components but the method did not exist. Added Client::refresh_components
+    to clear the cache; a long-lived client must call it after a reinstall or Root rotation.
+  evidence:
+  - kind: code
+    ref: crates/rgen-sdk/src/client.rs:181
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-058
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: Every term emitted its deployId even when GenRoot.register returned (false, reason). install.py now
+    resolves all nine keys through Root before writing the manifest and exits non-zero on a missing or different
+    URI (9/9 in the normal path).
+  evidence:
+  - kind: test
+    ref: harness/install.py:180
+  - kind: code
+    ref: contracts/src/deploy/00_root.rho:39
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-059
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: If a component label was absent from a deploy, common kept the dry-run default and dependent terms
+    were rendered against it. install.py now rejects a rendered term that still contains a dry-run placeholder before
+    deploying it.
+  evidence:
+  - kind: test
+    ref: harness/install.py:182
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-060
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: openDisputeGate allowed the validator, but openOracleCase passed parties=[claimant, approver]. OracleFactory
+    requires the opener to be in parties, so a validator opening was refused with "case fields". parties now includes
+    the validator.
+  evidence:
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:504
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:517
+  - kind: test
+    ref: harness/unit_kasset.py
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-061
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: The arm consumed rootState and then called authSubject with the caller's dId. A fresh channel in the
+    dId position could block the auth continuation, and the blocked continuation commits the consumed cell, leaving
+    every resolve/get/keys call blocked. Authentication now precedes the rootState consume and a (false, _) auth
+    reply is returned as "not installer".
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/00_root.rho:39
+  - kind: test
+    ref: harness/install.py
+  - kind: test
+    ref: harness/unit_identity.py
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-062
+  priority: P1
+  decision: risk-accepted
+  owner: patrick
+  rationale: validate checks the credential once and writes status validated; proveValidated mints from that durable
+    status without re-reading the credential. The proof is height-bound, but a revoked validator can mint a fresh
+    proof at a later height. This is the validation analogue of approval durability (RGA-055); devalidation would
+    need a new transition.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/22_value.rho:190
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: '2027-05-08'
+- id: RGA-063
+  priority: P1
+  decision: risk-accepted
+  owner: patrick
+  rationale: The writers list is fixed at create. A compromised writer keeps appending anchors and comments for
+    the cell's lifetime. Provenance is advisory and no core arm uses it as authority; a removeWriter arm would add
+    a state transition and a writer-consent policy.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/40_provenance.rho:36
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: '2027-05-08'
+- id: RGA-064
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: openDispute records disputePrevStatus. OracleCase.expire writes an "expiring" receipt, calls the subject's
+    Apply.expireCase, and then marks the case expired; a retry from "expiring" re-notifies. The K-Asset and VP restore
+    the prior status and mark the dispute record expired. unit_oracle asserts an expired dispute returns the K-Asset
+    to approved.
+  evidence:
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:728
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:806
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:278
+  - kind: code
+    ref: contracts/src/deploy/22_value.rho:349
+  - kind: test
+    ref: harness/unit_oracle.py
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-065
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: finalizeWith is the only minter; resumeFinalize commits a receipt only when it names a kassetRef and
+    the claim is still validating. A Nil kassetRef answers "not minted" and leaves the claim, and the receipt now
+    carries validationRef so the commit is complete. ClaimMint.lean proves resume_cannot_mint. unit_claim refuses
+    resume on open and final claims and asserts the kassetRef is unchanged. A stranded pre-mint receipt needs a
+    separate lease protocol, not a resume mint.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:249
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho:345
+  - kind: test
+    ref: harness/unit_claim.py
+  - kind: theorem
+    ref: spec/lean/RGen/Model/ClaimMint.lean
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-067
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: checkCredentialProof now compares the proof payload's requirement with the consumer requirement as
+    well as subject, credentialUri and atHeight. proveAndCheck threads the same rq through prove, the reply and
+    the take. Every in-tree consumer uses this path; the primitive suites exercise valid, wrong-subject and wrong-scope
+    proofs.
+  evidence:
+  - kind: code
+    ref: contracts/src/lib/Proof.rho:10
+  - kind: code
+    ref: contracts/src/lib/Proof.rho:18
+  - kind: test
+    ref: harness/unit_credentials.py
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-068
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: proveAndCheck now calls CredentialFactory.verify before resolving the URI and refuses a URI the factory
+    did not issue. The helper is still private; the factory capability is passed by each term. unit_claim, unit_kasset
+    and unit_oracle exercise forged credential and adjudicator refusals through this path.
+  evidence:
+  - kind: code
+    ref: contracts/src/lib/Proof.rho:28
+  - kind: code
+    ref: contracts/src/lib/Proof.rho:31
+  - kind: test
+    ref: harness/unit_claim.py
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-069
+  priority: P1
+  decision: fixed
+  owner: patrick
+  rationale: The arm consumed factoryState before creating the Credential and calling rs!. A blocked rs! continuation
+    committed the consumed registry cell, so verify/count/issue could block forever while the Credential cell existed.
+    The consume now happens after the URI is known, and the self-issue refusal no longer touches the cell.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:138
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho:333
+  - kind: test
+    ref: harness/unit_credentials.py
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-070
+  priority: P0
+  decision: fixed
+  owner: patrick
+  rationale: makeKAsset resolves component:oracle-factory from Root and refuses to create the K-Asset when the wired
+    URI differs; the VP factory publishes only when the wired oracle URI matches Root. The Apply handoff stays case-bound.
+    The negative mismatched-manifest path is a deploy-time refusal and is not exercised by a dedicated suite; it
+    needs external review.
+  evidence:
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:14
+  - kind: code
+    ref: contracts/src/lib/KAsset.rho:19
+  - kind: code
+    ref: contracts/src/deploy/22_value.rho:51
+  - kind: test
+    ref: harness/unit_core.py
+  - kind: test
+    ref: harness/unit_value.py
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: null
+- id: RGA-071
+  priority: P1
+  decision: risk-accepted
+  owner: patrick
+  rationale: A decided case whose subject Apply keeps refusing has no terminal close path; an abandon path needs
+    a liability policy.
+  evidence:
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:205
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:299
+  closed_on: '2026-11-08'
+  review: owner-authorized
+  expiry: '2027-05-08'

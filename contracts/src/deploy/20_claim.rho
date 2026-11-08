@@ -1,11 +1,6 @@
-// Why: The paper's claim is the quantity half of the handshake. One linear Claim cell makes a
-//      second validation non-representable; the claim carries the work element, selection
-//      criteria, the agreed clock/comment window, and the value-proposition reference.
-// Paper: @robles2020innovation p.5 (claim=quantity, validation=quality);
-//        @zhong2019bridge p.4 Fig.1 (Talent Pool -> Selection Criteria -> Work Element -> Claim
-//        -> Validation -> Approval), p.5 (clock, stakeholder comments).
-// r-gen decision: the K-Asset is created by the Claim cell through the private KAsset library,
-//      not by a public factory, so a fake K-Asset cannot be created for a real claim.
+// Why: the claim is the quantity half; one linear cell makes a second validation non-representable.
+// Paper: @robles2020innovation p.5; @zhong2019bridge p.4 Fig.1, p.5.
+// r-gen decision: the Claim creates the K-Asset privately, so a fake K-Asset cannot exist for a real claim.
 // Placeholders: __ROOT_URI__, __CREDENTIAL_FACTORY_URI__, __VALUE_PROPOSITION_FACTORY_URI__,
 //               __ORACLE_FACTORY_URI__.
 new
@@ -19,6 +14,7 @@ new
   listHas, listHasId, listHasAny, listHas3,
   listHasEq, listHasIdEq, listHasAnyEq, listHas3Eq,
   makeKAsset, claimReqOk, claimWorkGate, claimFieldsGate, claimFieldsOk, claimWindowOk,
+  claimVpGate,
   outcomeStatus, claimRegistryState,
   CredentialFactory, ValuePropositionFactory, OracleFactory,
   checkCredentialProof, proveAndCheck, checkValidatedProof, proveValidatedAndCheck,
@@ -77,11 +73,35 @@ in {
   // Claim and K-Asset status are derived from one verdict table in finalizeValidation.
   // An unknown verdict is rejected in both, so the two records cannot disagree.
 
+  rl!(`__ROOT_URI__`, *rootCh) |
   rl!(`__CREDENTIAL_FACTORY_URI__`, *cfCh) |
   rl!(`__VALUE_PROPOSITION_FACTORY_URI__`, *vpCh) |
   rl!(`__ORACLE_FACTORY_URI__`, *ofCh) |
-  for (CredentialFactory <- cfCh; ValuePropositionFactory <- vpCh; OracleFactory <- ofCh) {
+  for (CredentialFactory <- cfCh; ValuePropositionFactory <- vpCh; OracleFactory <- ofCh;
+       Root <- rootCh) {
     // @@INLINE:lib/KAsset.rho@@
+
+    // A non-Nil valuePropositionRef must resolve through the genuine factory (RGA-046).
+    contract claimVpGate(@req, ret3) = {
+      match req.get("valuePropositionRef") {
+        Nil => { ret3!(true) }
+        {"uri": uri, ..._} => {
+          if (uri == Nil || uri == "") { ret3!(false) }
+          else {
+            new vfCh in {
+              ValuePropositionFactory!("verify", uri, *vfCh) |
+              for (@vf <- vfCh) {
+                match vf {
+                  (true, _) => { ret3!(true) }
+                  _ => { ret3!(false) }
+                }
+              }
+            }
+          }
+        }
+        _ => { ret3!(false) }
+      }
+    } |
 
     contract ClaimFactory(@"verify", @uri, ret) = {
       for (@r <<- claimRegistryState) {
@@ -97,12 +117,14 @@ in {
         authOwner!(*dId, *aCh) |
         nowHeight!(*hCh) |
         for (@(true, claimant, pk) <- aCh; @height <- hCh) {
-          new okCh in {
+          new okCh, vpOkCh in {
             claimReqOk!(req, height, *okCh) |
-            for (@ok <- okCh) {
-              if (not ok) {
-                ret!((false, "fields"))
-              } else {
+            claimVpGate!(req, *vpOkCh) |
+            for (@ok <- okCh; @vpOk <- vpOkCh) {
+              match (ok, vpOk) {
+                (false, _) => { ret!((false, "fields")) }
+                (true, false) => { ret!((false, "value proposition")) }
+                (true, true) => {
                 new claimState, Claim, finalizeValidation, finalizeWith, resumeFinalize, appendComment, uriCh in {
                   claimState!({
                     "uri": "",
@@ -225,6 +247,11 @@ in {
                       .set("validationReceipt", {
                         "claimStatus": claimSt,
                         "validation": validation,
+                        "validationRef": {
+                          "credentialUri": credentialUri,
+                          "verdict": validation.get("verdict"),
+                          "quality": validation.get("quality"),
+                          "validator": validator},
                         "credentialUri": credentialUri,
                         "validator": validator,
                         "height": height,
@@ -251,11 +278,13 @@ in {
                         "approvedAt": Nil,
                         "approvalVersion": Nil,
                         "childRefs": [],
+                        "nestReceipt": Nil,
                         "dispute": Nil,
                         "revocation": Nil,
                         "createdAt": height,
                         "version": 1
-                      }, *OracleFactory, *ValuePropositionFactory, *ClaimFactory, *kaCh) |
+                      }, *OracleFactory, *ValuePropositionFactory, *ClaimFactory,
+                         `__ORACLE_FACTORY_URI__`, *Root, *kaCh) |
                       for (@ka <- kaCh) {
                         match ka {
                           (true, kassetUri) => {
@@ -306,27 +335,25 @@ in {
                     }
                   } |
 
+                  // Resume commits the receipt and never mints (ClaimMint.resume).
                   contract resumeFinalize(@s, @r, @validator, @who, ret3) = {
                     if (who != s.get("claimant") && who != validator) {
                       claimState!(s) | ret3!((false, "not party"))
                     } else {
                       match r.get("kassetRef") {
-                        Nil => {
-                          match r.get("validation") {
-                            Nil => { claimState!(s) | ret3!((false, "no validation")) }
-                            validation => {
-                              finalizeValidation!(s, validator, r.get("height"),
-                                                  r.get("credentialUri"), validation, *ret3)
-                            }
-                          }
-                        }
+                        Nil => { claimState!(s) | ret3!((false, "not minted")) }
                         kr => {
-                          claimState!(s.set("status", r.get("claimStatus"))
-                            .set("validationRef", r.get("validationRef"))
-                            .set("kassetRef", kr)
-                            .set("validationReceipt", Nil)
-                            .set("version", s.get("version") + 1)) |
-                          ret3!((true, kr))
+                          match (s.get("status"), r.get("validationRef")) {
+                            ("validating", vr) => {
+                              claimState!(s.set("status", r.get("claimStatus"))
+                                .set("validationRef", vr)
+                                .set("kassetRef", kr)
+                                .set("validationReceipt", Nil)
+                                .set("version", s.get("version") + 1)) |
+                              ret3!((true, kr))
+                            }
+                            _ => { claimState!(s) | ret3!((false, "not resumable")) }
+                          }
                         }
                       }
                     }
@@ -346,7 +373,7 @@ in {
                                 for (@vf <- vfCh) {
                                   match vf {
                                     (true, _) => {
-                                      proveAndCheck!(credentialUri, *dId2,
+                                      proveAndCheck!(*CredentialFactory, credentialUri, *dId2,
                                         s.get("selectionCriteria"), validator, height, *okCh) |
                                       for (@ok <- okCh) {
                                         if (ok) {
@@ -416,6 +443,8 @@ in {
                     }
                   }
                 }
+                }
+                _ => { ret!((false, "fields")) }
               }
             }
           }
@@ -425,12 +454,9 @@ in {
 
     rs!(bundle+{*ClaimFactory}, *cFactory) |
     for (@uri <- cFactory) {
-      rl!(`__ROOT_URI__`, *rootCh) |
-      for (Root <- rootCh) {
-        Root!("register", "component:claim-factory", uri, 1, "claims",
-              *deployerId, *ack1) |
-        for (@r <- ack1) { deployId!([("claim-factory", uri)]) }
-      }
+      Root!("register", "component:claim-factory", uri, 1, "claims",
+            *deployerId, *ack1) |
+      for (@r <- ack1) { deployId!([("claim-factory", uri)]) }
     }
   }
 }

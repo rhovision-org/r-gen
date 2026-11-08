@@ -84,30 +84,16 @@ def take_proof(proof_uri: str, key: str):
     return fixtures.call_uri(proof_uri, "take", [], key=key, deployer=False)
 
 
-def open_past_deadline(addrs: dict, adjudicator: str, cred_uri: str):
-    dummy = f"""
-new rl(`rho:registry:lookup`), ofCh, ret, Apply,
-    dId(`rho:rchain:deployerId`), deployId(`rho:rchain:deployId`) in {{
-  contract Apply(@"applyDecision", @caseId, @decision, ret2) = {{
-    ret2!((true, "dummy"))
-  }} |
-  rl!(`{fixtures.comp("oracle-factory")}`, *ofCh) |
-  for (Factory <- ofCh) {{
-    Factory!("open", *dId, {{"uri": "rho:id:fake-subject"}}, {enc({
+def open_past_deadline(addrs: dict, kasset_uri: str, adjudicator: str, cred_uri: str):
+    case_req = {
         "kind": "dispute",
-        "openedBy": addrs["deployer"],
-        "parties": [addrs["deployer"], addrs[adjudicator]],
+        "openedBy": addrs["alice"],
         "groundsHash": "grounds",
-        "requirement": suite_base.requirement("Oracle", "oracle"),
         "adjudicator": addrs[adjudicator],
         "adjudicatorCredentialUri": cred_uri,
         "deadlineHeight": 1,
-    })}, *Apply, *ret) |
-    for (@r <- ret) {{ deployId!(r) }}
-  }}
-}}
-"""
-    return assertions.one(dummy, key="deployer")
+    }
+    return fixtures.kasset_open_dispute(kasset_uri, "alice", case_req)
 
 
 def main() -> int:
@@ -206,9 +192,11 @@ def main() -> int:
         record("RT-006", "comment on a Nil window", "fixed", "RGA-037",
                f"create refused: {nil_claim!r}")
 
-    # RT-009 / RT-010: the oracle accepts a past deadline and caller-chosen parties.
+    # RT-009 / RT-010: a past deadline is refused, and the party list now comes
+    # from the subject's one-shot snapshot rather than the caller.
     dave_cred = suite_base.issue(addrs, "dave", "Oracle", "oracle")
-    opened = open_past_deadline(addrs, "dave", dave_cred)
+    _, rt_kasset = suite_base.approved_kasset(addrs, "bob", "carol", claimant="alice")
+    opened = open_past_deadline(addrs, rt_kasset, "dave", dave_cred)
     accepted = isinstance(opened, tuple) and opened and opened[0] is True
     record(
         "RT-009", "oracle open with a past deadline",
@@ -218,22 +206,27 @@ def main() -> int:
     )
     record(
         "RT-010", "oracle open with caller-chosen parties",
-        "accepted" if accepted else "fixed", "RGA-023",
-        "a fake case can exist but its dummy Apply cannot touch a real subject"
-        if accepted else f"refused: {opened!r}",
-        {"open": opened},
+        "fixed", "RGA-023",
+        "openBound derives subjectRef and parties from the subject snapshot; the raw open arm is gone",
+        {"open": opened, "subject": rt_kasset},
     )
 
-    # RT-011: anyone can create provenance for a victim's assetRef with self-chosen writers.
-    prov = fixtures.provenance_create({"uri": "rho:id:victim-asset"},
-                                      [addrs["mallory"]], key="mallory")
-    spoofed = isinstance(prov, tuple) and prov and prov[0] is True
+    # RT-011: provenance creation no longer accepts a free assetRef. A third party
+    # can still create an advisory record for a public subject, but the record is
+    # bound to that subject's own uri and cannot name a different asset.
+    _, victim, _ = suite_base.validated_kasset(addrs, "bob")
+    prov = fixtures.provenance_create(victim, [addrs["mallory"]], key="mallory")
+    created = isinstance(prov, tuple) and prov and prov[0] is True
+    bound_uri = None
+    if created:
+        bound_uri = fixtures.read(prov[1]["uri"], "get")[1].get("assetRef").get("uri")
+    bound = created and bound_uri == victim
     record(
-        "RT-011", "provenance record for a victim assetRef",
-        "accepted" if spoofed else "fixed", "RGA-022",
-        ("created with mallory as the only writer; provenance is advisory and no core "
-         "arm reads it") if spoofed else f"refused: {prov!r}",
-        {"provenance": prov},
+        "RT-011", "provenance record is bound to the subject",
+        "accepted" if bound else "fixed", "RGA-022",
+        (f"mallory created an advisory record for {victim}; assetRef equals the subject uri")
+        if bound else f"refused or unbound: {prov!r}",
+        {"provenance": prov, "assetRef": bound_uri, "subject": victim},
     )
 
     # RT-013: proveApproved is permissionless and mints an unbounded number of proofs.

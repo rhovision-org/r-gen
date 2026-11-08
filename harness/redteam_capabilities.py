@@ -119,10 +119,9 @@ def main() -> int:
     }
     vp_reply = fixtures.vp_propose("alice", vp_req)
     vp_uri = vp_reply[1]["uri"] if as_ok(vp_reply) else ""
-    prov_reply = fixtures.provenance_create(
-        {"uri": "rho:id:asset"}, [addrs["alice"]], key="alice")
-    prov_uri = prov_reply[1]["uri"] if as_ok(prov_reply) else ""
     _, matrix_kasset, _ = suite_base.validated_kasset(addrs, "bob", claimant="alice")
+    prov_reply = fixtures.provenance_create(matrix_kasset, [addrs["alice"]], key="alice")
+    prov_uri = prov_reply[1]["uri"] if as_ok(prov_reply) else ""
     unauthorized = {
         "identity.update": call(identity_uri, "update", [Raw("*dId"), {"orgHash": "x"}],
                                 key="mallory") if identity_uri else "no-uri",

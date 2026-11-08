@@ -107,6 +107,8 @@ end RGen
 #check RGen.oracleDecideArm_proof_cell
 #check RGen.claimRejectArm_proof_cell
 #check RGen.runExec_append
+#check RGen.runExec_commute_disjoint
+#check RGen.core_independent_cells_commute
 #check RGen.vpWithdraw_guard_eq
 #check RGen.vpOpenDispute_guard_eq
 #check RGen.vpDecision_guard_eq

@@ -7,7 +7,7 @@
 // Each check is a flat helper: one `for`, one `match`, and a direct boolean return. No
 // nested match/if chain.
 
-contract checkCredentialProof(Proof, @validator, @credentialUri, @height, ret) = {
+contract checkCredentialProof(Proof, @validator, @credentialUri, @height, @rq, ret) = {
   new tCh in {
     Proof!("take", *tCh) |
     for (@t <- tCh) {
@@ -15,7 +15,8 @@ contract checkCredentialProof(Proof, @validator, @credentialUri, @height, ret) =
         (true, data) => {
           ret!(data.get("subject") == validator
             && data.get("credentialUri") == credentialUri
-            && data.get("atHeight") == height)
+            && data.get("atHeight") == height
+            && data.get("requirement") == rq)
         }
         _ => { ret!(false) }
       }
@@ -23,11 +24,21 @@ contract checkCredentialProof(Proof, @validator, @credentialUri, @height, ret) =
   }
 } |
 
-contract proveAndCheck(@credentialUri, dId, @rq, @validator, @height, ret) = {
-  new credCh in {
-    rl!(credentialUri, *credCh) |
-    for (Credential <- credCh) {
-      proveAndCheckCall!(*Credential, credentialUri, *dId, rq, validator, height, *ret)
+contract proveAndCheck(credentialFactory, @credentialUri, dId, @rq, @validator, @height, ret) = {
+  new vCh in {
+    credentialFactory!("verify", credentialUri, *vCh) |
+    for (@vf <- vCh) {
+      match vf {
+        (true, _) => {
+          new credCh in {
+            rl!(credentialUri, *credCh) |
+            for (Credential <- credCh) {
+              proveAndCheckCall!(*Credential, credentialUri, *dId, rq, validator, height, *ret)
+            }
+          }
+        }
+        _ => { ret!(false) }
+      }
     }
   }
 } |
@@ -36,22 +47,22 @@ contract proveAndCheckCall(Credential, @credentialUri, dId, @rq, @validator, @he
   new statusCh, proofCh in {
     Credential!("prove", *dId, rq, *statusCh, *proofCh) |
     for (@s <- statusCh) {
-      proveAndCheckReply!(s, *proofCh, validator, credentialUri, height, *ret)
+      proveAndCheckReply!(s, *proofCh, validator, credentialUri, height, rq, *ret)
     }
   }
 } |
 
-contract proveAndCheckReply(@s, proofCh, @validator, @credentialUri, @height, ret) = {
+contract proveAndCheckReply(@s, proofCh, @validator, @credentialUri, @height, @rq, ret) = {
   match s {
-    (true, _) => { proveTakeAndCheck!(*proofCh, validator, credentialUri, height, *ret) }
+    (true, _) => { proveTakeAndCheck!(*proofCh, validator, credentialUri, height, rq, *ret) }
     _ => { ret!(false) }
   }
 } |
 
-contract proveTakeAndCheck(proofCh, @validator, @credentialUri, @height, ret) = {
+contract proveTakeAndCheck(proofCh, @validator, @credentialUri, @height, @rq, ret) = {
   new okCh in {
     for (Proof <- proofCh) {
-      checkCredentialProof!(*Proof, validator, credentialUri, height, *okCh) |
+      checkCredentialProof!(*Proof, validator, credentialUri, height, rq, *okCh) |
       for (@ok <- okCh) { ret!(ok) }
     }
   }

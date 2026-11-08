@@ -15,24 +15,51 @@ new
   rootCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
   listHas, listHasId, listHasAny, listHas3,
-  listHasEq, listHasIdEq, listHasAnyEq, listHas3Eq
+  listHasEq, listHasIdEq, listHasAnyEq, listHas3Eq,
+  provenanceSubject, provenanceCreate, parentCheck, commitAnchor
 in {
   // @@INLINE:lib/Auth.rho@@
   // @@INLINE:lib/Time.rho@@
   // @@INLINE:lib/List.rho@@
 
-  contract ProvenanceFactory(@"create", dId, @assetRef, @writers, ret) = {
+  // Provenance is created against a subject capability, not a free asset
+  // reference. The factory reads the subject cell and derives assetRef from the
+  // subject's own uri; a caller cannot name a different asset (RGA-022).
+  contract ProvenanceFactory(@"createBound", dId, subjectCap, @writers, ret) = {
     new aCh in {
-    authOwner!(*dId, *aCh) |
-    for (@(true, creator, pk) <- aCh) {
-      match assetRef {
-        {"uri": uri, ..._} => {
-          if (writers.length() == 0 || uri == "") { ret!((false, "writers or asset")) }
-          else {
-      new pState, Provenance, uriCh in {
+      authOwner!(*dId, *aCh) |
+      for (@(true, creator, pk) <- aCh) {
+        new gCh in {
+          subjectCap!("get", *gCh) |
+          for (@g <- gCh) { provenanceSubject!(g, creator, writers, *ret) }
+        }
+      }
+    }
+  } |
+
+  contract provenanceSubject(@g, @creator, @writers, ret) = {
+    match g {
+      (true, subject) => {
+        match subject.get("uri") {
+          Nil => { ret!((false, "asset")) }
+          uri => {
+            if (uri.toString() == "" || writers.length() == 0) {
+              ret!((false, "writers or asset"))
+            } else { provenanceCreate!(subject, creator, writers, *ret) }
+          }
+        }
+      }
+      _ => { ret!((false, "asset")) }
+    }
+  } |
+
+  contract provenanceCreate(@subject, @creator, @writers, ret) = {
+    new pState, Provenance, uriCh in {
       pState!({
         "uri": "",
-        "assetRef": assetRef,
+        "assetRef": {"id": subject.get("uri").toString(),
+                     "uri": subject.get("uri").toString(),
+                     "claimRef": subject.get("claimRef")},
         "writers": [creator] ++ writers,
         "anchors": [],
         "comments": [],
@@ -68,14 +95,7 @@ in {
                             if (dup) {
                               pState!(s) | ret2!((false, "duplicate"))
                             } else {
-                              pState!(s.set("anchors", s.get("anchors") ++ [{
-                                "id": hash,
-                                "kind": doc.get("kind"),
-                                "hash": hash,
-                                "parentHash": doc.get("parentHash"),
-                                "by": who, "at": now}])
-                                .set("version", s.get("version") + 1)) |
-                              ret2!((true, Nil))
+                              parentCheck!(hash, doc, s, who, now, *ret2)
                             }
                           }
                         }
@@ -90,6 +110,33 @@ in {
         }
       } |
 
+      contract parentCheck(@hash, @doc, @s, @who, @now, ret2) = {
+        match doc.get("parentHash") {
+          Nil => { commitAnchor!(hash, doc, s, who, now, *ret2) }
+          "" => { commitAnchor!(hash, doc, s, who, now, *ret2) }
+          p => {
+            new pc in {
+              listHasId!(s.get("anchors"), p, *pc) |
+              for (@has <- pc) {
+                if (has) { commitAnchor!(hash, doc, s, who, now, *ret2) }
+                else { pState!(s) | ret2!((false, "parent")) }
+              }
+            }
+          }
+        }
+      } |
+
+      contract commitAnchor(@hash, @doc, @s, @who, @now, ret2) = {
+        pState!(s.set("anchors", s.get("anchors") ++ [{
+          "id": hash,
+          "kind": doc.get("kind"),
+          "hash": hash,
+          "parentHash": doc.get("parentHash"),
+          "by": who, "at": now}])
+          .set("version", s.get("version") + 1)) |
+        ret2!((true, Nil))
+      } |
+
       contract Provenance(@"comment", dId, @comment, ret2) = {
         new aCh, hCh in {
           authSubject!(*dId, *aCh) |
@@ -102,11 +149,15 @@ in {
                   if (not writer) {
                     pState!(s) | ret2!((false, "not writer"))
                   } else {
-                    pState!(s.set("comments", s.get("comments") ++ [{
-                      "id": "cm:" ++ who ++ ":" ++ now.toString(),
-                      "by": who, "hash": comment.get("hash"), "at": now}])
-                      .set("version", s.get("version") + 1)) |
-                    ret2!((true, Nil))
+                    if (comment.get("hash") == Nil || comment.get("hash") == "") {
+                      pState!(s) | ret2!((false, "hash"))
+                    } else {
+                      pState!(s.set("comments", s.get("comments") ++ [{
+                        "id": "cm:" ++ who ++ ":" ++ now.toString(),
+                        "by": who, "hash": comment.get("hash"), "at": now}])
+                        .set("version", s.get("version") + 1)) |
+                      ret2!((true, Nil))
+                    }
                   }
                 }
               }
@@ -129,12 +180,6 @@ in {
         for (@s2 <- pState) { pState!(s2.set("uri", uri)) } |
         ret!((true, {"id": uri, "uri": uri}))
       }
-      }
-      }
-      }
-      _ => { ret!((false, "writers or asset")) }
-      }
-    }
     }
   } |
 

@@ -61,7 +61,7 @@ The HAZOP rows for each item are in the manifest. Representative links:
   larger batches before proof consumption.
 - RR-07 is partial: claim creation now requires a deadline and rejects a comment window after the
   deadline. Claim and VP creation now require a future deadline; oracle future-ness remains open.
-- RR-11 is partial: claim validation writes a `validating` receipt and gains `Claim.resume`; identity create writes a pending directory entry and gains `IdentityFactory.resume`. Nest proof-consumption recovery remains.
+- RR-11 is partial: identity create writes a pending directory entry and gains `IdentityFactory.resume`. The claim and nest halves are fixed by RR-16 and RR-15: claim validation writes a `validating` receipt and `Claim.resume` commits it without minting; `KAsset.nest` reserves the parent, records each consumed proof, and gains `resumeNest`/`abortNest`. Identity-create recovery remains.
 - The other items remain proposed. On 2026-11-04 the isolated devnet was started with 8 GB and
   `make install unit-all` passed all ten suites on the rebuilt contracts. The earlier 4 GB
   attempt failed with exit 137; the memory requirement is documented in the devnet guide.
@@ -84,22 +84,26 @@ The remaining P0 findings are cross-cell failure windows, not guard bypasses:
   write. A failure after registration but before the directory write can leave an identity cell
   and bundle that the directory does not reference; a retry can create a second one. A recovery
   record needs the emitted identity URI and a pending/finalized directory status.
-- **Claim validation:** `finalizeValidation` mints the K-Asset before writing the claim's
-  `validationRef` and `kassetRef`. A failure between those writes can leave a K-Asset with no
-  claim reference, or allow a retry to mint another. A validation receipt in the claim state is
-  the intended fix.
-- **K-Asset nest:** `nestProofs` consumes each child approval proof before the parent writes
-  `childRefs`. A failed parent write consumes the proofs while the parent is unchanged. A nest
-  receipt that records the consumed child ids or the proof payloads is the intended fix.
+- **Claim validation:** fixed by RR-16. `finalizeWith` writes the `validating` receipt (with the
+  computed `validationRef`) before minting and is the only minter. `Claim.resume` commits only a
+  receipt that names a `kassetRef`; a Nil reference answers `not minted` and never mints. A
+  failure between the receipt and the mint therefore strands the claim in `validating` rather
+  than creating a second K-Asset. That liveness gap needs a separate lease/fencing protocol and
+  is not claimed as closed.
+- **K-Asset nest:** fixed by RR-15. `nestReserve` writes a receipt before any child proof is
+  consumed; `recordNestProof` records each proof payload; `nestCommit` commits from the receipt
+  without an external call; `resumeNest` re-drives only the missing suffix and `abortNest`
+  clears the receipt. A failed batch is resumable or abortable, not silently proof-burning.
 
-No current Phase 2 change claims to close these. They remain accepted P0 items with the failure
-window documented; the devnet suites cannot exercise them without crash/failure injection.
+Identity create remains the one accepted cross-cell window. The devnet suites exercise the
+recovery arms and the pre-fix failure paths that are reachable without crash injection; a true
+mid-deploy crash remains out of reach.
 
 ### Phase 3 candidates
 
 - Bind oracle `subjectRef` and provenance `assetRef` to a registry instead of a free string.
-- Add an explicit oracle execution receipt and a claim validation receipt.
-- Add identity-create and nest recovery records for the failure windows above.
+- Add an explicit oracle execution receipt (the claim and nest receipts now exist).
+- Add an identity-create recovery record for the remaining failure window.
 - Add a registry cap/sharding plan or a measured throughput limit for `directoryState`/`factoryState`.
 
 ## Why these orderings
