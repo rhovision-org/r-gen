@@ -81,7 +81,6 @@ in {
        Root <- rootCh) {
     // @@INLINE:lib/KAsset.rho@@
 
-    // A non-Nil valuePropositionRef must resolve through the genuine factory (RGA-046).
     contract claimVpGate(@req, ret3) = {
       match req.get("valuePropositionRef") {
         Nil => { ret3!(true) }
@@ -107,7 +106,11 @@ in {
       for (@r <<- claimRegistryState) {
         match r.get(uri.toString()) {
           Nil => { ret!((false, "unknown claim")) }
-          rec => { ret!((true, rec)) }
+          rec => {
+            if (rec.get("uri").toString() != uri.toString()) {
+              ret!((false, "uri mismatch"))
+            } else { ret!((true, rec)) }
+          }
         }
       }
     } |

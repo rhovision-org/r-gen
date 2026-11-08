@@ -301,7 +301,7 @@ new rs(`rho:registry:insertArbitrary`), fakeState, FakeChild, uriCh,
         durable_kasset, approver_cred, "carol",
         suite_base.approval(approver_cred, addrs["carol"]))
     revoked = fixtures.call_uri(approver_cred, "revoke",
-                                [Raw("*dId"), "capability test"], key="deployer")
+                                [Raw("*dId"), "capability test"], key="issuer")
     after = fixtures.read(durable_kasset, "get")
     status = after[1].get("status") if as_ok(after) else None
     record(

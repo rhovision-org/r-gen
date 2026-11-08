@@ -248,9 +248,9 @@ items:
   - harness/unit_kasset.py
   - harness/concurrency_core.py
   status: partial
-  note: Claim validation (RR-16) and nest proof-consumption (RR-15) recovery are fixed. Identity-create recovery remains -
-    identityState and the bundle registration precede the directoryState write, so a failure before that write still needs
-    a pending/finalized directory record.
+  note: Claim validation (RR-16) and nest proof-consumption (RR-15) recovery are fixed. Identity create already has a
+    reserving/minted/active directory record and a subject-only resume arm; unit_identity now covers active, no-pending and
+    non-subject resume. The minted-pending transition still needs a fault-injection test.
 - id: RR-10
   priority: P2
   title: Cap or measure registry growth and create serialization
@@ -424,3 +424,21 @@ items:
   status: fixed
   note: unit_core and unit_value create K-Assets and VPs through the Root-matched wiring. The mismatched-manifest refusal
     is a deploy-time path and needs external review; CHZ-030 is a HAZOP run row, so hazop is empty.
+- id: RR-18
+  priority: P1
+  title: Add a terminal abandon path and an execution attempt counter
+  files:
+  - path: contracts/src/deploy/30_oracle.rho
+    function: OracleCase
+    lines: 245-333
+  finding: RGA-071
+  hazop: []
+  action: Increment execution.attempts on every execute retry and add an adjudicator-only abandon arm for a decided case;
+    close the case with execution.status abandoned.
+  compatibility: Additive arm and execution fields. A decided case can now close without an applied outcome; execute after
+    abandon refuses.
+  tests:
+  - harness/unit_oracle.py
+  status: fixed
+  note: unit_oracle covers non-adjudicator refusal, adjudicator abandon, the abandoned status and the post-abandon execute
+    refusal. The failed-apply retry path still needs fault injection.

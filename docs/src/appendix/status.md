@@ -1,8 +1,30 @@
 # Status and limits
 
-**Devnet-only, no real value. Phase 1 audit recorded; Phase 2 and Phase 3 repair in progress; independent review pending.**
+**Devnet-only, no real value. Phase 1 audit recorded; P0/P1 close-out complete; improvement
+portfolio in progress; independent review pending.**
 
-## Verified on 2026-11-07
+## Verified on 2026-11-08
+
+- **P0/P1 close-out:** `spec/audit/closeout.yaml` has 59 rows, 48 `fixed` and 11
+  `risk-accepted` with a 2027-05-08 expiry. `make check-closeout` is part of
+  `make spec-check`.
+- **Findings:** 64 findings, 25 P0, 33 P1, the rest P2. The last P0 fixes were the install
+  plan, registry verify binding, enforced Root pinning and the oracle abandon path.
+- **Proofs:** 45 Lean files, 244 axiom-clean theorems, 131 Pareto checks; 72 deployed arms
+  (1 `proved-model`, 35 `proved-conformance`, 36 `owed`). The versioned
+  `runExec_commute_disjoint` theorem is in the audit.
+- **Suites:** the ten core suites, the installer state test and the RGA-070 wiring negative
+  pass on a fresh 8 GB devnet. The nightly soak runs on its own schedule; fault injection
+  is still a targeted follow-up.
+- **Ledgers:** findings, rholang, rigor, HAZOP and the new improvement plan are reconciled;
+  `make check-improvement-plan` and `make check-registry-trust` are in `spec-check`.
+- **S1:** RGA-051 (manifest Root) is risk-accepted with enforced pinning for non-devnet;
+  RGA-070 (oracle wiring) is fixed with a dedicated negative test. External review is
+  still required. See the [external review packet](../reference/external-review-packet.md).
+- **Hygiene:** `spec/acceptance.yaml` is marked legacy (pre-Pareto twelve-term), and
+  `contracts/measure.json` is regenerated for the seven-term build.
+
+## Historical: verified on 2026-11-07
 
 - Contracts hardened for the workflow HAZOP: identity reservation and subject-only resume; claim
   write-ahead validating receipt and resume; private proof capabilities; VP validator-dispute

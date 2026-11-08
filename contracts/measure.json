@@ -1,50 +1,58 @@
 {
+  "contracts/build/deploy/00_root.rho": {
+    "raw": 3417,
+    "minified": 2344
+  },
+  "contracts/build/deploy/10_identity.rho": {
+    "raw": 10404,
+    "minified": 6996
+  },
+  "contracts/build/deploy/11_credentials.rho": {
+    "raw": 23615,
+    "minified": 12425
+  },
+  "contracts/build/deploy/20_claim.rho": {
+    "raw": 57119,
+    "minified": 38537
+  },
+  "contracts/build/deploy/22_value.rho": {
+    "raw": 25667,
+    "minified": 13856
+  },
+  "contracts/build/deploy/30_oracle.rho": {
+    "raw": 24642,
+    "minified": 14804
+  },
+  "contracts/build/deploy/40_provenance.rho": {
+    "raw": 9646,
+    "minified": 6141
+  },
   ".devnet/rendered/00_root.rho": {
-    "raw": 12827,
-    "minified": 8068
-  },
-  ".devnet/rendered/01_kernel.rho": {
-    "raw": 3191,
-    "minified": 2589
-  },
-  ".devnet/rendered/02_admin.rho": {
-    "raw": 7221,
-    "minified": 4486
+    "raw": 3417,
+    "minified": 2344
   },
   ".devnet/rendered/10_identity.rho": {
-    "raw": 10611,
-    "minified": 6587
+    "raw": 10416,
+    "minified": 7002
   },
   ".devnet/rendered/11_credentials.rho": {
-    "raw": 24207,
-    "minified": 14875
+    "raw": 23627,
+    "minified": 12431
   },
-  ".devnet/rendered/12_token.rho": {
-    "raw": 23869,
-    "minified": 11256
+  ".devnet/rendered/20_claim.rho": {
+    "raw": 57173,
+    "minified": 38567
   },
-  ".devnet/rendered/20_work.rho": {
-    "raw": 17634,
-    "minified": 10366
+  ".devnet/rendered/22_value.rho": {
+    "raw": 25709,
+    "minified": 13880
   },
-  ".devnet/rendered/21_kasset.rho": {
-    "raw": 46832,
-    "minified": 23895
+  ".devnet/rendered/30_oracle.rho": {
+    "raw": 24666,
+    "minified": 14816
   },
-  ".devnet/rendered/22_provenance.rho": {
-    "raw": 12450,
-    "minified": 7899
-  },
-  ".devnet/rendered/30_risk.rho": {
-    "raw": 22286,
-    "minified": 13174
-  },
-  ".devnet/rendered/40_payments.rho": {
-    "raw": 25692,
-    "minified": 12392
-  },
-  ".devnet/rendered/50_oracle.rho": {
-    "raw": 35175,
-    "minified": 20697
+  ".devnet/rendered/40_provenance.rho": {
+    "raw": 9658,
+    "minified": 6147
   }
 }

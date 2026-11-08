@@ -35,6 +35,8 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--strict", action="store_true",
                         help="fail on a fixed row without test/theorem/gate/doc evidence")
+    parser.add_argument("--strict-s1", action="store_true",
+                        help="fail on a fixed S1 row without test/theorem/gate/doc evidence")
     args = parser.parse_args()
 
     findings = {f["id"]: f for f in load(FINDINGS).get("findings", [])}
@@ -83,7 +85,10 @@ def main() -> int:
         if decision == "fixed":
             if not (kinds & {"test", "theorem", "gate", "doc"}):
                 message = f"{rid}: fixed row has no test/theorem/gate/doc evidence"
-                (errors if args.strict else warnings).append(message)
+                if args.strict or (args.strict_s1 and finding.get("severity") == "S1"):
+                    errors.append(message)
+                else:
+                    warnings.append(message)
         if decision == "risk-accepted":
             for field in ("rationale", "owner", "expiry"):
                 if not row.get(field):

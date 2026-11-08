@@ -14,6 +14,7 @@ import assertions
 import corpus
 import fixtures
 import suite_base
+from terms import Raw
 
 
 def main() -> int:
@@ -106,10 +107,28 @@ def main() -> int:
     corpus.assert_row("O2-close-open", reply)
 
     # Evidence is restricted to parties and the adjudicator.
-    reply = fixtures.call_uri(third_case, "evidence", [__import__("terms").Raw("*dId"),
-                                                       {"hash": "ev"}], key="dave")
+    reply = fixtures.call_uri(third_case, "evidence", [Raw("*dId"), {"hash": "ev"}],
+                              key="dave")
     assertions.expect_ok("adjudicator evidence", reply)
     corpus.assert_row("ORACLE-evidence-party", reply)
+    reply = fixtures.call_uri(third_case, "evidence", [Raw("*dId"), {"hash": "ev"}],
+                              key="deployer")
+    assertions.expect_refusal("non-party evidence refused", reply, "not a party")
+
+    # A decided case has a terminal abandon path; a non-adjudicator cannot use it
+    # (RGA-071). The execution attempt count starts at 1 even when execute never ran.
+    reply = fixtures.oracle_decide(third_case, "dave", decision)
+    assertions.expect_ok("decide before abandon", reply)
+    reply = fixtures.call_uri(third_case, "abandon", [Raw("*dId")], key="bob")
+    assertions.expect_refusal("non-adjudicator abandon refused", reply, "not adjudicator")
+    reply = fixtures.call_uri(third_case, "abandon", [Raw("*dId")], key="dave")
+    assertions.expect_ok("adjudicator abandon", reply)
+    state = fixtures.read(third_case, "get")[1]
+    assertions.expect("abandon closes the case", state.get("status"), "closed")
+    assertions.expect("abandon records the terminal status",
+                      state.get("execution").get("status"), "abandoned")
+    reply = fixtures.oracle_execute(third_case)
+    assertions.expect_refusal("abandoned case cannot execute", reply, "not decided")
 
     # An expired dispute restores the subject's prior status (RGA-064).
     _, expiry_kasset = suite_base.approved_kasset(addrs, "bob", "carol")
@@ -132,9 +151,6 @@ def main() -> int:
     assertions.expect_ok("expire dispute", reply)
     assertions.expect("expired dispute restores K-Asset",
                       fixtures.read(expiry_kasset, "get")[1].get("status"), "approved")
-    reply = fixtures.call_uri(third_case, "evidence", [__import__("terms").Raw("*dId"),
-                                                       {"hash": "ev"}], key="deployer")
-    assertions.expect_refusal("non-party evidence refused", reply, "not a party")
 
     print("unit_oracle: pass")
     return 0

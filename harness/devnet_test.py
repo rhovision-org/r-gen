@@ -161,6 +161,9 @@ def full() -> None:
     ok, _ = make("unit-all")
     if not ok:
         raise SystemExit(1)
+    ok, _ = make("unit-wiring")
+    if not ok:
+        raise SystemExit(1)
     ok, _ = make("redteam", env={"RGEN_EXPECT": "fixed"})
     if not ok:
         raise SystemExit(1)
@@ -244,8 +247,12 @@ def nightly() -> None:
         raise SystemExit(1)
     RESULTS.append({
         "name": "recovery-fault-injection",
-        "status": "skipped",
-        "reason": "fault-injection recovery suite is a planned follow-up",
+        "status": "partial",
+        "reason": (
+            "unit_kasset drives a deterministic partial nest failure through a recorded "
+            "receipt and an abort; unit_claim refuses resume on an unminted claim. A true "
+            "mid-deploy crash remains out of reach and is recorded as the residual."
+        ),
     })
 
 

@@ -356,7 +356,8 @@ contract outcomeStatus(@outcome, ret) = {
         (true, false, _) => { ret!((false, "case fields")) }
         (true, true, false) => { ret!((false, "adjudicator credential")) }
         (true, true, true) => {
-        new caseState, OracleCase, selfDecide, commitExecution, expireNotify, uriCh in {
+        new caseState, OracleCase, selfDecide, commitExecution, nextAttempt,
+            abandonExecution, abandonDo, expireNotify, uriCh in {
           caseState!({
             "uri": "",
             "kind": caseReq.get("kind"),
@@ -451,10 +452,10 @@ contract outcomeStatus(@outcome, ret) = {
           } |
 
           contract commitExecution(@s, @status, @execStatus, @lastError, @outcome,
-                                   @reply, ret2) = {
+                                   @attempts, @reply, ret2) = {
             for (@s2 <- caseState) {
               caseState!(s2.set("status", status)
-                           .set("execution", {"attempts": 1,
+                           .set("execution", {"attempts": attempts,
                                               "lastError": lastError,
                                               "status": execStatus,
                                               "caseId": s.get("uri"),
@@ -462,6 +463,13 @@ contract outcomeStatus(@outcome, ret) = {
                                               "outcome": outcome}))
             } |
             ret2!(reply)
+          } |
+
+          contract nextAttempt(@s, ret2) = {
+            match s.get("execution") {
+              Nil => { ret2!(1) }
+              e => { ret2!(e.get("attempts") + 1) }
+            }
           } |
 
           contract OracleCase(@"execute", ret2) = {
@@ -472,26 +480,31 @@ contract outcomeStatus(@outcome, ret) = {
                 if (s.get("status") != "decided" && s.get("status") != "executing") {
                   caseState!(s) | ret2!((false, "not decided"))
                 } else {
-                  caseState!(s.set("status", "executing")
-                              .set("execution", {"attempts": 1, "lastError": Nil,
-                                                 "status": "pending",
-                                                 "caseId": s.get("uri"),
-                                                 "decision": s.get("decision")})) |
-                  new aCh in {
-                    subjectApply!("applyDecision", s.get("uri"), s.get("decision"), *aCh) |
-                    for (@a <- aCh) {
-                      match a {
-                        (true, outcome) => {
-                          commitExecution!(s, "executed", "applied", Nil, outcome,
-                                           (true, outcome), *ret2)
-                        }
-                        (false, why) => {
-                          commitExecution!(s, "decided", "failed", why, Nil,
-                                           (false, why), *ret2)
-                        }
-                        _ => {
-                          commitExecution!(s, "decided", "failed", "apply", Nil,
-                                           (false, "apply"), *ret2)
+                  new nCh in {
+                    nextAttempt!(s, *nCh) |
+                    for (@attempts <- nCh) {
+                      caseState!(s.set("status", "executing")
+                                  .set("execution", {"attempts": attempts, "lastError": Nil,
+                                                     "status": "pending",
+                                                     "caseId": s.get("uri"),
+                                                     "decision": s.get("decision")})) |
+                      new aCh in {
+                        subjectApply!("applyDecision", s.get("uri"), s.get("decision"), *aCh) |
+                        for (@a <- aCh) {
+                          match a {
+                            (true, outcome) => {
+                              commitExecution!(s, "executed", "applied", Nil, outcome,
+                                               attempts, (true, outcome), *ret2)
+                            }
+                            (false, why) => {
+                              commitExecution!(s, "decided", "failed", why, Nil,
+                                               attempts, (false, why), *ret2)
+                            }
+                            _ => {
+                              commitExecution!(s, "decided", "failed", "apply", Nil,
+                                               attempts, (false, "apply"), *ret2)
+                            }
+                          }
                         }
                       }
                     }
@@ -499,6 +512,44 @@ contract outcomeStatus(@outcome, ret) = {
                 }
               }
             }
+          } |
+
+          // A decided case can be abandoned by its adjudicator. This is the terminal
+          // path for a case whose subject execution cannot complete (RGA-071).
+          contract OracleCase(@"abandon", dId, ret2) = {
+            new aCh, hCh in {
+              authSubject!(*dId, *aCh) |
+              nowHeight!(*hCh) |
+              for (@(true, who) <- aCh; @now <- hCh) {
+                for (@s <- caseState) {
+                  match (s.get("status"), who == s.get("adjudicator")) {
+                    ("decided", true) => { abandonExecution!(s, now, *ret2) }
+                    (_, false) => { caseState!(s) | ret2!((false, "not adjudicator")) }
+                    _ => { caseState!(s) | ret2!((false, "not decided")) }
+                  }
+                }
+              }
+            }
+          } |
+
+          contract abandonExecution(@s, @now, ret2) = {
+            match s.get("execution") {
+              Nil => { abandonDo!(s, 1, Nil, now, *ret2) }
+              e => { abandonDo!(s, e.get("attempts"), e.get("lastError"), now, *ret2) }
+            }
+          } |
+
+          contract abandonDo(@s, @attempts, @lastError, @now, ret2) = {
+            caseState!(s.set("status", "closed")
+                         .set("execution", {"attempts": attempts,
+                                            "lastError": lastError,
+                                            "status": "abandoned",
+                                            "caseId": s.get("uri"),
+                                            "decision": s.get("decision"),
+                                            "outcome": Nil,
+                                            "abandonedAt": now})
+                         .set("version", s.get("version") + 1)) |
+            ret2!((true, Nil))
           } |
 
           // Expiry restores the subject before the case is marked expired. The

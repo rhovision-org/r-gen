@@ -113,7 +113,7 @@ a public theorem outside the Pareto vocabulary can still escape it. The
 
 `spec/flows/core.yaml` maps every deployed arm to a Lean declaration and one of four
 statuses: `proved-model`, `proved-conformance`, `owed`, `open`. At this checkpoint the
-71 deployed arms are 1 `proved-model`, 35 `proved-conformance`, and 35 `owed`
+72 deployed arms are 1 `proved-model`, 35 `proved-conformance`, and 36 `owed`
 (read-only arms, creation registries, and extensions). `Identity.update` is modeled by
 `ProfileState.updateProfile`. `tools/check_flows.py` enforces coverage, deployment, and
 declaration existence.

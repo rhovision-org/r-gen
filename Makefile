@@ -15,13 +15,13 @@ export DEVNET_PREFIX
 export DEVNET_NODE_MEMORY
 export RGEN_CONTAINER
 
-.PHONY: venv build build-check measure measure-check spec-check parse-check docs docs-check \
+.PHONY: venv venv-ci build build-check measure measure-check spec-check parse-check docs docs-check \
         check-arch check-captures check-placeholders check-money check-core-boundary \
         check-concurrency check-citations check-docs check-docs-links check-suites \
-        check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit check-closeout check-conformance check-hazop hazop-check check-capabilities capabilities-check guard-check style-check audit-control-flow probe-deploy-semantics redteam redteam-capabilities lean-build lean-audit lean-audit-coverage lean-check gen-core-vectors check-core-vectors \
+        check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit check-closeout check-improvement-plan check-registry-trust check-rigor check-conformance check-hazop hazop-check check-capabilities capabilities-check guard-check style-check audit-control-flow probe-deploy-semantics redteam redteam-capabilities lean-build lean-audit lean-audit-coverage lean-check gen-core-vectors check-core-vectors \
         devnet-up devnet-wait down status keys install unit-identity unit-credentials \
         unit-claim unit-kasset unit-value unit-oracle unit-provenance unit-integration \
-        unit-core unit-race unit-all verify \
+        unit-core unit-race unit-install unit-wiring unit-all verify \
         devnet-image devnet-doctor devnet-logs devnet-reset devnet-verify \
         devnet-test-smoke devnet-test-full devnet-test-nightly setup devnet-setup \
         client-lint client-test client-build client-wasm client-check \
@@ -34,6 +34,9 @@ venv:
 	python3 -m venv .venv
 	$(PY) -m pip -q install --upgrade pip
 	$(PY) -m pip -q install -r harness/requirements.txt
+
+venv-ci: venv
+	$(PY) -m pip -q install --require-hashes -r harness/requirements-ci.txt
 
 build:
 	$(PY) tools/build_contracts.py
@@ -96,7 +99,16 @@ check-audit:
 	$(PY) tools/check_audit.py --strict
 
 check-closeout:
-	$(PY) tools/check_closeout.py
+	$(PY) tools/check_closeout.py --strict-s1
+
+check-improvement-plan:
+	$(PY) tools/check_improvement_plan.py --strict
+
+check-registry-trust:
+	$(PY) tools/check_registry_trust.py
+
+check-rigor:
+	$(PY) tools/check_rigor.py
 
 check-conformance:
 	$(PY) tools/check_conformance.py
@@ -148,7 +160,7 @@ lean-check: lean-build check-lean lean-audit lean-audit-coverage check-core-vect
 
 spec-check: build-check measure-check check-arch check-captures check-placeholders \
             check-money check-core-boundary check-concurrency check-citations \
-            check-suites check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit check-closeout check-conformance check-hazop check-capabilities guard-check style-check
+            check-suites check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit check-closeout check-improvement-plan check-registry-trust check-rigor unit-install check-conformance check-hazop check-capabilities guard-check style-check
 
 parse-check:
 	rm -f .devnet/rendered/*.rho
@@ -199,6 +211,7 @@ devnet-test-nightly:
 
 devnet-reset:
 	cd $(RHOLO_DIR) && DEVNET_PREFIX=$(DEVNET_PREFIX) tools/devnet.sh down -v
+	rm -f .devnet/install-state.json deployments/devnet.json
 
 down:
 	cd $(RHOLO_DIR) && DEVNET_PREFIX=$(DEVNET_PREFIX) tools/devnet.sh down
@@ -240,6 +253,12 @@ unit-provenance:
 
 unit-integration:
 	$(PY) harness/integration_core.py
+
+unit-install:
+	$(PY) harness/unit_install.py
+
+unit-wiring:
+	$(PY) harness/unit_wiring.py
 
 unit-core:
 	$(PY) harness/unit_core.py

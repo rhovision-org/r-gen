@@ -116,11 +116,18 @@ def main() -> int:
     reply = fixtures.kasset_nest(oparent, "alice", sorted_refs)
     assertions.expect_refusal("second nest refused while receipt held", reply,
                               "nest in progress")
+    state = fixtures.read(oparent, "get")[1]
+    assertions.expect("nest receipt records the partial batch",
+                      state.get("nestReceipt") is not None, True)
+    assertions.expect("nest receipt records both consumed proofs",
+                      len(state.get("nestReceipt").get("taken")), 2)
     reply = fixtures.kasset_resume_nest(oparent, "alice")
     assertions.expect_refusal("resume keeps the recorded prefix and order", reply,
                               "order")
     reply = fixtures.kasset_abort_nest(oparent, "alice")
     assertions.expect_ok("abort clears the nest receipt", reply)
+    assertions.expect("abort leaves no receipt",
+                      fixtures.read(oparent, "get")[1].get("nestReceipt"), None)
     reply = fixtures.kasset_nest(oparent, "alice", sorted_refs)
     assertions.expect_ok("nest after abort", reply)
     assertions.expect("two children after abort",

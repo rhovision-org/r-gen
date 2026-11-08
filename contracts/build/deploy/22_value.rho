@@ -230,7 +230,11 @@ contract outcomeStatus(@outcome, ret) = {
         for (@r <<- vpRegistryState) {
           match r.get(uri.toString()) {
             Nil => { ret!((false, "unknown value proposition")) }
-            rec => { ret!((true, rec)) }
+            rec => {
+              if (rec.get("uri").toString() != uri.toString()) {
+                ret!((false, "uri mismatch"))
+              } else { ret!((true, rec)) }
+            }
           }
         }
       } |

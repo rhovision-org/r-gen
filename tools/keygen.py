@@ -26,7 +26,7 @@ DEPLOYER_KEY = "a68a6e6cca30f81bd24a719f3145d20e8424bd7b396309b0708a16c7d8000b76
 ACTORS = [
     "alice", "bob", "carol", "dave", "erin", "frank", "mallory",
     "ida", "idb", "wa", "wb", "ka", "kb", "kc", "ta", "tb", "tc", "pa",
-    "admin1", "admin2", "admin3",
+    "admin1", "admin2", "admin3", "issuer",
 ]
 
 

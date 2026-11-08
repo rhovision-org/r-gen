@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { initWasm, Rgen } from "../wasm";
 import * as db from "./db";
+import { assertPinnedRoot } from "./manifest";
 import {
   DEVNET,
   manifestUrl,
@@ -76,23 +77,6 @@ async function retry<T>(work: () => Promise<T>, attempts = 4): Promise<T> {
   throw last;
 }
 
-// A manifest is an unsigned file of URI designations. When the build pins a Root,
-// a substituted manifest is refused before any deploy is signed (RGA-051).
-function assertPinnedRoot(document: string): string {
-  const pinned = import.meta.env.VITE_RGEN_ROOT_URI as string | undefined;
-  if (!pinned) return document;
-  let root: unknown;
-  try {
-    root = JSON.parse(document).root_uri;
-  } catch {
-    throw new Error("manifest is not valid JSON");
-  }
-  if (root !== pinned) {
-    throw new Error(`manifest Root ${String(root)} does not match the pinned Root ${pinned}`);
-  }
-  return document;
-}
-
 async function manifestFor(profile: NetworkProfile, node: string): Promise<string> {
   // A deployed manifest wins over a cached one: a reinstall changes the Root, and an old
   // Root resolves to nothing. The cache is only a fallback when the fetch is unavailable.
@@ -100,7 +84,7 @@ async function manifestFor(profile: NetworkProfile, node: string): Promise<strin
   try {
     const response = await fetch(url, { cache: "no-store" });
     if (response.ok) {
-      const document = assertPinnedRoot(await response.text());
+      const document = assertPinnedRoot(await response.text(), profile);
       localStorage.setItem(manifestKey(node), document);
       return document;
     }
@@ -108,7 +92,7 @@ async function manifestFor(profile: NetworkProfile, node: string): Promise<strin
     // offline or a static host without the file
   }
   const stored = localStorage.getItem(manifestKey(node));
-  if (stored) return assertPinnedRoot(stored);
+  if (stored) return assertPinnedRoot(stored, profile);
   throw new Error(
     `no manifest at ${url} and none saved. Install the contracts, then paste deployments/${profile.manifestPath} in Settings.`,
   );
@@ -184,7 +168,7 @@ export const useWallet = create<WalletState>((set, get) => ({
   setManifest: async (document: string) => {
     const node = get().node;
     const profile = networkForNode(node);
-    const checked = assertPinnedRoot(document);
+    const checked = assertPinnedRoot(document, profile);
     const client = new Rgen(node, checked);
     client.set_network(
       profile.shard,

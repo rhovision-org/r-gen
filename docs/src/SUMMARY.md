@@ -34,6 +34,8 @@
 - [Object capabilities](reference/object-capabilities.md)
 - [Audit charter](reference/audit-charter.md)
 - [Close-out ledger](reference/closeout.md)
+- [Improvement plan](reference/improvement-plan.md)
+- [External review packet](reference/external-review-packet.md)
 - [HAZOP](reference/hazop.md)
 - [Workflow HAZOP: multi-agent run](reference/workflow-hazop.md)
 - [Red team](reference/red-team.md)

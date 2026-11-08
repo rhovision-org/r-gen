@@ -50,8 +50,14 @@ def ensure_identity(name: str, handle: str, display: str = ""):
     return identity(name, handle, display)
 
 
+def identity_resume(name: str):
+    subject = actors.address(name)
+    return call_uri(comp("identity-factory"), "resume", [Raw("*dId"), subject], key=name)
+
+
 def issue(subject: str, ctype: str, discipline: str, jurisdiction: str, role: str,
-          level: int = 1, expires_at: int = 0, issuer: str = "deployer"):
+          level: int = 1, expires_at: int = 0, issuer: str = "issuer"):
+    actors.ensure_vault(issuer)
     req = {
         "subject": subject, "ctype": ctype, "discipline": discipline,
         "jurisdiction": jurisdiction, "role": role, "level": level,
