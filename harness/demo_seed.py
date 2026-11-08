@@ -248,9 +248,7 @@ def main() -> int:
     reply = fixtures.oracle_execute(case_uri)
     assertions.expect_ok("oracle execution", reply)
 
-    prov = fixtures.provenance_create(
-        {"type": "kasset", "id": kasset_a, "uri": kasset_a}, [alice, bob, carol]
-    )
+    prov = fixtures.provenance_create(kasset_a, [alice, bob, carol])
     assertions.expect_ok("provenance", prov)
     prov_uri = prov[1]["uri"]
     report_hash = digest("inspection-report.md")

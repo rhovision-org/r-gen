@@ -103,16 +103,17 @@ of the pre-state.
 
 ## Axiom audit
 
-`tools/check_lean.py --audit` elaborates `RGen/Audit.lean`. On 2026-11-07 the listed
-241 theorems reported only `propext` and `Quot.sound` (`Classical.choice` is permitted
-but unused). `--audit-coverage` reports 129 Pareto checks. The list is hand-maintained;
-the [proof audit](proof-audit.md) records that gap as RGA-006.
+`tools/check_lean.py --audit` elaborates `RGen/Audit.lean`. On 2026-11-08 the listed
+244 theorems reported only `propext` and `Quot.sound` (`Classical.choice` is permitted
+but unused). `--audit-coverage` reports 131 Pareto checks. The list is hand-maintained;
+a public theorem outside the Pareto vocabulary can still escape it. The
+[proof audit](proof-audit.md) records that gap as RGA-006.
 
 ## Manifest and corpus
 
 `spec/flows/core.yaml` maps every deployed arm to a Lean declaration and one of four
 statuses: `proved-model`, `proved-conformance`, `owed`, `open`. At this checkpoint the
-67 deployed arms are 0 `proved-model`, 35 `proved-conformance`, and 32 `owed`
+71 deployed arms are 1 `proved-model`, 35 `proved-conformance`, and 35 `owed`
 (read-only arms, creation registries, and extensions). `Identity.update` is modeled by
 `ProfileState.updateProfile`. `tools/check_flows.py` enforces coverage, deployment, and
 declaration existence.

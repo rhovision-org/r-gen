@@ -40,9 +40,20 @@ in {
     }
   } |
 
+  rl!(`__ROOT_URI__`, *rootCh) |
   rl!(`__CREDENTIAL_FACTORY_URI__`, *cfCh) |
   rl!(`__ORACLE_FACTORY_URI__`, *ofCh) |
-  for (CredentialFactory <- cfCh; OracleFactory <- ofCh) {
+  for (CredentialFactory <- cfCh; OracleFactory <- ofCh; Root <- rootCh) {
+    // The VP hands its private Apply to the oracle factory on dispute. Publish the
+    // factory only when the wired URI matches the Root-registered Oracle component
+    // (RGA-070 / CHZ-030).
+    new wiringCh in {
+    Root!("resolve", "component:oracle-factory", *wiringCh) |
+    for (@r <- wiringCh) {
+    match r {
+    (true, oracleUri, _) => {
+    if (oracleUri.toString() != `__ORACLE_FACTORY_URI__`.toString()) { Nil }
+    else {
     new ValuePropositionFactory in {
       new vpRegistryState in {
       vpRegistryState!({}) |
@@ -68,7 +79,8 @@ in {
                   ret!((false, "fields"))
                 } else {
                   new vpState, ValueProposition, Apply, openVpDispute,
-                      vpApplyGate, vpApplyOutcome, uriCh in {
+                      vpApplyGate, vpApplyOutcome, vpExpireCase, vpExpireStatus,
+                      vpExpireDo, uriCh in {
                     vpState!({
                       "uri": "",
                       "proposer": proposer,
@@ -157,7 +169,7 @@ in {
                                   for (@vf <- vfCh) {
                                     match vf {
                                       (true, _) => {
-                                        proveAndCheck!(credentialUri, *dId2,
+                                        proveAndCheck!(*CredentialFactory, credentialUri, *dId2,
                                           s.get("selectionCriteria"), validator, height, *okCh) |
                                         for (@ok <- okCh) {
                                           if (ok) {
@@ -229,16 +241,31 @@ in {
                     } |
 
                     contract openVpDispute(@s, @who, @parties, @caseReq, dId, ret2) = {
-                      new oCh in {
-                        OracleFactory!("open", *dId, s.get("subjectRef"), {
+                      new proofState, Proof, proofCh, oCh in {
+                        proofState!({
+                          "data": {
+                            "kind": "vp",
+                            "subjectRef": s.get("subjectRef"),
+                            "subjectUri": s.get("uri").toString(),
+                            "parties": parties,
+                            "discipline": s.get("selectionCriteria").get("discipline"),
+                            "jurisdiction": s.get("selectionCriteria").get("jurisdiction")},
+                          "used": false}) |
+                        contract Proof(@"take", ret3) = {
+                          for (@p <- proofState) {
+                            if (p.get("used")) {
+                              proofState!(p) | ret3!((false, "used"))
+                            } else {
+                              proofState!(p.set("used", true)) |
+                              ret3!((true, p.get("data")))
+                            }
+                          }
+                        } |
+                        proofCh!(bundle+{*Proof}) |
+                        OracleFactory!("openBound", *dId, *proofCh, {
                           "kind": caseReq.get("kind"),
                           "openedBy": who,
-                          "parties": parties,
                           "groundsHash": caseReq.get("groundsHash"),
-                          "requirement": {"ctype": "Oracle",
-                                          "discipline": s.get("selectionCriteria").get("discipline"),
-                                          "jurisdiction": s.get("selectionCriteria").get("jurisdiction"),
-                                          "role": "oracle", "minLevel": 1},
                           "adjudicator": caseReq.get("adjudicator"),
                           "adjudicatorCredentialUri": caseReq.get("adjudicatorCredentialUri"),
                           "deadlineHeight": caseReq.get("deadlineHeight")
@@ -248,6 +275,7 @@ in {
                             (true, caseRef) => {
                               vpState!(s.set("status", "disputed")
                                          .set("dispute", caseRef)
+                                         .set("disputePrevStatus", s.get("status"))
                                          .set("version", s.get("version") + 1)) |
                               ret2!((true, caseRef))
                             }
@@ -329,6 +357,39 @@ in {
                       }
                     } |
 
+                    contract Apply(@"expireCase", @caseId, ret2) = {
+                      for (@s <- vpState) { vpExpireCase!(s, caseId, *ret2) }
+                    } |
+
+                    contract vpExpireCase(@s, @caseId, ret2) = {
+                      match s.get("dispute") {
+                        Nil => { vpState!(s) | ret2!((false, "no dispute")) }
+                        d => {
+                          if (d.get("id") != caseId) {
+                            vpState!(s) | ret2!((false, "case mismatch"))
+                          } else {
+                            if (s.get("status") != "disputed") {
+                              vpState!(s) | ret2!((true, "already"))
+                            } else { vpExpireStatus!(s, d, *ret2) }
+                          }
+                        }
+                      }
+                    } |
+
+                    contract vpExpireStatus(@s, @d, ret2) = {
+                      match s.get("disputePrevStatus") {
+                        Nil => { vpExpireDo!(s, d, "proposed", *ret2) }
+                        p => { vpExpireDo!(s, d, p, *ret2) }
+                      }
+                    } |
+
+                    contract vpExpireDo(@s, @d, @prev, ret2) = {
+                      vpState!(s.set("status", prev)
+                                .set("dispute", d.set("status", "expired"))
+                                .set("version", s.get("version") + 1)) |
+                      ret2!((true, prev))
+                    } |
+
                     rs!(bundle+{*ValueProposition}, *uriCh) |
                     for (@uri <- uriCh) {
                       for (@s2 <- vpState) {
@@ -354,12 +415,15 @@ in {
 
       rs!(bundle+{*ValuePropositionFactory}, *cFactory) |
       for (@uri <- cFactory) {
-        rl!(`__ROOT_URI__`, *rootCh) |
-        for (Root <- rootCh) {
-          Root!("register", "component:value-proposition-factory", uri, 1, "value",
-                *deployerId, *ack1) |
-          for (@r <- ack1) { deployId!([("value-proposition-factory", uri)]) }
-        }
+        Root!("register", "component:value-proposition-factory", uri, 1, "value",
+              *deployerId, *ack1) |
+        for (@r <- ack1) { deployId!([("value-proposition-factory", uri)]) }
+      }
+      }
+      }
+      }
+      }
+    _ => { Nil }
       }
       }
     }

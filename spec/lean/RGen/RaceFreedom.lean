@@ -61,13 +61,21 @@ theorem core_proof_payloads_consumed {α : Type} {w : VWorld (ProofState α)}
       CommitOutcome.isRejected ((proofEvent c (n + 1)).apply w') = true :=
   proof_take_once_versioned hcell hp
 
-/-- Independent traces over disjoint stores commute (the existing `L1` theorem). -/
-theorem core_independent_cells_commute {α : Type} (s : Store α)
+/-- Independent traces over disjoint stores commute (the `L1` theorem). -/
+theorem core_independent_stores_commute {α : Type} (s : Store α)
     (ops1 ops2 : List (Op α)) (hdisj : FootprintDisjoint ops1 ops2)
     {sA sB : Store α}
     (h1 : run s [] ops1 = some (sA, [])) (h2 : run s [] ops2 = some (sB, [])) :
     run s [] (ops1 ++ ops2) = run s [] (ops2 ++ ops1) :=
   disjoint_cells_commute_wf s ops1 ops2 hdisj h1 h2
+
+/-- Independent event traces over disjoint versioned cells commute. This is the
+versioned replacement for the plain-`Store` theorem; it is quantified over `VWorld` and
+`Event`, the same model used by the race-freedom theorem. -/
+theorem core_independent_cells_commute {σ : Type} (w : VWorld σ)
+    (es1 es2 : List (Event σ)) (hdisj : DisjointEvents es1 es2) :
+    runExec w (es1 ++ es2) = runExec w (es2 ++ es1) :=
+  runExec_commute_disjoint w es1 es2 hdisj
 
 
 /-- Events for arms on distinct cells reach the same final world in either order. This is

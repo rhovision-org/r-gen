@@ -16,6 +16,7 @@ new
   listHas, listHasId, listHasAny, listHas3,
   listHasEq, listHasIdEq, listHasAnyEq, listHas3Eq,
   CredentialFactory, openCaseCheck, caseReqOk, outcomeStatus,
+  openBoundGo, openBoundBody,
   checkCredentialProof, proveAndCheck, checkValidatedProof, proveValidatedAndCheck,
   proveAndCheckCall, proveAndCheckReply, proveTakeAndCheck,
   proveValidatedCall, proveValidatedReply, proveValidatedTake
@@ -130,7 +131,7 @@ contract listHas3Eq(@head, @a, @b, @c, @tail, ret) = {
 // Each check is a flat helper: one `for`, one `match`, and a direct boolean return. No
 // nested match/if chain.
 
-contract checkCredentialProof(Proof, @validator, @credentialUri, @height, ret) = {
+contract checkCredentialProof(Proof, @validator, @credentialUri, @height, @rq, ret) = {
   new tCh in {
     Proof!("take", *tCh) |
     for (@t <- tCh) {
@@ -138,7 +139,8 @@ contract checkCredentialProof(Proof, @validator, @credentialUri, @height, ret) =
         (true, data) => {
           ret!(data.get("subject") == validator
             && data.get("credentialUri") == credentialUri
-            && data.get("atHeight") == height)
+            && data.get("atHeight") == height
+            && data.get("requirement") == rq)
         }
         _ => { ret!(false) }
       }
@@ -146,11 +148,21 @@ contract checkCredentialProof(Proof, @validator, @credentialUri, @height, ret) =
   }
 } |
 
-contract proveAndCheck(@credentialUri, dId, @rq, @validator, @height, ret) = {
-  new credCh in {
-    rl!(credentialUri, *credCh) |
-    for (Credential <- credCh) {
-      proveAndCheckCall!(*Credential, credentialUri, *dId, rq, validator, height, *ret)
+contract proveAndCheck(credentialFactory, @credentialUri, dId, @rq, @validator, @height, ret) = {
+  new vCh in {
+    credentialFactory!("verify", credentialUri, *vCh) |
+    for (@vf <- vCh) {
+      match vf {
+        (true, _) => {
+          new credCh in {
+            rl!(credentialUri, *credCh) |
+            for (Credential <- credCh) {
+              proveAndCheckCall!(*Credential, credentialUri, *dId, rq, validator, height, *ret)
+            }
+          }
+        }
+        _ => { ret!(false) }
+      }
     }
   }
 } |
@@ -159,22 +171,22 @@ contract proveAndCheckCall(Credential, @credentialUri, dId, @rq, @validator, @he
   new statusCh, proofCh in {
     Credential!("prove", *dId, rq, *statusCh, *proofCh) |
     for (@s <- statusCh) {
-      proveAndCheckReply!(s, *proofCh, validator, credentialUri, height, *ret)
+      proveAndCheckReply!(s, *proofCh, validator, credentialUri, height, rq, *ret)
     }
   }
 } |
 
-contract proveAndCheckReply(@s, proofCh, @validator, @credentialUri, @height, ret) = {
+contract proveAndCheckReply(@s, proofCh, @validator, @credentialUri, @height, @rq, ret) = {
   match s {
-    (true, _) => { proveTakeAndCheck!(*proofCh, validator, credentialUri, height, *ret) }
+    (true, _) => { proveTakeAndCheck!(*proofCh, validator, credentialUri, height, rq, *ret) }
     _ => { ret!(false) }
   }
 } |
 
-contract proveTakeAndCheck(proofCh, @validator, @credentialUri, @height, ret) = {
+contract proveTakeAndCheck(proofCh, @validator, @credentialUri, @height, @rq, ret) = {
   new okCh in {
     for (Proof <- proofCh) {
-      checkCredentialProof!(*Proof, validator, credentialUri, height, *okCh) |
+      checkCredentialProof!(*Proof, validator, credentialUri, height, rq, *okCh) |
       for (@ok <- okCh) { ret!(ok) }
     }
   }
@@ -255,7 +267,10 @@ contract outcomeStatus(@outcome, ret) = {
                       for (@g <- gCh) {
                         match g {
                           (true, cred) => {
-                            ret!(cred.get("subject") == caseReq.get("adjudicator"))
+                            ret!(cred.get("subject") == caseReq.get("adjudicator")
+                              && cred.get("status") == "active"
+                              && (cred.get("expiresAt") == 0
+                                  || caseReq.get("deadlineHeight") <= cred.get("expiresAt")))
                           }
                           _ => { ret!(false) }
                         }
@@ -290,7 +305,44 @@ contract outcomeStatus(@outcome, ret) = {
         }
       } |
 
-      contract OracleFactory(@"open", dId, @subjectRef, @caseReq, subjectApply, ret) = {
+      // Raw open is gone: the subject closure mints a one-shot snapshot and the
+      // factory derives subjectRef, parties and the oracle requirement from it.
+      // A caller cannot substitute a different subject or party list (RGA-023).
+      contract OracleFactory(@"openBound", dId, subjectProof, @caseReq, subjectApply, ret) = {
+        new pCh in {
+          for (Proof <- subjectProof) {
+            Proof!("take", *pCh) |
+            for (@p <- pCh) {
+              match p {
+                (true, snapshot) => {
+                  match snapshot {
+                    {"subjectRef": subjectRef, "parties": parties,
+                     "discipline": discipline, "jurisdiction": jurisdiction, ..._} => {
+                      openBoundGo!(snapshot, subjectRef, parties, discipline, jurisdiction,
+                                   caseReq, *dId, *subjectApply, *ret)
+                    }
+                    _ => { ret!((false, "subject proof")) }
+                  }
+                }
+                _ => { ret!((false, "subject proof")) }
+              }
+            }
+          }
+        }
+      } |
+
+      contract openBoundGo(@snapshot, @subjectRef, @parties, @discipline, @jurisdiction,
+                           @caseReq, dId, subjectApply, ret) = {
+        openBoundBody!(caseReq.set("subjectRef", subjectRef)
+                                .set("parties", parties)
+                                .set("requirement", {"ctype": "Oracle",
+                                                     "discipline": discipline,
+                                                     "jurisdiction": jurisdiction,
+                                                     "role": "oracle", "minLevel": 1}),
+                       snapshot, *dId, *subjectApply, *ret)
+      } |
+
+      contract openBoundBody(@caseReq, @snapshot, dId, subjectApply, ret) = {
         new aCh, okCh, hCh in {
         authSubject!(*dId, *aCh) |
         openCaseCheck!(caseReq, *okCh) |
@@ -299,17 +351,17 @@ contract outcomeStatus(@outcome, ret) = {
         new ckCh in {
         caseReqOk!(caseReq, opener, now, *ckCh) |
         for (@caseOk <- ckCh) {
-        match (opener == caseReq.get("openedBy"), subjectRef != Nil, caseOk, ok) {
-        (false, _, _, _) => { ret!((false, "not opener")) }
-        (true, false, _, _) => { ret!((false, "case fields")) }
-        (true, true, false, _) => { ret!((false, "case fields")) }
-        (true, true, true, false) => { ret!((false, "adjudicator credential")) }
-        (true, true, true, true) => {
-        new caseState, OracleCase, selfDecide, commitExecution, uriCh in {
+        match (opener == caseReq.get("openedBy"), caseOk, ok) {
+        (false, _, _) => { ret!((false, "not opener")) }
+        (true, false, _) => { ret!((false, "case fields")) }
+        (true, true, false) => { ret!((false, "adjudicator credential")) }
+        (true, true, true) => {
+        new caseState, OracleCase, selfDecide, commitExecution, expireNotify, uriCh in {
           caseState!({
             "uri": "",
             "kind": caseReq.get("kind"),
-            "subjectRef": subjectRef,
+            "subjectRef": caseReq.get("subjectRef"),
+            "subjectUri": snapshot.get("subjectUri"),
             "openedBy": caseReq.get("openedBy"),
             "parties": caseReq.get("parties"),
             "groundsHash": caseReq.get("groundsHash"),
@@ -366,7 +418,7 @@ contract outcomeStatus(@outcome, ret) = {
                          now > s.get("deadlineHeight")) {
                     (true, true, false) => {
                       new okCh in {
-                        proveAndCheck!(s.get("adjudicatorCredentialUri"), *dId,
+                        proveAndCheck!(*CredentialFactory, s.get("adjudicatorCredentialUri"), *dId,
                           s.get("requirement"), who, now, *okCh) |
                         new osCh in {
                           outcomeStatus!(decision.get("outcome"), *osCh) |
@@ -449,22 +501,45 @@ contract outcomeStatus(@outcome, ret) = {
             }
           } |
 
+          // Expiry restores the subject before the case is marked expired. The
+          // "expiring" receipt makes a blocked apply retryable (RGA-064).
           contract OracleCase(@"expire", ret2) = {
             new hCh in {
               nowHeight!(*hCh) |
               for (@now <- hCh) {
                 for (@s <- caseState) {
-                  if (s.get("status") != "open") {
-                    caseState!(s) | ret2!((false, "not open"))
-                  } else {
-                    if (now <= s.get("deadlineHeight")) {
-                      caseState!(s) | ret2!((false, "not expired"))
-                    } else {
-                      caseState!(s.set("status", "expired")
-                                  .set("version", s.get("version") + 1)) |
-                      ret2!((true, Nil))
+                  match s.get("status") {
+                    "expiring" => { expireNotify!(s, *ret2) }
+                    "open" => {
+                      if (now <= s.get("deadlineHeight")) {
+                        caseState!(s) | ret2!((false, "not expired"))
+                      } else {
+                        caseState!(s.set("status", "expiring")
+                                    .set("version", s.get("version") + 1)) |
+                        expireNotify!(s, *ret2)
+                      }
                     }
+                    "expired" => { caseState!(s) | ret2!((true, "already expired")) }
+                    _ => { caseState!(s) | ret2!((false, "not open")) }
                   }
+                }
+              }
+            }
+          } |
+
+          contract expireNotify(@s, ret2) = {
+            new aCh in {
+              subjectApply!("expireCase", s.get("uri"), *aCh) |
+              for (@a <- aCh) {
+                for (@s2 <- caseState) {
+                  caseState!(s2.set("status", "expired")
+                               .set("execution", {"attempts": 1, "lastError": Nil,
+                                                  "status": "expired",
+                                                  "caseId": s2.get("uri"),
+                                                  "decision": s2.get("decision"),
+                                                  "expireApply": a})
+                               .set("version", s2.get("version") + 1)) |
+                  ret2!((true, Nil))
                 }
               }
             }
@@ -489,7 +564,7 @@ contract outcomeStatus(@outcome, ret) = {
           }
         }
         }
-        _ => { ret!((false, "not opener")) }
+        _ => { ret!((false, "case fields")) }
         }
         }
         }

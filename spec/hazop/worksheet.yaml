@@ -1111,7 +1111,7 @@ rows:
   action: RR-10
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-ROOT-003
   node: root-install
   guide_word: Less
@@ -1127,7 +1127,7 @@ rows:
   action: RR-10
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-ROOT-004
   node: root-install
   guide_word: As well as
@@ -1143,7 +1143,7 @@ rows:
   action: RR-10
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-ROOT-005
   node: root-install
   guide_word: Part of
@@ -1159,7 +1159,7 @@ rows:
   action: RR-10
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-ROOT-006
   node: root-install
   guide_word: Reverse
@@ -1175,7 +1175,7 @@ rows:
   action: accept-risk
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-ROOT-007
   node: root-install
   guide_word: Other than
@@ -1191,7 +1191,7 @@ rows:
   action: RR-10
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-ROOT-008
   node: root-install
   guide_word: Before
@@ -1255,7 +1255,7 @@ rows:
   action: accept-risk
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-ROOT-012
   node: root-install
   guide_word: Substitute/confused-deputy
@@ -1319,7 +1319,7 @@ rows:
   action: LR-00
   finding: RGA-013
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-ID-003
   node: identity
   guide_word: Less
@@ -1335,7 +1335,7 @@ rows:
   action: LR-08
   finding: RGA-013
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-ID-004
   node: identity
   guide_word: As well as
@@ -1367,7 +1367,7 @@ rows:
   action: LR-08
   finding: RGA-013
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-ID-006
   node: identity
   guide_word: Reverse
@@ -1383,7 +1383,7 @@ rows:
   action: accept-risk
   finding: RGA-008
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-ID-007
   node: identity
   guide_word: Other than
@@ -1463,7 +1463,7 @@ rows:
   action: RR-11
   finding: RGA-031
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-CRED-001
   node: issuer-credential-proof
   guide_word: No/Not
@@ -1495,7 +1495,7 @@ rows:
   action: accept-risk
   finding: RGA-004
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-CRED-003
   node: issuer-credential-proof
   guide_word: Less
@@ -1543,7 +1543,7 @@ rows:
   action: LR-01
   finding: RGA-004
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-CRED-006
   node: issuer-credential-proof
   guide_word: Reverse
@@ -1607,7 +1607,7 @@ rows:
   action: LR-08
   finding: RGA-004
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-CRED-010
   node: issuer-credential-proof
   guide_word: Before
@@ -1671,7 +1671,7 @@ rows:
   action: LR-01
   finding: RGA-004
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-CRED-014
   node: issuer-credential-proof
   guide_word: Substitute/confused-deputy
@@ -1703,7 +1703,7 @@ rows:
   action: RR-11
   finding: RGA-002
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-CLAIM-001
   node: claim-validation
   guide_word: No/Not
@@ -1767,7 +1767,7 @@ rows:
   action: RR-04
   finding: RGA-020
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-CLAIM-005
   node: claim-validation
   guide_word: Part of
@@ -1783,7 +1783,7 @@ rows:
   action: RR-04
   finding: RGA-020
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-CLAIM-006
   node: claim-validation
   guide_word: Reverse
@@ -1815,7 +1815,7 @@ rows:
   action: RR-04
   finding: RGA-020
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-CLAIM-008
   node: claim-validation
   guide_word: Late
@@ -1895,7 +1895,7 @@ rows:
   action: RR-11
   finding: RGA-032
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-CLAIM-013
   node: claim-validation
   guide_word: Stale
@@ -1927,7 +1927,7 @@ rows:
   action: LR-08
   finding: RGA-004
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-CLAIM-015
   node: claim-validation
   guide_word: Partial commit
@@ -1943,7 +1943,7 @@ rows:
   action: RR-11
   finding: RGA-032
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-KASSET-001
   node: kasset-nesting
   guide_word: No/Not
@@ -1991,7 +1991,7 @@ rows:
   action: LR-01
   finding: RGA-004
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-KASSET-004
   node: kasset-nesting
   guide_word: As well as
@@ -2103,7 +2103,7 @@ rows:
   action: LR-01
   finding: RGA-004
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-KASSET-011
   node: kasset-nesting
   guide_word: After
@@ -2183,7 +2183,7 @@ rows:
   action: RR-11
   finding: RGA-033
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-VP-001
   node: value-proposition
   guide_word: No/Not
@@ -2263,7 +2263,7 @@ rows:
   action: RR-03
   finding: RGA-021
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-VP-006
   node: value-proposition
   guide_word: Reverse
@@ -2391,7 +2391,7 @@ rows:
   action: RR-03
   finding: RGA-021
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-VP-014
   node: value-proposition
   guide_word: Substitute/confused-deputy
@@ -2423,7 +2423,7 @@ rows:
   action: RR-11
   finding: RGA-021
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-ORACLE-001
   node: oracle
   guide_word: No/Not
@@ -2471,7 +2471,7 @@ rows:
   action: LR-01
   finding: RGA-004
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-ORACLE-004
   node: oracle
   guide_word: As well as
@@ -2487,7 +2487,7 @@ rows:
   action: RR-01
   finding: RGA-023
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-ORACLE-005
   node: oracle
   guide_word: Part of
@@ -2503,7 +2503,7 @@ rows:
   action: RR-01
   finding: RGA-023
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-ORACLE-006
   node: oracle
   guide_word: Reverse
@@ -2631,7 +2631,7 @@ rows:
   action: RR-08
   finding: RGA-024
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-ORACLE-014
   node: oracle
   guide_word: Substitute/confused-deputy
@@ -2663,7 +2663,7 @@ rows:
   action: RR-08
   finding: RGA-024
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-PROV-001
   node: provenance
   guide_word: No/Not
@@ -2695,7 +2695,7 @@ rows:
   action: RR-02
   finding: RGA-022
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-PROV-003
   node: provenance
   guide_word: Less
@@ -2711,7 +2711,7 @@ rows:
   action: RR-02
   finding: RGA-022
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-PROV-004
   node: provenance
   guide_word: As well as
@@ -2727,7 +2727,7 @@ rows:
   action: accept-risk
   finding: RGA-022
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-PROV-005
   node: provenance
   guide_word: Part of
@@ -2743,7 +2743,7 @@ rows:
   action: RR-02
   finding: RGA-022
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-PROV-006
   node: provenance
   guide_word: Reverse
@@ -2775,7 +2775,7 @@ rows:
   action: RR-02
   finding: RGA-022
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-PROV-008
   node: provenance
   guide_word: Before
@@ -2807,7 +2807,7 @@ rows:
   action: accept-risk
   finding: RGA-022
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-PROV-010
   node: provenance
   guide_word: Duplicate/Replay
@@ -2839,7 +2839,7 @@ rows:
   action: RR-02
   finding: RGA-022
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-PROV-012
   node: provenance
   guide_word: Substitute/confused-deputy
@@ -2855,7 +2855,7 @@ rows:
   action: RR-02
   finding: RGA-022
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-PROV-013
   node: provenance
   guide_word: Partial commit
@@ -2887,7 +2887,7 @@ rows:
   action: RR-10
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-REG-002
   node: registries-factories
   guide_word: More
@@ -2903,7 +2903,7 @@ rows:
   action: RR-10
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-REG-003
   node: registries-factories
   guide_word: Less
@@ -2919,7 +2919,7 @@ rows:
   action: RR-10
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-REG-004
   node: registries-factories
   guide_word: As well as
@@ -2935,7 +2935,7 @@ rows:
   action: RR-10
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-REG-005
   node: registries-factories
   guide_word: Part of
@@ -2951,7 +2951,7 @@ rows:
   action: RR-10
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-REG-006
   node: registries-factories
   guide_word: Reverse
@@ -2983,7 +2983,7 @@ rows:
   action: LR-06
   finding: RGA-005
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-REG-008
   node: registries-factories
   guide_word: Before
@@ -2999,7 +2999,7 @@ rows:
   action: RR-11
   finding: RGA-031
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-REG-009
   node: registries-factories
   guide_word: After
@@ -3015,7 +3015,7 @@ rows:
   action: RR-11
   finding: RGA-031
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-REG-010
   node: registries-factories
   guide_word: Duplicate/Replay
@@ -3031,7 +3031,7 @@ rows:
   action: RR-10
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-REG-011
   node: registries-factories
   guide_word: Stale
@@ -3063,7 +3063,7 @@ rows:
   action: RR-10
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-REG-013
   node: registries-factories
   guide_word: Partial commit
@@ -3079,7 +3079,7 @@ rows:
   action: RR-11
   finding: RGA-031
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-DEPLOY-001
   node: deployment-phlo
   guide_word: No/Not
@@ -3111,7 +3111,7 @@ rows:
   action: RR-05
   finding: RGA-025
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-DEPLOY-003
   node: deployment-phlo
   guide_word: Less
@@ -3127,7 +3127,7 @@ rows:
   action: accept-risk
   finding: RGA-025
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-DEPLOY-004
   node: deployment-phlo
   guide_word: As well as
@@ -3143,7 +3143,7 @@ rows:
   action: accept-risk
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-DEPLOY-005
   node: deployment-phlo
   guide_word: Part of
@@ -3175,7 +3175,7 @@ rows:
   action: accept-risk
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-DEPLOY-007
   node: deployment-phlo
   guide_word: Other than
@@ -3191,7 +3191,7 @@ rows:
   action: accept-risk
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-DEPLOY-008
   node: deployment-phlo
   guide_word: Late
@@ -3255,7 +3255,7 @@ rows:
   action: RR-08
   finding: RGA-024
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-DEPLOY-012
   node: deployment-phlo
   guide_word: Duplicate/Replay
@@ -3271,7 +3271,7 @@ rows:
   action: accept-risk
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-DEPLOY-013
   node: deployment-phlo
   guide_word: Stale
@@ -3287,7 +3287,7 @@ rows:
   action: accept-risk
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-DEPLOY-014
   node: deployment-phlo
   guide_word: Substitute/confused-deputy
@@ -3303,7 +3303,7 @@ rows:
   action: RR-10
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-DEPLOY-015
   node: deployment-phlo
   guide_word: Partial commit
@@ -3319,7 +3319,7 @@ rows:
   action: accept-risk
   finding: RGA-029
   negative: false
-  disposition: open
+  disposition: accept-risk
 - id: HZ-CRED-016
   node: issuer-credential-proof
   guide_word: Substitute/confused-deputy
@@ -3335,7 +3335,7 @@ rows:
   action: RR-06
   finding: RGA-027
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-CLAIM-016
   node: claim-validation
   guide_word: Other than
@@ -3351,7 +3351,7 @@ rows:
   action: RR-07
   finding: RGA-026
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-VP-016
   node: value-proposition
   guide_word: Other than
@@ -3367,7 +3367,7 @@ rows:
   action: RR-07
   finding: RGA-026
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-ORACLE-016
   node: oracle
   guide_word: Other than
@@ -3383,7 +3383,7 @@ rows:
   action: RR-07
   finding: RGA-026
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-ID-012
   node: identity
   guide_word: No/Not
@@ -3399,7 +3399,7 @@ rows:
   action: RR-09
   finding: RGA-028
   negative: false
-  disposition: open
+  disposition: fixed
 - id: HZ-KASSET-016
   node: kasset-nesting
   guide_word: More
@@ -3415,4 +3415,4 @@ rows:
   action: RR-05
   finding: RGA-025
   negative: false
-  disposition: open
+  disposition: fixed

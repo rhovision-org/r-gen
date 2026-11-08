@@ -28,6 +28,8 @@ def main() -> int:
     assertions.expect_ok("create claim", reply)
     claim_uri = reply[1]["uri"]
     assertions.expect("claim open", fixtures.read(claim_uri, "get")[1].get("status"), "open")
+    reply = fixtures.claim_resume(claim_uri, "alice")
+    assertions.expect_refusal("resume open claim refused", reply, "not resumable")
 
     # Comment no longer requires directory registration; frank has no identity.
     reply = fixtures.claim_comment(claim_uri, "frank", {"hash": "frank-comment"})
@@ -63,6 +65,11 @@ def main() -> int:
     reply = fixtures.read(claim2_uri, "get")
     assertions.expect("claim validated", reply[1].get("status"), "validated")
     assertions.expect("one kasset ref", reply[1].get("kassetRef").get("uri"), kasset_uri)
+    reply = fixtures.claim_resume(claim2_uri, "alice")
+    assertions.expect_refusal("resume final claim refused", reply, "not resumable")
+    assertions.expect("resume cannot change kasset ref",
+                      fixtures.read(claim2_uri, "get")[1].get("kassetRef").get("uri"),
+                      kasset_uri)
     reply = fixtures.claim_validate(claim2_uri, bob_cred, "bob",
                                     suite_base.validation(bob_cred, "invalid"))
     assertions.expect_refusal("second validate refused", reply, "not open")
@@ -104,6 +111,15 @@ def main() -> int:
     past = suite_base.claim_req(addrs["alice"])
     past["deadlineHeight"] = 0
     assertions.expect_refusal("past deadline refused", fixtures.claim("alice", past), "fields")
+
+    # A claim cannot bind a value proposition the genuine factory did not issue
+    # (RGA-046). The reference is checked at creation; validation still re-checks
+    # that the VP is validated at approval.
+    forged_uri = fixtures.fake_uri()
+    forged_vp = suite_base.claim_req(addrs["alice"])
+    forged_vp["valuePropositionRef"] = {"id": forged_uri, "uri": forged_uri}
+    assertions.expect_refusal("forged value proposition refused",
+                              fixtures.claim("alice", forged_vp), "value proposition")
 
     # Comment window closes.
     closed = suite_base.claim_req(addrs["alice"])

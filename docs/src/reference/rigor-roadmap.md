@@ -37,13 +37,13 @@ say the table is complete over unbounded inputs. The target set is the 35 proved
 | Item | Status | What changed |
 |---|---|---|
 | LR-00 | done | `ProfileState.updateProfile` and `IdentityPatch`; Arm values for identity update, identity create, and VP comment; model-only arms listed in `spec/proofs/rigor.yaml` |
-| LR-01 | done | `*_guard_eq` theorems for all 32 mutating proved-model arms and a manifest `guard_eq` field; the three read-only arms have no guard obligation |
-| LR-02 | partial | `VWorld.set_commute`, `VWorld.commit_commute`, `Event.apply_commute_distinct`, `core_independent_arms_commute`, and `runExec_append`; a full `runExec` commute theorem remains |
+| LR-01 | partial | `*_guard_eq` theorems for all 32 mutating proved-model arms and a manifest `guard_eq` field; the 35 owed arms have no deployed guard obligation in the model |
+| LR-02 | done | `VWorld.set_commute`, `VWorld.commit_commute`, `Event.apply_commute_distinct`, `runExec_append`, `runExec_some_iff_cells`, and `runExec_commute_disjoint`; `core_independent_cells_commute` is now the versioned theorem |
 | LR-03 | done | `Linear/Consumption.lean` requires declared proof cells before a commit, forbids proof-cell reuse, and the 2026-11 extension proves `core_no_proof_reuse_across_arms` over a token trace |
-| LR-04 | done | Independent arm events commute to the same final world; `core_independent_cells_commute` remains as a compatibility alias |
+| LR-04 | done | Independent arm events commute to the same final world; `core_independent_cells_commute` is the versioned `runExec` theorem over `VWorld`, and `core_independent_stores_commute` keeps the plain-`Store` result |
 | LR-05 | partial | The model-only finish/execute row is removed; the matrix is 32 rows against 48 distinct modeled pairs |
-| LR-06 | partial | `check_conformance.py` enforces theorem + vector + suite; all 35 proved arms are promoted via emitted vectors and the primitive suites |
-| LR-07 | done | `check_lean.py --audit-coverage` requires every Pareto `#check` in `Audit.lean`; 129 Pareto checks and 241 axiom checks pass |
+| LR-06 | done | `check_conformance.py` enforces theorem + vector + suite; all 35 proved arms are promoted via emitted vectors and the primitive suites; the 35 owed arms are unmodeled |
+| LR-07 | done | `check_lean.py --audit-coverage` requires every Pareto `#check` in `Audit.lean`; 129 Pareto checks and 244 axiom checks pass |
 | LR-08 | partial | Identity update is now modeled; the other divergences remain in the ledger |
 
 The guard count is 32 of 35 proved-model arms; the remaining three are read-only verification

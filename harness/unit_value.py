@@ -47,6 +47,13 @@ def main() -> int:
     assertions.expect_refusal("second validate refused", reply, "not proposed")
     corpus.assert_row("V1-validate-twice", reply)
 
+    # Validation is a durable transition; revoking the validator's credential does
+    # not devalidate the VP (RGA-062, accepted).
+    reply = fixtures.revoke_credential(bob_cred, "bob")
+    assertions.expect_ok("revoke validator credential", reply)
+    assertions.expect("validation survives revocation",
+                      fixtures.read(vp_uri, "get")[1].get("status"), "validated")
+
     reply = fixtures.vp_prove_validated(vp_uri, "carol")
     assertions.expect("proveValidated returns proof and take", isinstance(reply, list), True)
     prove, take = reply

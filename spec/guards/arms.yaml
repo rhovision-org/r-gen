@@ -54,8 +54,9 @@ arms:
     atoms:
       - '"validating"'
       - '"not party"'
-      - '"no validation"'
-      - 'finalizeValidation'
+      - '"not minted"'
+      - '"not resumable"'
+      - 'validationRef'
   - id: claim.comment
     source: contracts/src/deploy/20_claim.rho
     flow: {file: contracts/src/deploy/20_claim.rho, contract: Claim, arm: comment}
@@ -95,11 +96,13 @@ arms:
       - '*dId2'
       - 'parties'
       - '"not a party"'
-  - id: oracle.open
+  - id: oracle.openBound
     source: contracts/src/deploy/30_oracle.rho
-    flow: {file: contracts/src/deploy/30_oracle.rho, contract: OracleFactory, arm: open}
+    flow: {file: contracts/src/deploy/30_oracle.rho, contract: OracleFactory, arm: openBound}
     guard_eq: owed
     atoms:
+      - 'subjectProof'
+      - '"subject proof"'
       - 'caseReqOk'
       - '"case fields"'
       - 'deadlineHeight'
@@ -118,11 +121,13 @@ arms:
       - '"executing"'
       - '"not decided"'
       - '"already executed"'
-  - id: provenance.create
+  - id: provenance.createBound
     source: contracts/src/deploy/40_provenance.rho
-    flow: {file: contracts/src/deploy/40_provenance.rho, contract: ProvenanceFactory, arm: create}
+    flow: {file: contracts/src/deploy/40_provenance.rho, contract: ProvenanceFactory, arm: createBound}
     guard_eq: owed
     atoms:
+      - 'subjectCap!("get"'
+      - '"writers or asset"'
       - '[creator] ++ writers'
       - 'assetRef'
       - 'writers'

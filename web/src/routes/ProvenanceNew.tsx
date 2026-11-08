@@ -54,11 +54,11 @@ export default function ProvenanceNew() {
           The creator is derived from the signing key. Writers can anchor and comment; the
           creator is added automatically.
         </p>
-        <Field label="Asset reference URI">
+        <Field label="Subject asset URI">
           <input
             value={assetRef}
             onChange={(event) => setAssetRef(event.target.value)}
-            placeholder="rho:id:… of the K-Asset or claim"
+            placeholder="rho:id:… of the K-Asset cell"
             className="mono"
           />
         </Field>

@@ -1,9 +1,9 @@
 schema: rgen.redteam/v1
-measured_at: '2026-11-07T15:34:35.113497+00:00'
+measured_at: '2026-11-08T17:44:16.512163+00:00'
 node:
   api: '1'
   node: RChain Node 0.1.0 (e2d073dcd02f1e560ccb84749937138a1e184b0b)
-expectation: fixed
+expectation: any
 results:
 - id: RT-004
   name: third party takes a proof URI
@@ -35,17 +35,17 @@ results:
   finding: RGA-037
   observed: comment returned; claim status 'open'
   detail:
-    claim: rho:id:bhsy6uecomuwju7nyhw7f5yexkt7azpwb66kka5qhit3nje6jx1o
+    claim: rho:id:9ko8bprt4fbbuf7mejgknkj7sj79muw85aqqr4eq3x8fgddu3j4o
     comment_error: null
     after:
     - true
-    - claimant: 11112nYTuGmFjyCsCTqGPXJ2eS8zc5fVDjJ7e7XNoQ6GQK5dzZVaUg
+    - claimant: 11112EtUHi6W2sEBQAmdy326Z68MbPpw5PjoBEn669XgXXV4Ss1X6g
       comments:
-      - at: 830
-        by: 11112uzDWFsN37BsEo64bbz1SyvQKX51K5hjqjoL7fZpnEd7FVBzUb
+      - at: 781
+        by: 11112938kUtkNUpSHSGKNEeWptH6BNZEeNMYoCqo1VvrRSGrAojTfb
         hash: x
-        id: cm:11112uzDWFsN37BsEo64bbz1SyvQKX51K5hjqjoL7fZpnEd7FVBzUb:830
-      createdAt: 828
+        id: cm:11112938kUtkNUpSHSGKNEeWptH6BNZEeNMYoCqo1VvrRSGrAojTfb:781
+      createdAt: 780
       deadlineHeight: 1000000
       definitionHash: twelve inspections
       evidence:
@@ -63,8 +63,8 @@ results:
       selectionCriteriaHash: sc
       statementHash: deck inspected
       status: open
-      updatedAt: 830
-      uri: rho:id:bhsy6uecomuwju7nyhw7f5yexkt7azpwb66kka5qhit3nje6jx1o
+      updatedAt: 781
+      uri: rho:id:9ko8bprt4fbbuf7mejgknkj7sj79muw85aqqr4eq3x8fgddu3j4o
       version: 2
       work:
         discipline: structural
@@ -80,25 +80,29 @@ results:
     open: &id001
     - false
     - case fields
-    adjudicator_credential: rho:id:afphiy4xit9zcef976ofsis6enc8pzunj6z5t5oxikfioi6qkmuy
+    adjudicator_credential: rho:id:fubuoxjjmawo1et78oagmyh44ud4eyy9xg9b688apaz7sa56kq6o
 - id: RT-010
   name: oracle open with caller-chosen parties
   classification: fixed
   finding: RGA-023
-  observed: 'refused: (False, ''case fields'')'
+  observed: openBound derives subjectRef and parties from the subject snapshot; the
+    raw open arm is gone
   detail:
     open: *id001
+    subject: rho:id:zzxh34aqqghwy9yxn97hi8hq17mkjqx39czpkj4ty4qhazysi8by
 - id: RT-011
-  name: provenance record for a victim assetRef
+  name: provenance record is bound to the subject
   classification: accepted
   finding: RGA-022
-  observed: created with mallory as the only writer; provenance is advisory and no
-    core arm reads it
+  observed: mallory created an advisory record for rho:id:norocsuaa4bejdixcdhw8yzmcik37qzz7j45zcwo7dk1q1tmupwo;
+    assetRef equals the subject uri
   detail:
     provenance:
     - true
-    - id: rho:id:xgt6obgkoeh8dcfbi7fhtb3b1dbya7rkuntpbimubbfb9zoujisy
-      uri: rho:id:xgt6obgkoeh8dcfbi7fhtb3b1dbya7rkuntpbimubbfb9zoujisy
+    - id: rho:id:87udwqn664wjxqejnktsqkkb3od7zfj49s39gucacap9nzw9rfoo
+      uri: rho:id:87udwqn664wjxqejnktsqkkb3od7zfj49s39gucacap9nzw9rfoo
+    assetRef: rho:id:norocsuaa4bejdixcdhw8yzmcik37qzz7j45zcwo7dk1q1tmupwo
+    subject: rho:id:norocsuaa4bejdixcdhw8yzmcik37qzz7j45zcwo7dk1q1tmupwo
 - id: RT-013
   name: permissionless proveApproved minting
   classification: accepted
@@ -106,35 +110,35 @@ results:
   observed: 3/3 private proofs minted and taken by mallory; caller-paid, no registry
     entry, no victim state
   detail:
-    kasset: rho:id:q9bofn7f9bmuhxjtjhg7qowq7548r98qe5e7i15esrnqdwfsxdpo
+    kasset: rho:id:ak4aweukudxmqpwp6bqdog8tkrkimt3cn7843w969bx915gbqrgo
     proofs:
     - - - true
         - private
       - - true
-        - approvedAt: 847
-          approver: 11112utC5BqFMSTefiSd3xFaWFkwndvtEHdBm5phPcvtyvPVUmURxo
+        - approvedAt: 813
+          approver: 1111tv5UwtArZ4Fojd2ZAbdDQZRfM7RAmzqKkZdA5NfGXjWiqEALf
           discipline: structural
-          id: rho:id:q9bofn7f9bmuhxjtjhg7qowq7548r98qe5e7i15esrnqdwfsxdpo
+          id: rho:id:ak4aweukudxmqpwp6bqdog8tkrkimt3cn7843w969bx915gbqrgo
           jurisdiction: US-TX
-          uri: rho:id:q9bofn7f9bmuhxjtjhg7qowq7548r98qe5e7i15esrnqdwfsxdpo
+          uri: rho:id:ak4aweukudxmqpwp6bqdog8tkrkimt3cn7843w969bx915gbqrgo
     - - - true
         - private
       - - true
-        - approvedAt: 847
-          approver: 11112utC5BqFMSTefiSd3xFaWFkwndvtEHdBm5phPcvtyvPVUmURxo
+        - approvedAt: 813
+          approver: 1111tv5UwtArZ4Fojd2ZAbdDQZRfM7RAmzqKkZdA5NfGXjWiqEALf
           discipline: structural
-          id: rho:id:q9bofn7f9bmuhxjtjhg7qowq7548r98qe5e7i15esrnqdwfsxdpo
+          id: rho:id:ak4aweukudxmqpwp6bqdog8tkrkimt3cn7843w969bx915gbqrgo
           jurisdiction: US-TX
-          uri: rho:id:q9bofn7f9bmuhxjtjhg7qowq7548r98qe5e7i15esrnqdwfsxdpo
+          uri: rho:id:ak4aweukudxmqpwp6bqdog8tkrkimt3cn7843w969bx915gbqrgo
     - - - true
         - private
       - - true
-        - approvedAt: 847
-          approver: 11112utC5BqFMSTefiSd3xFaWFkwndvtEHdBm5phPcvtyvPVUmURxo
+        - approvedAt: 813
+          approver: 1111tv5UwtArZ4Fojd2ZAbdDQZRfM7RAmzqKkZdA5NfGXjWiqEALf
           discipline: structural
-          id: rho:id:q9bofn7f9bmuhxjtjhg7qowq7548r98qe5e7i15esrnqdwfsxdpo
+          id: rho:id:ak4aweukudxmqpwp6bqdog8tkrkimt3cn7843w969bx915gbqrgo
           jurisdiction: US-TX
-          uri: rho:id:q9bofn7f9bmuhxjtjhg7qowq7548r98qe5e7i15esrnqdwfsxdpo
+          uri: rho:id:ak4aweukudxmqpwp6bqdog8tkrkimt3cn7843w969bx915gbqrgo
 - id: RT-014
   name: nest above the 32-child cap
   classification: fixed
@@ -151,12 +155,12 @@ results:
   observed: 1 validation(s) succeeded
   detail:
     replies:
+    - - true
+      - id: rho:id:cruw8qh57t41tp85axniirz8mfyir19woa4zwyni3n8i4cjs5woy
+        uri: rho:id:cruw8qh57t41tp85axniirz8mfyir19woa4zwyni3n8i4cjs5woy
     - - false
       - not open
-    - - true
-      - id: rho:id:aoucodik3z3ks8wn7zez611zsntng6ibdnnrcd8ayxh7hwn1zofy
-        uri: rho:id:aoucodik3z3ks8wn7zez611zsntng6ibdnnrcd8ayxh7hwn1zofy
-    claim: rho:id:r5fpwquwjfa871nwjym65s94g4zrr8qg6pb545rfhz5qtc6u6kxo
+    claim: rho:id:i76c54yn9b6atmbgozmsirt3fy8ygd7y6ppxnbgodwmrps348agy
 - id: RT-012
   name: permissionless execute crank
   classification: accepted
@@ -170,30 +174,30 @@ results:
     - upheld
     state:
     - true
-    - adjudicator: 1111So2FkuQPKzcfpwkPmNdedkbsPaJzKCuF9YGNsJVe66JEajGHY
-      adjudicatorCredentialUri: rho:id:4f9bnworkqiwwe81ixpicsy69gjzchyzrztb56xnjumuth4od3ho
+    - adjudicator: 1111evVrcyqe67RCzc6eYeigKttxr4ssGCKbZ2eNYtwZkE4VN9hjh
+      adjudicatorCredentialUri: rho:id:7au8381fma15kh38pfdsk1gr9syjaowkg576i3desa6n71nrm9eo
       deadlineHeight: 1000000
       decision:
-        decidedAt: 866
+        decidedAt: 827
         outcome: uphold
         rationaleHash: r
       evidence: []
       execution:
         attempts: 1
-        caseId: rho:id:iiouis4m9er5cfyu4taa3cj3sjz1xq9fxepgs753q7mfxrmndbzy
+        caseId: rho:id:4sbs976ratwygd4d9ke3spfjfstm7jzsx5s985u9r4gmhaod3spy
         decision:
-          decidedAt: 866
+          decidedAt: 827
           outcome: uphold
           rationaleHash: r
         outcome: upheld
         status: applied
       groundsHash: grounds
       kind: dispute
-      openedBy: 11112nYTuGmFjyCsCTqGPXJ2eS8zc5fVDjJ7e7XNoQ6GQK5dzZVaUg
+      openedBy: 11112EtUHi6W2sEBQAmdy326Z68MbPpw5PjoBEn669XgXXV4Ss1X6g
       parties:
-      - 11112nYTuGmFjyCsCTqGPXJ2eS8zc5fVDjJ7e7XNoQ6GQK5dzZVaUg
-      - 11112uzDWFsN37BsEo64bbz1SyvQKX51K5hjqjoL7fZpnEd7FVBzUb
-      - 11112utC5BqFMSTefiSd3xFaWFkwndvtEHdBm5phPcvtyvPVUmURxo
+      - 11112EtUHi6W2sEBQAmdy326Z68MbPpw5PjoBEn669XgXXV4Ss1X6g
+      - 11112938kUtkNUpSHSGKNEeWptH6BNZEeNMYoCqo1VvrRSGrAojTfb
+      - 1111tv5UwtArZ4Fojd2ZAbdDQZRfM7RAmzqKkZdA5NfGXjWiqEALf
       requirement:
         ctype: Oracle
         discipline: structural
@@ -202,9 +206,10 @@ results:
         role: oracle
       status: executed
       subjectRef:
-        id: rho:id:1zi1j53cfqq68ao9b9g43ez6pjng46u6b38jcncccuxzi1x1wtho
-        uri: rho:id:1zi1j53cfqq68ao9b9g43ez6pjng46u6b38jcncccuxzi1x1wtho
-      uri: rho:id:iiouis4m9er5cfyu4taa3cj3sjz1xq9fxepgs753q7mfxrmndbzy
+        id: rho:id:86k6ina89p9u6en439556rbkmmuq4u4su66u4iy7afohtyqraf3o
+        uri: rho:id:86k6ina89p9u6en439556rbkmmuq4u4su66u4iy7afohtyqraf3o
+      subjectUri: rho:id:ak4aweukudxmqpwp6bqdog8tkrkimt3cn7843w969bx915gbqrgo
+      uri: rho:id:4sbs976ratwygd4d9ke3spfjfstm7jzsx5s985u9r4gmhaod3spy
       version: 2
 - id: RT-020
   name: VP validator opens a dispute
@@ -212,34 +217,34 @@ results:
   finding: RGA-041
   observed: validator dispute opened
   detail:
-    vp: rho:id:u11fsaqcamg3cq7axp6ibf7k7jc3fmff453jdisuddr46w6hgpay
+    vp: rho:id:41oboe37ge1n9bdczd5uanpi14s4ab7y84xs7erysb3o6irseopy
     reply:
     - true
-    - id: rho:id:ghsi8t6647gj6jufq9n5u1ou6uymqkt6bf19bjbgc79nsi3y63cy
-      uri: rho:id:ghsi8t6647gj6jufq9n5u1ou6uymqkt6bf19bjbgc79nsi3y63cy
+    - id: rho:id:84xiwxraxshurducek8myd1qhmq7pe1jkfshoroyq4sbjm4a9aty
+      uri: rho:id:84xiwxraxshurducek8myd1qhmq7pe1jkfshoroyq4sbjm4a9aty
 - id: RT-021
   name: VP validation after the deadline
   classification: fixed
   finding: RGA-042
-  observed: deadline 879; reply (False, 'deadline'); error None
+  observed: deadline 840; reply (False, 'deadline'); error None
   detail:
-    vp: rho:id:x63xwfsi35bx58ytyrawb19jn7qwo41wngsh5yeqs36cxwp8jcky
+    vp: rho:id:7drbisunrc6omza78cofbo3xbu8kbpiyhs6es7tkbqrtu8c11bfy
 - id: RT-022
   name: oracle decide after the case deadline
   classification: fixed
   finding: RGA-043
-  observed: deadline 895; reply (False, 'expired')
+  observed: deadline 856; reply (False, 'expired')
   detail:
-    case: rho:id:6kx5xrxiws97gnpmuq6j38rwwe8b3honaci8a73ob414ciyacnwy
+    case: rho:id:jdpknun6rxgagkhgzh7k3xzzgwphdmph8edr5seyjx5saf5ct1oo
 - id: RT-023
   name: claim records the proved credential
   classification: fixed
   finding: RGA-044
-  observed: claim stored 'rho:id:a1odcf6qpouxcud41e6b6rxdqqqbuu47t6xx5x64cwrqarxj5khy';
-    kasset stored 'rho:id:a1odcf6qpouxcud41e6b6rxdqqqbuu47t6xx5x64cwrqarxj5khy'
+  observed: claim stored 'rho:id:4r637du9wkegan1xuiqcyw9y775hm6ugzk7oii9ukb9sw1mhscso';
+    kasset stored 'rho:id:4r637du9wkegan1xuiqcyw9y775hm6ugzk7oii9ukb9sw1mhscso'
   detail:
-    claim: rho:id:z9kkifoa8czw7e3uat8yrtyaww4izxecgx6itnk85pxf7ybhhm1o
-    kasset: rho:id:dfrb1haxzkekx73ay5xckz94ybkcqdgjfmw5rimr6u8i8gmfkeio
+    claim: rho:id:91m5eaf6krdwk4i4cnik8ot9kyp54ntqgc5sg7g6akk8hnx84jgy
+    kasset: rho:id:xqk6djnojn1eeg1cqgxoj9hbgk5ep8fmanynnyo7tqkkhegnus8y
 - id: RT-001
   name: two identity creates for one address
   classification: not_reproduced
@@ -249,10 +254,10 @@ results:
     attempts:
     - actor: mallory
       replies:
-      - - true
-        - rho:id:5fddfhywz8y5dbs3i4pe34qxwbpu6dp8qd5fdamuu91n7jojj53y
       - - false
         - duplicate
+      - - true
+        - rho:id:rxdojwk754i96rpiqe9bs4qwsuzs3cryf7ydpy7e83fgu4mq8gsy
     - actor: ida
       replies:
       - - false
@@ -262,7 +267,7 @@ results:
     - actor: idb
       replies:
       - - true
-        - rho:id:j31swi3qgf345szacnnx8zypgkymarji1ihysb8h75sdcw8y89zo
+        - rho:id:a5rpzjf7bj63q1sbnnrp9r4z837u5k43pf44u9z938ppzs6hzoqo
       - - false
         - duplicate
 

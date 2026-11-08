@@ -271,7 +271,7 @@ rows:
     confidence: high
     authors: [analyst-vp-provenance-workflow]
     finding: RGA-022
-    disposition: open
+    disposition: fixed
   - id: WF-016
     node: wf-recovery
     guide_word: Other than

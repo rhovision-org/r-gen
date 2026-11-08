@@ -136,8 +136,7 @@ def main() -> int:
     reply = fixtures.read(kasset_uri, "get")
     assertions.expect("K-Asset upheld", reply[1].get("status"), "upheld")
 
-    prov = fixtures.provenance_create(
-        {"type": "kasset", "id": kasset_uri, "uri": kasset_uri}, [alice, bob])
+    prov = fixtures.provenance_create(kasset_uri, [alice, bob])
     assertions.expect_ok("create provenance", prov)
     prov_uri = prov[1]["uri"]
     reply = fixtures.provenance_anchor(prov_uri, ALICE,

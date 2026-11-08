@@ -21,11 +21,17 @@ def main() -> int:
         return 2
     addrs = suite_base.setup(("alice", "bob"))
 
-    created = fixtures.provenance_create(
-        {"type": "kasset", "id": "asset-1", "uri": "rho:id:asset-1"},
-        [addrs["alice"]])
+    # Provenance binds to a real subject capability and derives assetRef from
+    # the subject's own uri; a free asset reference is no longer accepted.
+    _, kasset_uri, _ = suite_base.validated_kasset(addrs, "bob")
+    created = fixtures.provenance_create(kasset_uri, [addrs["alice"]])
     assertions.expect_ok("create provenance", created)
     prov_uri = created[1]["uri"]
+    state = fixtures.read(prov_uri, "get")[1]
+    assertions.expect("provenance asset bound",
+                      state.get("assetRef").get("uri"), kasset_uri)
+    reply = fixtures.provenance_create(kasset_uri, [])
+    assertions.expect_refusal("empty writers refused", reply, "writers or asset")
 
     reply = fixtures.provenance_anchor(
         prov_uri, "alice", {"kind": "inspection", "hash": "aa", "parentHash": ""})
@@ -40,6 +46,9 @@ def main() -> int:
     reply = fixtures.provenance_anchor(
         prov_uri, "bob", {"kind": "inspection", "hash": "bb", "parentHash": ""})
     assertions.expect_refusal("non-writer anchor refused", reply, "not writer")
+    reply = fixtures.provenance_anchor(
+        prov_uri, "alice", {"kind": "inspection", "hash": "cc", "parentHash": "zz"})
+    assertions.expect_refusal("unknown parent refused", reply, "parent")
 
     reply = fixtures.provenance_anchor(
         prov_uri, "alice", {"kind": "photo", "hash": "bb", "parentHash": "aa"})
@@ -57,6 +66,9 @@ def main() -> int:
                               key="alice")
     assertions.expect_ok("writer comment", reply)
     corpus.assert_row("PROV-comment-writer", reply)
+    reply = fixtures.call_uri(prov_uri, "comment", [Raw("*dId"), {"hash": ""}],
+                              key="alice")
+    assertions.expect_refusal("empty comment hash refused", reply, "hash")
     reply = fixtures.call_uri(prov_uri, "comment", [Raw("*dId"), {"hash": "note"}],
                               key="bob")
     assertions.expect_refusal("non-writer comment refused", reply, "not writer")

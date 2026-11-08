@@ -55,6 +55,14 @@ def main() -> int:
     assertions.expect_ok("approval proof take", take)
     assertions.expect("approval proof id", take[1].get("id"), kasset_uri)
 
+    # proveApproved is permissionless, but the proof is the K-Asset's own data:
+    # a third party cannot choose a different target (RGA-040).
+    reply = fixtures.kasset_prove_approved(kasset_uri, "bob")
+    prove, take = reply
+    assertions.expect_ok("third-party proveApproved", prove)
+    assertions.expect_ok("third-party proof take", take)
+    assertions.expect("third-party proof target", take[1].get("id"), kasset_uri)
+
     # A claimant cannot approve.
     claim2, kasset2, _ = suite_base.validated_kasset(addrs, "bob")
     reply = fixtures.kasset_approve(kasset2, alice_cred, "alice",
@@ -88,14 +96,35 @@ def main() -> int:
     assertions.expect("two children stored", len(stored), 2)
     reply = fixtures.kasset_nest(parent, "alice", [refs[0]])
     assertions.expect_refusal("duplicate child refused", reply, "duplicate child")
+    reply = fixtures.kasset_resume_nest(parent, "alice")
+    assertions.expect_refusal("resume without receipt refused", reply, "no receipt")
+    reply = fixtures.kasset_abort_nest(parent, "alice")
+    assertions.expect_refusal("abort without receipt refused", reply, "no receipt")
+
+    # An unsorted batch passes the read-only preflight (each child is approved and
+    # older than the parent), reserves the parent, records the first proof, then
+    # fails on ascending order. The receipt must remain for resume or abort, and a
+    # second nest must not start over the reserved parent.
     _, oc1 = suite_base.approved_kasset(addrs, "bob", "carol")
     _, oc2 = suite_base.approved_kasset(addrs, "bob", "carol")
     _, oparent = suite_base.approved_kasset(addrs, "bob", "carol")
-    reply = fixtures.kasset_nest(oparent, "alice",
-                                 list(reversed([{"id": oc1, "uri": oc1},
-                                                {"id": oc2, "uri": oc2}])))
+    unsorted = [{"id": oc2, "uri": oc2}, {"id": oc1, "uri": oc1}]
+    sorted_refs = [{"id": oc1, "uri": oc1}, {"id": oc2, "uri": oc2}]
+    reply = fixtures.kasset_nest(oparent, "alice", unsorted)
     assertions.expect_refusal("unsorted children refused", reply, "order")
     corpus.assert_row("K3-nest-unsorted", reply)
+    reply = fixtures.kasset_nest(oparent, "alice", sorted_refs)
+    assertions.expect_refusal("second nest refused while receipt held", reply,
+                              "nest in progress")
+    reply = fixtures.kasset_resume_nest(oparent, "alice")
+    assertions.expect_refusal("resume keeps the recorded prefix and order", reply,
+                              "order")
+    reply = fixtures.kasset_abort_nest(oparent, "alice")
+    assertions.expect_ok("abort clears the nest receipt", reply)
+    reply = fixtures.kasset_nest(oparent, "alice", sorted_refs)
+    assertions.expect_ok("nest after abort", reply)
+    assertions.expect("two children after abort",
+                      len(fixtures.read(oparent, "children")[1]), 2)
     reply = fixtures.kasset_nest(parent, "bob", refs)
     assertions.expect_refusal("non-claimant nest refused", reply, "not claimant")
 
@@ -103,6 +132,18 @@ def main() -> int:
     claim5, kasset5, _ = suite_base.validated_kasset(addrs, "bob")
     reply = fixtures.kasset_nest(kasset5, "alice", refs)
     assertions.expect_refusal("unapproved parent refused", reply, "parent not approved or limit")
+
+    # An approval is a durable transition; revoking the approver's credential does
+    # not de-approve the K-Asset (RGA-055, accepted).
+    _, rev_kasset, _ = suite_base.validated_kasset(addrs, "bob")
+    rev_cred = suite_base.issue(addrs, "carol", "Approver", "approver")
+    reply = fixtures.kasset_approve(rev_kasset, rev_cred, "carol",
+                                    suite_base.approval(rev_cred, addrs["carol"]))
+    assertions.expect_ok("approve before revocation", reply)
+    reply = fixtures.revoke_credential(rev_cred, "carol")
+    assertions.expect_ok("revoke approver credential", reply)
+    assertions.expect("approval survives revocation",
+                      fixtures.read(rev_kasset, "get")[1].get("status"), "approved")
 
     # Dispute parties.
     case_req = {
