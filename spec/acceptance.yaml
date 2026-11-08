@@ -1,4 +1,7 @@
 schema: rgen.acceptance/v1
+status: legacy
+note: This is the pre-Pareto twelve-term acceptance spec. The current acceptance gates are AGENTS.md,
+  docs/src/reference/rigor-roadmap.md and the Makefile targets; this file is not enforced.
 checks:
   - id: A1
     claim: a fresh devnet installs all twelve terms

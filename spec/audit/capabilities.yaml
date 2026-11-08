@@ -495,7 +495,7 @@ capabilities:
   - id: CAP-024
     name: OracleCase
     kind: published-contract
-    source: contracts/src/deploy/30_oracle.rho:311
+    source: contracts/src/deploy/30_oracle.rho:388
     source_atom: 'bundle+{*OracleCase}'
     creator: OracleFactory.openBound
     holders: anyone with the case URI
@@ -510,10 +510,11 @@ capabilities:
       - {arm: execute, mutating: true, authority: none, rationale: permissionless crank; applies only the stored decision through the case-bound Apply}
       - {arm: expire, mutating: true, authority: none, rationale: clock arm; refuses before the deadline}
       - {arm: close, mutating: true, authority: none, rationale: only executed or expired cases can close}
+      - {arm: abandon, mutating: true, authority: caller-subject, atoms: ['authSubject', 'who == s.get("adjudicator")', '"not adjudicator"', '"not decided"']}
     delegation: []
     revocation: none
-    forge_path: decide requires the adjudicator's credential proof; execute cannot change the decision.
-    hazard: the public case URI is a capability to crank execute/expire/close; the Apply is case-bound.
+    forge_path: decide requires the adjudicator's credential proof; execute cannot change the decision; abandon requires the adjudicator.
+    hazard: the public case URI is a capability to crank execute/expire/close; the Apply is case-bound; abandon is adjudicator-only.
     disposition: accepted
     finding: '-'
     evidence: contracts/src/deploy/30_oracle.rho:119-311

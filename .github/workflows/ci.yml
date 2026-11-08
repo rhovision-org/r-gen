@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: make venv PY=.venv/bin/python
+      - run: make venv-ci PY=.venv/bin/python
       - run: make spec-check PY=.venv/bin/python
 
   docs:
@@ -28,7 +28,7 @@ jobs:
       - uses: peaceiris/actions-mdbook@v2
         with:
           mdbook-version: "0.5.4"
-      - run: make venv PY=.venv/bin/python
+      - run: make venv-ci PY=.venv/bin/python
       - run: make docs-check PY=.venv/bin/python
 
   lean:
@@ -53,6 +53,8 @@ jobs:
           components: rustfmt, clippy
       - run: cargo test -p rgen-core -p rgen-keystore -p rgen-sdk -p rgen-cli
       - run: cargo check -p rgen-wasm --target wasm32-unknown-unknown
+      - uses: taiki-e/install-action@cargo-audit
+      - run: cargo audit
 
   client:
     runs-on: ubuntu-latest
@@ -68,6 +70,7 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci --prefix web
+      - run: npm --prefix web audit --omit=dev
       - run: npm --prefix web run wasm:build
       - run: npm --prefix web run test:wasm
       - run: npm --prefix web run typecheck
@@ -87,7 +90,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-      - run: make venv PY=.venv/bin/python
+      - run: make venv-ci PY=.venv/bin/python
       - run: make build PY=.venv/bin/python
       - run: RCHAIN_RUST_DIR=$PWD/rnode-rust tools/parse_check.sh contracts/build/deploy/*.rho
 
@@ -107,7 +110,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: make venv PY=.venv/bin/python
+      - run: make venv-ci PY=.venv/bin/python
       - run: cargo build -p rgen-cli
       - run: DEVNET_PREFIX=rgen DEVNET_NODE_MEMORY=8g RHOLO_DIR=$PWD/rnode-rust \
           make devnet-up keys install devnet-verify unit-all demo-seed demo-verify \

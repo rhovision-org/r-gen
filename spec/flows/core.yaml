@@ -376,6 +376,14 @@
 
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
+  arm: abandon
+  lean: -
+  cell: caseState
+  status: owed
+  note: adjudicator-only terminal close for a decided case; unit_oracle covers the refusal, success and post-abandon execute refusal
+
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleCase
   arm: decide
   lean: RGen.OracleState.decide_once
   cell: caseState

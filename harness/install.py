@@ -9,7 +9,9 @@ directory only. `--dry-run` renders only, so static checks can parse without a n
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -122,6 +124,91 @@ COMPONENT_KEYS = [
     "claim-factory",
 ]
 
+# The Root entry for each key carries a kind. The installer verifies the kind as well as
+# the URI, so a wrong-kind substitution is a failed install (HZ-DEPLOY-014).
+KINDS = {
+    "root": "root",
+    "identity-factory": "identity",
+    "identity-directory": "identity",
+    "issuer": "credentials",
+    "credential-factory": "credentials",
+    "oracle-factory": "oracle",
+    "provenance-factory": "provenance",
+    "value-proposition-factory": "value",
+    "claim-factory": "claims",
+}
+
+STATE_SCHEMA = "rgen.install-state/v1"
+
+
+def state_path() -> Path:
+    return ROOT / ".devnet" / "install-state.json"
+
+
+def plan_hash(build: Path) -> str:
+    """Hash the ordered build terms; a changed build invalidates a partial install."""
+    digest = hashlib.sha256()
+    for name in ORDER:
+        digest.update(name.encode())
+        digest.update(minify((build / name).read_text()).encode())
+    return digest.hexdigest()
+
+
+def new_state(plan: str) -> dict:
+    return {"schema": STATE_SCHEMA, "plan_hash": plan, "root_uri": None,
+            "issuer_address": None, "terms": {}, "components": {}, "complete": False}
+
+
+def issuer_address(keys: dict) -> str:
+    """The genesis Issuer may be a distinct key from the installer (RGA-052)."""
+    issuer = keys.get("issuer") or keys["deployer"]
+    return issuer.get("address", keys["deployer"]["address"])
+
+
+def load_state(plan: str, allow_any: bool = False) -> dict | None:
+    path = state_path()
+    if not path.is_file():
+        return None
+    try:
+        state = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError) as error:
+        print(f"install: cannot read {path}: {error}")
+        return None
+    if state.get("schema") != STATE_SCHEMA:
+        print(f"install: cannot resume {path}: unknown schema")
+        return None
+    if not allow_any and state.get("plan_hash") != plan:
+        print(f"install: cannot resume {path}: the build changed; reset the devnet or use --fresh")
+        return None
+    state.setdefault("terms", {})
+    state.setdefault("components", {})
+    state.setdefault("complete", False)
+    return state
+
+
+def save_state(state: dict) -> None:
+    path = state_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(state, indent=2) + "\n")
+    os.replace(tmp, path)
+
+
+def common_values(state: dict) -> dict[str, str]:
+    values = {
+        "__ROOT_URI__": state.get("root_uri") or "rho:id:dryrun-root",
+        "__IDENTITY_DIRECTORY_URI__": state["components"].get(
+            "identity-directory", "rho:id:dryrun-identity-directory"),
+        "__CREDENTIAL_FACTORY_URI__": state["components"].get(
+            "credential-factory", "rho:id:dryrun-credential-factory"),
+        "__ORACLE_FACTORY_URI__": state["components"].get(
+            "oracle-factory", "rho:id:dryrun-oracle-factory"),
+        "__VALUE_PROPOSITION_FACTORY_URI__": state["components"].get(
+            "value-proposition-factory", "rho:id:dryrun-value-proposition-factory"),
+        "__ISSUER_ADDRESS__": state.get("issuer_address") or "1111dryrun",
+    }
+    return values
+
 
 def resolve_key(root_uri: str, key: str, secret: str):
     term = f"""
@@ -140,12 +227,30 @@ new rl(`rho:registry:lookup`), ch, ret, deployId(`rho:rchain:deployId`) in {{
     return decoded
 
 
+def resolve_entry(root_uri: str, key: str, secret: str):
+    """Read the Root entry for a key, including its kind."""
+    term = f"""
+new rl(`rho:registry:lookup`), ch, ret, deployId(`rho:rchain:deployId`) in {{
+  rl!(`{root_uri}`, *ch) |
+  for (Root <- ch) {{
+    Root!("get", "component:{key}", *ret) |
+    for (@r <- ret) {{ deployId!(r) }}
+  }}
+}}
+"""
+    _, result = node.deploy_and_wait(term, secret, phlo_limit=4_000_000)
+    decoded = decode(result)
+    if isinstance(decoded, list) and len(decoded) == 1:
+        return decoded[0]
+    return decoded
+
+
 def verify_components(root_uri: str, components: dict[str, str], secret: str) -> None:
     """The installer must not write a manifest from a refused Root registration.
 
-    Each term emits its deployId even when GenRoot.register replied (false, reason). Resolve
-    every key through Root before writing the manifest; a missing or different URI is a failed
-    install, not a partial success.
+    Each term emits its deployId even when GenRoot.register replied (false, reason). Read
+    every Root entry before writing the manifest; a missing, different-URI or wrong-kind
+    entry is a failed install, not a partial success.
     """
     problems: list[str] = []
     for attempt in range(3):
@@ -155,13 +260,24 @@ def verify_components(root_uri: str, components: dict[str, str], secret: str) ->
             if not expected:
                 problems.append(f"{key}: no installer URI")
                 continue
-            reply = resolve_key(root_uri, key, secret)
+            reply = resolve_entry(root_uri, key, secret)
             if not (isinstance(reply, tuple) and len(reply) >= 2 and reply[0] is True):
                 problems.append(f"{key}: Root did not resolve it ({reply!r})")
-            elif str(reply[1]) != expected:
-                problems.append(f"{key}: Root has {reply[1]!r}, installer has {expected!r}")
+                continue
+            entry = reply[1]
+            if not isinstance(entry, dict):
+                problems.append(f"{key}: Root entry is not a map ({entry!r})")
+                continue
+            if str(entry.get("uri")) != expected:
+                problems.append(f"{key}: Root has {entry.get('uri')!r}, installer has {expected!r}")
+            elif entry.get("kind") != KINDS.get(key):
+                problems.append(
+                    f"{key}: Root kind is {entry.get('kind')!r}, expected {KINDS.get(key)!r}")
+            elif entry.get("version") != 1:
+                problems.append(f"{key}: Root version is {entry.get('version')!r}, expected 1")
         if not problems:
-            print(f"install: Root resolves {len(COMPONENT_KEYS)}/{len(COMPONENT_KEYS)} keys")
+            print(f"install: Root resolves {len(COMPONENT_KEYS)}/{len(COMPONENT_KEYS)} keys "
+                  "with matching URI, kind and version")
             return
         if attempt < 2:
             print("install: Root not consistent yet; retrying in 2s")
@@ -169,10 +285,65 @@ def verify_components(root_uri: str, components: dict[str, str], secret: str) ->
     raise SystemExit("install: Root verification failed: " + "; ".join(problems))
 
 
+def write_manifest(cfg: dict, state: dict, plan: str) -> None:
+    manifest = ROOT / cfg.get("manifest", "deployments/devnet.json")
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "root_uri": state["root_uri"],
+        "components": state["components"],
+        "install": {
+            "schema": STATE_SCHEMA,
+            "plan_hash": plan,
+            "status": "complete" if state.get("complete") else "partial",
+            "terms": state.get("terms", {}),
+        },
+    }
+    tmp = manifest.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, indent=2) + "\n")
+    os.replace(tmp, manifest)
+    print(f"install: wrote {manifest}")
+
+
+def existing_manifest_state(cfg: dict, plan: str, secret: str) -> dict | None:
+    """Use a previously written manifest as state only when it verifies through Root."""
+    manifest = ROOT / cfg.get("manifest", "deployments/devnet.json")
+    if not manifest.is_file():
+        return None
+    try:
+        old = json.loads(manifest.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+    root_uri = old.get("root_uri")
+    components = old.get("components")
+    if not root_uri or not isinstance(components, dict):
+        return None
+    old_plan = (old.get("install") or {}).get("plan_hash")
+    if old_plan and old_plan != plan:
+        print("install: existing manifest is from a different build; reset the devnet or use --fresh")
+        raise SystemExit(3)
+    try:
+        verify_components(root_uri, components, secret)
+    except SystemExit as error:
+        print(f"install: existing manifest does not verify: {error}")
+        print("install: reset the devnet or use --fresh; refusing to create duplicates")
+        raise SystemExit(3)
+    state = new_state(plan)
+    state["root_uri"] = root_uri
+    state["components"] = components
+    state["complete"] = True
+    save_state(state)
+    write_manifest(cfg, state, plan)
+    return state
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--node", default=None)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--fresh", action="store_true",
+                    help="ignore saved state and install into a fresh devnet")
+    ap.add_argument("--fail-after", type=int, default=0,
+                    help="test hook: stop after N deploys and save the partial state")
     args = ap.parse_args(argv)
 
     if args.node:
@@ -190,22 +361,35 @@ def main(argv: list[str] | None = None) -> int:
     if "deployer" not in keys:
         raise SystemExit("install: keys file has no deployer key")
 
-    common = {
-        "__ROOT_URI__": "rho:id:dryrun-root",
-        "__IDENTITY_DIRECTORY_URI__": "rho:id:dryrun-identity-directory",
-        "__CREDENTIAL_FACTORY_URI__": "rho:id:dryrun-credential-factory",
-        "__ORACLE_FACTORY_URI__": "rho:id:dryrun-oracle-factory",
-        "__VALUE_PROPOSITION_FACTORY_URI__": "rho:id:dryrun-value-proposition-factory",
-    }
-
     build = ROOT / "contracts" / "build" / "deploy"
     rendered_dir = ROOT / ".devnet" / "rendered"
     rendered_dir.mkdir(parents=True, exist_ok=True)
-    state: dict[str, object] = {"components": {}}
-    root_uri = None
+    plan = plan_hash(build)
     secret = keys["deployer"]["secret"]
 
+    state = None if args.fresh or args.dry_run else load_state(plan)
+    if state and state.get("complete"):
+        print("install: saved state is complete; verifying")
+        verify_components(state["root_uri"], state["components"], secret)
+        write_manifest(cfg, state, plan)
+        return 0
+    if state is None and not args.fresh and not args.dry_run:
+        state = existing_manifest_state(cfg, plan, secret)
+        if state is not None:
+            return 0
+    if state is None:
+        state = new_state(plan)
+    if not state.get("issuer_address"):
+        state["issuer_address"] = issuer_address(keys)
+
+    common = common_values(state)
+    root_uri = state.get("root_uri")
+    deployed = 0
+
     for name in ORDER:
+        if state["terms"].get(name, {}).get("status") == "done":
+            print(f"install: {name} already done; skipping")
+            continue
         source = build / name
         if not source.is_file():
             raise SystemExit(f"install: missing {source}; run `make build`")
@@ -253,14 +437,19 @@ def main(argv: list[str] | None = None) -> int:
             if "value-proposition-factory" in found:
                 common["__VALUE_PROPOSITION_FACTORY_URI__"] = found["value-proposition-factory"]
             print(f"install: {name} -> {found}")
+        state["terms"][name] = {"deploy_id": deploy_id, "status": "done"}
+        save_state(state)
+        deployed += 1
+        if args.fail_after and deployed >= args.fail_after:
+            print(f"install: stopped after {deployed} deploy(s) for testing; state saved")
+            return 97
 
     if not args.dry_run:
         assert root_uri is not None
         verify_components(root_uri, state["components"], secret)
-        manifest = ROOT / cfg.get("manifest", "deployments/devnet.json")
-        manifest.parent.mkdir(parents=True, exist_ok=True)
-        manifest.write_text(json.dumps(state, indent=2) + "\n")
-        print(f"install: wrote {manifest}")
+        state["complete"] = True
+        save_state(state)
+        write_manifest(cfg, state, plan)
     return 0
 
 

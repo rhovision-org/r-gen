@@ -141,7 +141,7 @@ def main() -> int:
         "issuerUri": fixtures.comp("issuer"), "expiresAt": 0,
     }
     bad_issue = fixtures.call_uri(fixtures.comp("credential-factory"), "issue",
-                                  [Raw("*dId"), bad_req], key="deployer")
+                                  [Raw("*dId"), bad_req], key="issuer")
     if isinstance(bad_issue, tuple) and bad_issue and bad_issue[0] is True:
         bad_cred = bad_issue[1]
         error = deploy_error(lambda: fixtures.cred_prove(bad_cred, "alice", requirement))

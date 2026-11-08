@@ -584,12 +584,11 @@ findings:
   verdict: proved-but-narrower
   arms:
   - KAsset.nest
-  actions:
-  - accept-risk
-  disposition: accept-risk
+  actions: []
+  disposition: fixed
   note: The contract refuses same-parent duplicates and cycles but allows a child approved by a different parent to be nested
-    again. The model theorem is about acyclicity and strict order, not unique parentage. Documentation should say "forest"
-    precisely.
+    again. The model theorem is about acyclicity and strict order, not unique parentage. The public pages now say "forest"
+    precisely and the proof audit records the multiple-parent caveat.
 - id: RGA-035
   title: A proof URI was a public bearer token a third party could take
   severity: S2
@@ -895,7 +894,8 @@ findings:
   evidence:
   - crates/rgen-core/src/manifest.rs:47
   - crates/rgen-core/src/manifest.rs:110
-  - web/src/lib/store.ts:79
+  - web/src/lib/manifest.ts:6
+  - web/src/lib/manifest.test.ts
   claim: A client can distinguish the genuine Root from a substituted manifest.
   verdict: proved-but-narrower
   arms: []
@@ -903,10 +903,11 @@ findings:
   disposition: accept-risk
   owner: patrick
   expiry: '2027-05-08'
-  note: The manifest is an unsigned file of URI designations. Pinning is now implemented and tested, not merely proposed.
-    Manifest::from_json_pinned refuses a substituted Root, and the web client refuses a fetched, cached or pasted manifest
-    whose Root differs from VITE_RGEN_ROOT_URI. The default build remains trust-on-first-use because pinning is opt-in; a
-    signed manifest is still the stronger fix. Risk accepted until an S1 external review or 2027-05-08, whichever is first.
+  note: The manifest is an unsigned file of URI designations. Pinning is implemented and tested. Manifest::from_json_pinned
+    refuses a substituted Root; the web client refuses a fetched, cached or pasted manifest whose Root differs from
+    VITE_RGEN_ROOT_URI, and a testnet or custom build without a pin fails closed. The devnet profile remains
+    trust-on-first-use because it reads a local, disposable file. A signed manifest is still the stronger fix. Risk
+    accepted until an S1 external review or 2027-05-08, whichever is first.
 - id: RGA-052
   title: The installer is both the Root writer and the genesis Issuer
   severity: S3
@@ -915,19 +916,19 @@ findings:
   priority: P1
   category: authority
   evidence:
-  - contracts/src/deploy/00_root.rho:63
-  - contracts/src/deploy/11_credentials.rho:48
-  claim: Root registration and qualification issuance are separate authorities.
-  verdict: unproved
+  - contracts/src/deploy/11_credentials.rho:52
+  - harness/install.py:143
+  - harness/unit_install.py
+  - tools/keygen.py:27
+  claim: Root registration and qualification issuance use separate key addresses.
+  verdict: proved
   arms: []
-  actions:
-  - accept-risk
-  disposition: accept-risk
-  owner: patrick
-  expiry: '2027-05-08'
-  note: The 00_root deployer becomes the installer and the 11_credentials deployer becomes the genesis Issuer. In the installer
-    they are one key. Loss of that key freezes Root updates and new qualifications; there is no rotate arm. A governance
-    extension must separate or rotate them.
+  actions: []
+  disposition: fixed
+  note: The installer renders __ISSUER_ADDRESS__ from the issuer key, and the default keygen now emits a distinct issuer key;
+    the 11_credentials term is still deployed by the installer for Root registration, but Issuer.authorize checks the
+    separate address. unit_install asserts the rendered term carries the issuer address, not the installer address. A
+    rotation arm remains a governance extension.
 - id: RGA-053
   title: Registry insertion is unauthenticated, so a URI is a designation and not an endorsement
   severity: S3
@@ -1299,21 +1300,22 @@ findings:
   priority: P1
   category: liveness
   evidence:
-  - contracts/src/deploy/30_oracle.rho:205
-  - contracts/src/deploy/30_oracle.rho:299
-  claim: A decided case can always reach closed.
-  verdict: unproved
+  - contracts/src/deploy/30_oracle.rho:245
+  - contracts/src/deploy/30_oracle.rho:296
+  - harness/unit_oracle.py
+  claim: A decided case can reach a terminal closed state without an applied outcome.
+  verdict: proved-but-narrower
   arms:
   - OracleCase.execute
   - OracleCase.close
-  actions: []
-  disposition: accept-risk
-  owner: patrick
-  expiry: '2027-05-08'
-  note: execute retries only the stored decision through the case-bound Apply. If the subject refuses forever, the case
-    returns to decided with a failed execution receipt and close refuses because it accepts only executed or expired. A
-    terminal abandon path needs a liability policy (adjudicator-signed abandon or timeout close). Accepted until that policy
-    is written; RGA-024's receipt is the recovery evidence for a failure that is retryable.
+  - OracleCase.abandon
+  actions:
+  - RR-18
+  disposition: fixed
+  note: execute now increments execution.attempts on every retry, and the adjudicator can abandon a decided case, closing it
+    with execution.status abandoned; execute after abandon refuses. unit_oracle covers non-adjudicator refusal, adjudicator
+    abandon, the closed status and the post-abandon refusal. Residual is that liveness depends on the adjudicator acting; a
+    timeout close would need a liability policy.
 
 arms:
 - file: contracts/src/deploy/00_root.rho
@@ -1779,6 +1781,18 @@ arms:
   guard_fidelity_finding: '-'
   guard_eq: RGen.oracleClose_guard_eq
   guard_fidelity_reason: ''
+- file: contracts/src/deploy/30_oracle.rho
+  contract: OracleCase
+  arm: abandon
+  node: oracle
+  disposition: infrastructure-reviewed
+  flow_status: owed
+  lean: '-'
+  divergences: []
+  guard_fidelity: not-applicable
+  guard_fidelity_finding: '-'
+  guard_eq: '-'
+  guard_fidelity_reason: terminal abandon arm added for RGA-071; no separate model transition
 - file: contracts/src/deploy/30_oracle.rho
   contract: OracleCase
   arm: decide

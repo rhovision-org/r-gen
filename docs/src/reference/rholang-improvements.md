@@ -39,32 +39,24 @@ The HAZOP rows for each item are in the manifest. Representative links:
 - RR-08: `HZ-ORACLE-013`, `HZ-ORACLE-015`.
 - RR-11: `HZ-ID-011`, `HZ-CRED-015`, `HZ-CLAIM-015`, `HZ-KASSET-015`.
 
-## Phase 2 progress
+## Status
 
-- RR-04 is fixed: `claimStatus` and `kassetStatus` both map `valid` to validated, `partial` to
-  conditional/validated, and `invalid` or unknown to rejected. An unknown verdict no longer produces
-  a validated claim beside a rejected K-Asset. Pre-write rejection remains a follow-up.
-- RR-01 is partial: `OracleFactory.open` now authenticates the opener and requires it to match
-  `caseReq.openedBy`. Parties and `subjectRef` remain caller-supplied; registry binding is open.
-  The Phase 2 guard checked `caseReq.subjectRef`, but `KAsset.openDispute` and
-  `VP.openDispute` pass the subject as a separate argument and never put it in `caseReq`, so
-  every dispute refused with `case fields`. The guard now checks the `subjectRef` parameter.
-  `unit_core` reaches dispute, decision, execution and provenance on the rebuilt contracts.
-- RR-02 is partial: `ProvenanceFactory.create` now authenticates the creator and rejects an empty
-  writer list. `assetRef` is still a free string; asset-registry binding is an extension.
-- RR-08 is fixed: `Apply.applyDecision` returns `already applied` when the K-Asset already has the
-  decision outcome, and `OracleCase.execute` records a pending/applied/failed receipt with the case id,
-  decision, and outcome so a retry can reconcile a partial cross-contract failure.
-- RR-03 is fixed: `ValueProposition.proveValidated` reads `nowHeight` and rejects a supplied
-  `atHeight` that differs from chain height.
-- RR-05 is fixed: `KAsset.nest` caps a batch at 32 children and the parent list at 64, rejecting
-  larger batches before proof consumption.
-- RR-07 is partial: claim creation now requires a deadline and rejects a comment window after the
-  deadline. Claim and VP creation now require a future deadline; oracle future-ness remains open.
-- RR-11 is partial: identity create writes a pending directory entry and gains `IdentityFactory.resume`. The claim and nest halves are fixed by RR-16 and RR-15: claim validation writes a `validating` receipt and `Claim.resume` commits it without minting; `KAsset.nest` reserves the parent, records each consumed proof, and gains `resumeNest`/`abortNest`. Identity-create recovery remains.
-- The other items remain proposed. On 2026-11-04 the isolated devnet was started with 8 GB and
-  `make install unit-all` passed all ten suites on the rebuilt contracts. The earlier 4 GB
-  attempt failed with exit 137; the memory requirement is documented in the devnet guide.
+The authoritative status is `spec/improvements/rholang.yaml`. At the 2026-11-08 close-out:
+
+- **Fixed:** RR-01 (oracle `openBound` subject snapshot), RR-02 (`createBound` subject
+  binding), RR-03 (height-bound VP proof), RR-04 (total verdict mapping), RR-05 (nest caps),
+  RR-06 (advisory `Credential.check`), RR-07 (future deadlines), RR-08 (execution receipt),
+  RR-09 (permissionless participation documented), RR-12 (capability handoff), RR-13 (Root
+  install authentication), RR-14 (VP reference at claim create), RR-15 (nest receipt),
+  RR-16 (claim resume without mint), RR-17 (oracle wiring against Root), RR-18 (oracle
+  abandon and attempt counter).
+- **Partial:** RR-11. Identity create already has a reserving/minted/active directory record
+  and a subject-only `IdentityFactory.resume`; `unit_identity` now covers active, no-pending
+  and non-subject resume. The minted-pending transition still needs a fault-injection test.
+- **Accepted:** RR-10 (registry growth and create serialization remain explicit).
+
+The isolated devnet needs 8 GB; the earlier 4 GB attempt failed with exit 137. The ten core
+suites, the installer state test and the RGA-070 wiring negative pass on a fresh devnet.
 
 ## Policy decisions
 

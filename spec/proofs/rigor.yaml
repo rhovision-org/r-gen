@@ -306,6 +306,8 @@ divergences:
   direction: mixed
   consequence: 'Resolved in Phase 2: the model revoke now requires active status, matching the deployed refusal.'
   finding: RGA-004
+  status: resolved
+  justification: Phase 2 aligns the model revoke with the deployed active-status refusal.
 - id: DIV-002
   arm: Credential.prove
   model_decl: RGen.CredentialState.activeAt
@@ -313,6 +315,8 @@ divergences:
   direction: mixed
   consequence: 'Resolved in Phase 2: the model uses h <= expiresAt and no issuedAt lower bound, matching the deployed expiry.'
   finding: RGA-004
+  status: resolved
+  justification: Phase 2 aligns the expiry boundary.
 - id: DIV-003
   arm: Credential.renew
   model_decl: RGen.CredentialState.renew
@@ -320,6 +324,8 @@ divergences:
   direction: mixed
   consequence: Model adds issuedAt <= newExpiry; deployed writes evidenceHash and renewals that the model omits.
   finding: RGA-004
+  status: justified
+  justification: The model adds an issuance lower bound; renewal evidence is outside the modeled state and no authority decision depends on it.
 - id: DIV-004
   arm: KAsset.approve
   model_decl: RGen.KAssetState.approve
@@ -327,6 +333,9 @@ divergences:
   direction: model-permissive
   consequence: Phase 2 requires the Approver credential type. Registry-level and minLevel qualification remain unmodeled.
   finding: RGA-004
+  status: material
+  justification: The model omits registry-level and minLevel approver qualification; closure is a proof-debt item.
+  closure: IMP-014
 - id: DIV-005
   arm: KAsset.nest
   model_decl: RGen.KAssetState.nest
@@ -334,6 +343,8 @@ divergences:
   direction: model-permissive
   consequence: 'Resolved in Phase 2: the model nest now requires an approved parent.'
   finding: RGA-004
+  status: resolved
+  justification: Phase 2 aligns the approved-parent guard.
 - id: DIV-006
   arm: KAsset.nest
   model_decl: RGen.KAssetState.strictRising
@@ -341,6 +352,8 @@ divergences:
   direction: mixed
   consequence: 'Resolved in Phase 2: strictRising now requires strictly increasing approvedAt, matching the deployed order.'
   finding: RGA-004
+  status: resolved
+  justification: Phase 2 aligns strict approvedAt order.
 - id: DIV-007
   arm: Claim.validate
   model_decl: RGen.ClaimState.validate
@@ -348,6 +361,9 @@ divergences:
   direction: shape-different
   consequence: Model takes a caller-chosen kassetId; deployed mints the K-Asset with makeKAsset.
   finding: RGA-004
+  status: material
+  justification: The model takes a kassetId while the deployed arm mints through makeKAsset; closure is a proof-debt item.
+  closure: IMP-014
 - id: DIV-008
   arm: Claim.validate
   model_decl: RGen.ClaimState.validate
@@ -355,6 +371,8 @@ divergences:
   direction: shape-different
   consequence: Model checks proof.requirement; deployed checks selectionCriteria.
   finding: RGA-004
+  status: justified
+  justification: The deployed selectionCriteria is passed as the proof requirement; the names denote the same guard.
 - id: DIV-009
   arm: Oracle.evidence
   model_decl: RGen.OracleState.addEvidence
@@ -362,6 +380,8 @@ divergences:
   direction: model-permissive
   consequence: 'Resolved in Phase 2: oracle evidence now requires a listed party or the adjudicator.'
   finding: RGA-004
+  status: resolved
+  justification: Phase 2 aligns the party-or-adjudicator evidence guard.
 - id: DIV-010
   arm: ValueProposition.proveValidated
   model_decl: RGen.VPState.proveValidated
@@ -370,6 +390,9 @@ divergences:
   consequence: Phase 2 adds caller to the model payload; the deployed contract also binds atHeight to nowHeight. The model
     still treats atHeight as a parameter.
   finding: RGA-021
+  status: material
+  justification: The deployed proof binds atHeight to nowHeight; the model still takes atHeight as a parameter; closure is a proof-debt item.
+  closure: IMP-014
 - id: DIV-011
   arm: Identity.update
   model_decl: RGen.updateOwner
@@ -377,6 +400,8 @@ divergences:
   direction: shape-different
   consequence: Model transfers ownership; deployed patches profile hashes and does not change the subject.
   finding: RGA-013
+  status: resolved
+  justification: ProfileState.updateProfile models the deployed profile patch; the old ownership-transfer description is legacy.
 - id: DIV-012
   arm: IdentityFactory.create
   model_decl: RGen.Directory.create
@@ -384,6 +409,8 @@ divergences:
   direction: effect-omitting
   consequence: Model proves first-writer-wins only; the deployed create also writes the identity and registers the bundle.
   finding: RGA-008
+  status: justified
+  justification: IdentityReservation models reserve, mint, commit and resume; bundle registration is an external effect.
 - id: DIV-013
   arm: Claim.validate
   model_decl: RGen.ClaimState.validate
@@ -392,6 +419,8 @@ divergences:
   consequence: Model has validated/expired/rejected; deployed derives claim and K-Asset statuses through two mappings that
     disagree on unknown verdicts.
   finding: RGA-020
+  status: resolved
+  justification: RR-04 makes the claim and K-Asset status mappings total and aligned.
 - id: DIV-014
   arm: OracleCase.execute
   model_decl: RGen.OracleState.execute
@@ -399,6 +428,8 @@ divergences:
   direction: effect-omitting
   consequence: Model has no executing state or cross-contract retry window.
   finding: RGA-024
+  status: justified
+  justification: The deployed executing state and attempt receipt are outside the model; execute_once covers the safety property.
 - id: DIV-015
   arm: ProvenanceFactory.create
   model_decl: RGen.ProvenanceState
@@ -406,6 +437,8 @@ divergences:
   direction: effect-omitting
   consequence: Model starts after creation; deployed creation is unauthenticated and chooses the writer list.
   finding: RGA-022
+  status: justified
+  justification: createBound authenticates and binds creation; the model starts at the first anchor and does not claim to model creation.
 - id: DIV-016
   arm: KAsset.nest
   model_decl: RGen.KAssetState.nest
@@ -414,52 +447,88 @@ divergences:
   consequence: Deployed uses a persistent peek pre-pass, then a linear consume and re-check; the model is a single atomic
     step.
   finding: RGA-004
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014
   note: The re-check makes the abstraction plausible but unproved.
 assumptions:
 - id: ASM-001
   assumption: Run is a finite list of events in trace order.
   effect: No scheduler, fairness, or interleaving enumeration.
   finding: RGA-001
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014
 - id: ASM-002
   assumption: Event.apply is deterministic and pure.
   effect: Rholang COMM semantics are cited, not modelled.
   finding: RGA-001
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014
 - id: ASM-003
   assumption: Cell names and proof capabilities are unforgeable.
   effect: Name unforgeability and single-use COMM are platform assumptions.
   finding: '-'
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014
 - id: ASM-004
   assumption: Arm steps are hand-transcribed from contracts.
   effect: No mechanized extraction or refinement.
   finding: RGA-004
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014
 - id: ASM-005
   assumption: Block height comes from rho:block:data.
   effect: Chain-height authenticity is not proved.
   finding: RGA-021
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014
 - id: ASM-006
   assumption: A proof is data plus a one-shot cell.
   effect: The private Proof capability and URI resolution are not modelled.
   finding: RGA-002
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014
 - id: ASM-007
   assumption: Phlo, deploy depth, serialization size, and JSON shape are deployment concerns.
   effect: No resource or schema proof.
   finding: RGA-025
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014
 - id: ASM-008
   assumption: The arm-to-model map is checked by name and cell.
   effect: No guard equivalence.
   finding: RGA-004
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014
 - id: ASM-009
   assumption: Model state records only the fields the invariants need.
   effect: Effect-omitting divergences are possible.
   finding: RGA-004
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014
 - id: ASM-010
   assumption: The six modeled cells cover the core state machine.
   effect: Registries, factories, and deployment wiring are outside the model.
   finding: RGA-029
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014
 - id: ASM-011
   assumption: A registry URI cannot be re-registered, so the term at a URI is fixed after insertion.
   effect: The nest anchor check can rely on ref.uri naming a genuine K-Asset; registry insertion itself is unauthenticated.
   finding: RGA-053
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014
 coverage:
 - id: INV-D1
   invariant: D1
@@ -653,9 +722,18 @@ model_only:
 - arm: Claim.reject
   reason: No deployed Claim(@"reject") arm; rejection is folded into Claim.validate via finalizeValidation.
   finding: RGA-008
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014
 - arm: Oracle.finishExecute
   reason: No deployed finishExecute arm; execute performs the executing/executed transition inline.
   finding: RGA-008
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014
 - arm: Oracle.rollbackExecute
   reason: No deployed rollbackExecute arm; execute reverts to decided on apply failure.
   finding: RGA-008
+  status: material
+  justification: The receipt makes the deployed commit atomic from the recorded prefix; the model remains a single atomic step.
+  closure: IMP-014

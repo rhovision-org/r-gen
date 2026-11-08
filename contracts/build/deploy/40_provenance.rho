@@ -16,7 +16,7 @@ new
   authOwner, authSubject, authPubKey, nowHeight,
   listHas, listHasId, listHasAny, listHas3,
   listHasEq, listHasIdEq, listHasAnyEq, listHas3Eq,
-  provenanceSubject, provenanceCreate, parentCheck, commitAnchor
+  provenanceSubject, provenanceCreate
 in {
 // Deployer identity helpers. The REV address is the subject id; the public key is stored
 // only where an identity profile needs it.
@@ -152,7 +152,7 @@ contract listHas3Eq(@head, @a, @b, @c, @tail, ret) = {
   } |
 
   contract provenanceCreate(@subject, @creator, @writers, ret) = {
-    new pState, Provenance, uriCh in {
+    new pState, Provenance, uriCh, parentCheck, commitAnchor in {
       pState!({
         "uri": "",
         "assetRef": {"id": subject.get("uri").toString(),
@@ -211,13 +211,16 @@ contract listHas3Eq(@head, @a, @b, @c, @tail, ret) = {
       contract parentCheck(@hash, @doc, @s, @who, @now, ret2) = {
         match doc.get("parentHash") {
           Nil => { commitAnchor!(hash, doc, s, who, now, *ret2) }
-          "" => { commitAnchor!(hash, doc, s, who, now, *ret2) }
           p => {
-            new pc in {
-              listHasId!(s.get("anchors"), p, *pc) |
-              for (@has <- pc) {
-                if (has) { commitAnchor!(hash, doc, s, who, now, *ret2) }
-                else { pState!(s) | ret2!((false, "parent")) }
+            if (p == "") {
+              commitAnchor!(hash, doc, s, who, now, *ret2)
+            } else {
+              new pc in {
+                listHasId!(s.get("anchors"), p, *pc) |
+                for (@has <- pc) {
+                  if (has) { commitAnchor!(hash, doc, s, who, now, *ret2) }
+                  else { pState!(s) | ret2!((false, "parent")) }
+                }
               }
             }
           }

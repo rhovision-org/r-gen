@@ -1,0 +1,419 @@
+schema_version: rgen.improvement-plan/v1
+baseline: '2026-11-08'
+objective: risk-reduction-per-effort
+items:
+- id: IMP-001
+  title: Install plan with kind-bound verification, atomic manifest and resumable state
+  class: live-risk
+  sources:
+  - HZ-DEPLOY-007
+  - HZ-DEPLOY-012
+  - HZ-DEPLOY-014
+  - HZ-DEPLOY-015
+  - RGA-070
+  closeout_ref: RGA-070
+  risk: 4
+  effort: 3
+  confidence: high
+  tier: 1
+  status: in-progress
+  action: Write a plan of key -> kind/version/uri, verify it through Root before writing the manifest, persist per-term
+    state, and resume or refuse a replay.
+  exit_criteria: A fail-after install resumes with one Root entry per component and a substituted or wrong-kind
+    URI is refused before the manifest is written.
+  depends_on: []
+  owner: patrick
+  evidence:
+  - kind: test
+    ref: harness/unit_install.py
+  - kind: test
+    ref: harness/unit_wiring.py
+  - kind: code
+    ref: harness/install.py
+  note: Replaces six install/HAZOP patches with three coherent units.
+- id: IMP-002
+  title: Refuse duplicate keys in factory registries
+  class: live-risk
+  sources:
+  - HZ-REG-010
+  closeout_ref: null
+  risk: 3
+  effort: 2
+  confidence: high
+  tier: 1
+  status: done
+  action: Confirm GenRoot duplicate refusal and add the same explicit refusal to factory registries keyed by a caller-supplied
+    URI.
+  exit_criteria: A second registration for a key is refused, not overwritten.
+  depends_on: []
+  owner: patrick
+  evidence:
+  - kind: test
+    ref: harness/unit_identity.py
+  - kind: code
+    ref: contracts/src/deploy/00_root.rho
+  note: GenRoot.register already refuses a duplicate key; the gap is the factory registries.
+- id: IMP-003
+  title: Bind every registry verify to the record URI and kind
+  class: live-risk
+  sources:
+  - HZ-REG-012
+  - RGA-053
+  closeout_ref: null
+  risk: 4
+  effort: 2
+  confidence: high
+  tier: 1
+  status: done
+  action: Require the record's own uri (and kind where present) to equal the requested URI in CredentialFactory,
+    ClaimFactory and ValuePropositionFactory verify; add a static trust gate.
+  exit_criteria: A record fetched by a different URI is refused and check_registry_trust flags a new unverified
+    resolve.
+  depends_on: []
+  owner: patrick
+  evidence:
+  - kind: gate
+    ref: tools/check_registry_trust.py
+  - kind: code
+    ref: contracts/src/deploy/11_credentials.rho
+  - kind: code
+    ref: contracts/src/deploy/20_claim.rho
+  - kind: code
+    ref: contracts/src/deploy/22_value.rho
+  note: RGA-053 remains a systemic boundary; this reduces the consumer-side risk.
+- id: IMP-004
+  title: Enforce Root pinning by default for non-devnet profiles
+  class: live-risk
+  sources:
+  - RGA-051
+  closeout_ref: RGA-051
+  risk: 5
+  effort: 2
+  confidence: high
+  tier: 1
+  status: done
+  action: Make RGEN_ROOT_URI and VITE_RGEN_ROOT_URI mandatory and fail closed when unset; use the existing from_json_pinned
+    and web assertPinnedRoot paths.
+  exit_criteria: A tampered manifest is rejected by the default build and a correctly pinned one loads.
+  depends_on: []
+  owner: patrick
+  evidence:
+  - kind: test
+    ref: web/src/lib/manifest.test.ts
+  - kind: test
+    ref: crates/rgen-core/src/manifest.rs
+  - kind: code
+    ref: web/src/lib/manifest.ts
+  note: This is the cheap 80 percent fix; signed manifests remain Tier 3.
+- id: IMP-005
+  title: Add supply-chain gates and pin the Python toolchain
+  class: supply-chain
+  sources: []
+  closeout_ref: null
+  risk: 3
+  effort: 2
+  confidence: high
+  tier: 1
+  status: done
+  action: Add dependabot for cargo/npm/pip, cargo audit in CI, hashes for harness/requirements.txt, and upgrade
+    the web dev chain past the tinypool advisories.
+  exit_criteria: cargo audit and npm audit are clean or have recorded exceptions; CI runs the gates.
+  depends_on: []
+  owner: patrick
+  evidence:
+  - kind: gate
+    ref: .github/dependabot.yml
+  - kind: gate
+    ref: harness/requirements-ci.txt
+  - kind: code
+    ref: web/package.json
+  note: The advisories are in dev dependencies, not the shipped bundle.
+- id: IMP-006
+  title: Increment execution attempts and add a terminal abandon path
+  class: live-risk
+  sources:
+  - RGA-071
+  - WF-011
+  - WF-012
+  closeout_ref: RGA-071
+  risk: 3
+  effort: 3
+  confidence: high
+  tier: 2
+  status: done
+  action: Increment execution.attempts on retry and add OracleCase.abandon for a decided case whose execution is
+    failed; close with execution.status abandoned.
+  exit_criteria: Failure increments attempts, abandon closes the case, and normal execute is unchanged.
+  depends_on:
+  - IMP-001
+  owner: patrick
+  evidence:
+  - kind: test
+    ref: harness/unit_oracle.py
+  - kind: code
+    ref: contracts/src/deploy/30_oracle.rho:296
+  - kind: improvement
+    ref: spec/improvements/rholang.yaml
+  note: The abandon policy needs an adjudicator signature or a bounded attempt count.
+- id: IMP-007
+  title: Fault-inject between receipt and commit for nest and mint
+  class: assurance
+  sources:
+  - RGA-033
+  - RGA-065
+  closeout_ref: null
+  risk: 4
+  effort: 3
+  confidence: medium
+  tier: 2
+  status: in-progress
+  action: Replace the skipped nightly recovery case with a targeted kill after the receipt and before the commit,
+    then resume or abort.
+  exit_criteria: The nightly recovery row passes for nest and mint, or the residual is recorded with new evidence.
+  depends_on: []
+  owner: patrick
+  evidence:
+  - kind: test
+    ref: harness/unit_kasset.py
+  - kind: test
+    ref: harness/devnet_test.py
+  note: Deterministic partial-failure recovery is covered; a true mid-deploy crash is still the residual.
+- id: IMP-008
+  title: Separate installer and Issuer keys and drill key-loss recovery
+  class: ops
+  sources:
+  - RGA-052
+  closeout_ref: RGA-052
+  risk: 3
+  effort: 3
+  confidence: high
+  tier: 2
+  status: done
+  action: Allow INSTALLER_KEY and ISSUER_KEY to differ, test that Root and Issuer resolve to different addresses,
+    and document a rotation and key-loss drill.
+  exit_criteria: A test install uses two keys and the drill recovers without a duplicate deployment.
+  depends_on: []
+  owner: patrick
+  evidence:
+  - kind: test
+    ref: harness/unit_install.py
+  - kind: code
+    ref: harness/install.py
+  - kind: code
+    ref: tools/keygen.py
+  note: Rotation remains a governance extension; the drill is the bounded control.
+- id: IMP-009
+  title: Triage DIV-001..016 with explicit status and justification
+  class: proof-debt
+  sources:
+  - RGA-004
+  - LR-08
+  closeout_ref: null
+  risk: 4
+  effort: 2
+  confidence: high
+  tier: 2
+  status: done
+  action: Add status and justification to every DIV, resolve the material abstractions (DIV-004, DIV-010, DIV-016)
+    and mark the rest model-stricter or justified.
+  exit_criteria: Every DIV has a terminal status and check_rigor passes.
+  depends_on: []
+  owner: patrick
+  evidence:
+  - kind: gate
+    ref: tools/check_rigor.py
+  - kind: doc
+    ref: spec/proofs/rigor.yaml
+  note: Triage, not full closure; closure stays in Tier 3.
+- id: IMP-010
+  title: Sync the stale status, acceptance, measure and wording artifacts
+  class: hygiene
+  sources:
+  - RGA-030
+  closeout_ref: null
+  risk: 2
+  effort: 1
+  confidence: high
+  tier: 2
+  status: done
+  action: Update status.md, mark or rewrite spec/acceptance.yaml, regenerate or retire contracts/measure.json, sync
+    rholang-improvements.md, and correct the forest and PRF wording.
+  exit_criteria: No tracked page describes the pre-Pareto system as current.
+  depends_on: []
+  owner: patrick
+  evidence:
+  - kind: doc
+    ref: docs/src/appendix/status.md
+  - kind: doc
+    ref: spec/acceptance.yaml
+  - kind: doc
+    ref: docs/src/reference/rholang-improvements.md
+  - kind: doc
+    ref: contracts/measure.json
+  note: Evidence is a docs and claim review, not a contract change.
+- id: IMP-011
+  title: Prepare and commission the external S1 review packet
+  class: assurance
+  sources:
+  - RGA-051
+  - RGA-070
+  closeout_ref: null
+  risk: 5
+  effort: 3
+  confidence: high
+  tier: 0
+  status: in-progress
+  action: Assemble the closeout, S1 traces, manifest substitution and oracle-factory wiring evidence, red-team results
+    and reviewer questions; record the external review outcome.
+  exit_criteria: A reviewer packet exists and the review outcome is recorded in the closeout ledger.
+  depends_on: []
+  owner: patrick
+  evidence:
+  - kind: doc
+    ref: docs/src/reference/external-review-packet.md
+  note: The review itself is an external prerequisite; this item prepares and tracks it.
+- id: IMP-012
+  title: Fail the close-out gate on a code-only S1 fixed row
+  class: assurance
+  sources:
+  - RGA-070
+  closeout_ref: RGA-070
+  risk: 2
+  effort: 1
+  confidence: high
+  tier: 0
+  status: done
+  action: Add a strict S1 evidence mode to check_closeout.py and run it in make check-closeout.
+  exit_criteria: An S1 fixed row without test/theorem/gate/doc evidence fails the gate; RGA-070 passes with the
+    wiring test.
+  depends_on:
+  - IMP-001
+  owner: patrick
+  evidence:
+  - kind: gate
+    ref: tools/check_closeout.py
+  - kind: gate
+    ref: Makefile
+  note: Do not fail lower-severity code-only rows in this pass.
+- id: IMP-013
+  title: Sign the manifest with a distributed trust root
+  class: live-risk
+  sources:
+  - RGA-051
+  closeout_ref: RGA-051
+  risk: 5
+  effort: 4
+  confidence: medium
+  tier: 3
+  status: proposed
+  action: Produce an Ed25519-signed manifest from the installer, verify it in from_json_pinned and the web store,
+    and document key distribution and rotation.
+  exit_criteria: A tampered manifest is rejected without a pre-shared pin.
+  depends_on:
+  - IMP-004
+  owner: patrick
+  evidence: []
+  note: Deferred because enforced pinning covers the default build at lower effort.
+- id: IMP-014
+  title: Close the remaining proof debt
+  class: proof-debt
+  sources:
+  - LR-01
+  - LR-08
+  - RGA-006
+  - RGA-007
+  closeout_ref: null
+  risk: 2
+  effort: 4
+  confidence: high
+  tier: 3
+  status: proposed
+  action: Close the owed-arm guard fidelity, the DIV closure, the axiom coverage outside the Pareto vocabulary,
+    and the 48-pair matrix after triage.
+  exit_criteria: The rigor ladder has no partial item without a terminal scope statement.
+  depends_on:
+  - IMP-009
+  owner: patrick
+  evidence: []
+  note: Proof debt, not live risk; fixed budget after triage.
+- id: IMP-015
+  title: Complete the identity-create recovery record
+  class: live-risk
+  sources:
+  - RR-11
+  closeout_ref: null
+  risk: 4
+  effort: 3
+  confidence: high
+  tier: 1
+  status: in-progress
+  action: Exercise the existing reserving/minted/active directory record and subject-only IdentityFactory.resume;
+    add the active, no-pending and non-subject tests, then fault-inject the minted-pending transition.
+  exit_criteria: Active, no-pending and non-subject resume are green, and the minted-pending transition resumes
+    to exactly one identity.
+  depends_on: []
+  owner: patrick
+  evidence: []
+  note: This closes the last accepted cross-cell atomicity window in RR-11.
+- id: IMP-016
+  title: Complete or justify the remaining race pairs
+  class: proof-debt
+  sources:
+  - RGA-007
+  - LR-05
+  closeout_ref: null
+  risk: 2
+  effort: 3
+  confidence: high
+  tier: 3
+  status: proposed
+  action: Add the 16 missing cross-primitive pairs to spec/flows/races.yaml or record a reason for each unmodeled
+    pair.
+  exit_criteria: The matrix is 48 rows or every unrecorded pair has a reason.
+  depends_on:
+  - IMP-009
+  owner: patrick
+  evidence: []
+  note: The public page already states 32 of 48; completion removes the remaining proof debt.
+- id: IMP-017
+  title: Decide the de-approval, devalidation and provenance-writer policies
+  class: policy
+  sources:
+  - RGA-055
+  - RGA-062
+  - RGA-063
+  - RGA-066
+  - RGA-040
+  - RGA-054
+  closeout_ref: null
+  risk: 2
+  effort: 5
+  confidence: medium
+  tier: 3
+  status: proposed
+  action: Write the liability and consent policy for de-approval, devalidation, writer removal and caller bounds,
+    then implement only the accepted transitions.
+  exit_criteria: Each policy has an owner decision and either a transition or a renewed acceptance.
+  depends_on: []
+  owner: patrick
+  evidence: []
+  note: Policy-heavy; the current acceptances are bounded but expiring.
+- id: IMP-018
+  title: Revisit the registry cap and PR devnet tier when infrastructure allows
+  class: ops
+  sources:
+  - RGA-029
+  - RGA-011
+  closeout_ref: null
+  risk: 2
+  effort: 4
+  confidence: medium
+  tier: 3
+  status: proposed
+  action: Measure the registry ceiling and add a PR smoke tier only when an 8 GB runner is available; otherwise
+    renew the acceptance with the measured evidence.
+  exit_criteria: A measured ceiling and runner decision are recorded.
+  depends_on: []
+  owner: patrick
+  evidence: []
+  note: RGA-011 is blocked by runner capacity; RGA-029 is a breaking cap decision.

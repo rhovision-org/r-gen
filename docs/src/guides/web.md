@@ -9,6 +9,10 @@ signs real deploys through the same signed-deploy path as the CLI.
   keystore in IndexedDB; the private key never crosses into JavaScript.
 - **Network:** devnet, public testnet, or a custom node. Settings selects the profile and
   accepts a pasted manifest. The app resolves all nine Root keys before writes are enabled.
+- **Root pinning:** the devnet profile may trust its local manifest. The testnet and custom
+  profiles require `VITE_RGEN_ROOT_URI` at build time and refuse a fetched, cached or
+  pasted manifest whose `root_uri` differs. Set it before `npm run build`; an unpinned
+  non-devnet build fails closed.
 - **No indexer:** the chain is the backend. Lists are the local journal, pasted share links,
   and the seeded catalogue. Every detail page re-reads its entity.
 

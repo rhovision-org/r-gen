@@ -24,11 +24,11 @@ At the 2026-11-08 baseline the ledger has **59 P0/P1 rows**: 25 P0 and 34 P1.
 
 | Decision | Rows |
 |---|---|
-| fixed | 47 |
-| risk-accepted | 12 |
+| fixed | 49 |
+| risk-accepted | 10 |
 | narrowed-claim | 0 |
 
-The twelve accepted risks are:
+The ten accepted risks are:
 
 | ID | Risk | Why it is accepted | Expiry |
 |---|---|---|---|
@@ -37,13 +37,11 @@ The twelve accepted risks are:
 | RGA-029 | Registries grow without a cap | `directoryState` and `factoryState` are documented serialization points; a cap is a breaking change | 2027-05-08 |
 | RGA-040 | `proveApproved` is permissionless | The proof is data with no victim state; the caller pays; nesting still requires the parent claimant | 2027-05-08 |
 | RGA-051 | Unsigned manifest | Root pinning is implemented and tested; the default build is trust-on-first-use; signing remains future work | 2027-05-08 |
-| RGA-052 | Installer is Root writer and genesis Issuer | One genesis key controls both; key loss is the threat model; rotation is a governance extension | 2027-05-08 |
 | RGA-053 | Registry insertion is unauthenticated | A URI is a designation, not an endorsement; every consumer must verify factory membership | 2027-05-08 |
 | RGA-054 | Oracle/claim clock arms have no caller check | They are cranks, not decisions; `execute` replays only the stored decision through the case-bound Apply | 2027-05-08 |
 | RGA-055 | Approval survives approver revocation | The proof is height-bound; de-approval needs a new transition and a liability policy | 2027-05-08 |
 | RGA-062 | Validation survives validator revocation | The proof is height-bound; devalidation needs a new transition | 2027-05-08 |
 | RGA-063 | Provenance writers cannot be revoked | Provenance is advisory; no core arm uses it as authority; `removeWriter` needs a writer-consent policy | 2027-05-08 |
-| RGA-071 | A decided case with a permanently refusing subject Apply cannot close | A terminal abandon needs a liability policy; the execution receipt records the failure | 2027-05-08 |
 
 ## Residual risks carried by fixed rows
 
@@ -66,7 +64,8 @@ Several fixed rows carry a documented residual rather than a new finding:
 The ledger is owner-authorized. There is one maintainer. No independent technical review
 has been performed. External review is required before any value-bearing deployment and is
 specifically required for the S1 rows (RGA-051, RGA-070) and recommended for the P0 set.
-The acceptance dates above are not a substitute for that review.
+The acceptance dates above are not a substitute for that review. The reviewer-facing
+evidence and questions are in the [external review packet](external-review-packet.md).
 
 ## Regenerating
 

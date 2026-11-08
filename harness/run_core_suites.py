@@ -24,6 +24,8 @@ SUITES = {
     "integration": "integration_core.py",
     "core": "unit_core.py",
     "race": "concurrency_core.py",
+    "install": "unit_install.py",
+    "wiring": "unit_wiring.py",
 }
 DEFAULT = ["identity", "credentials", "claim", "kasset", "value", "oracle",
            "provenance", "integration", "core", "race"]

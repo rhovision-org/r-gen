@@ -14,6 +14,7 @@ ALLOWED = {
     "__CREDENTIAL_FACTORY_URI__",
     "__ORACLE_FACTORY_URI__",
     "__VALUE_PROPOSITION_FACTORY_URI__",
+    "__ISSUER_ADDRESS__",
 }
 PATTERN = re.compile(r"__[A-Z0-9_]+__")
 

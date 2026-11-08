@@ -66,7 +66,7 @@ def main() -> int:
     assertions.expect("advisory check scope", reply[1], False)
     assertions.expect("advisory check scope reason", reply[2], "scope")
 
-    self_issue = fixtures.issue(actors.address("deployer"), "Validator", "structural",
+    self_issue = fixtures.issue(actors.address("issuer"), "Validator", "structural",
                                 "US-TX", "validator", 1)
     assertions.expect_refusal("self issue refused", self_issue, "self issue")
 
@@ -86,7 +86,7 @@ def main() -> int:
     assertions.expect_refusal("self attest refused", reply, "self attest")
 
     reply = fixtures.call_uri(carol_cred, "renew", [Raw("*dId"), 2000000, "renew-hash"],
-                              key="deployer")
+                              key="issuer")
     assertions.expect_ok("issuer renew", reply)
     corpus.assert_row("CRED-renew", reply)
     reply = fixtures.call_uri(carol_cred, "renew", [Raw("*dId"), 1, "short"], key="bob")

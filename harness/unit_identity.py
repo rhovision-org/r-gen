@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import sys
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -27,6 +28,13 @@ def main() -> int:
     assertions.expect_ok("alice directory lookup", reply)
     alice_uri = reply[1]
 
+    reply = fixtures.identity_resume("alice")
+    assertions.expect_ok("resume active identity", reply)
+    assertions.expect("resume active uri", reply[1], alice_uri)
+    reply = fixtures.call_uri(fixtures.comp("identity-factory"), "resume",
+                              [Raw("*dId"), addrs["alice"]], key="bob")
+    assertions.expect_refusal("non-subject resume refused", reply, "not subject")
+
     reply = fixtures.identity("alice", "alice-second")
     assertions.expect_refusal("duplicate identity refused", reply, "duplicate")
     corpus.assert_row("ID-create-duplicate", reply)
@@ -49,6 +57,17 @@ def main() -> int:
                               deployer=False)
     assertions.expect_ok("identity count", reply)
     assertions.expect("at least three identities", reply[1] >= 3, True)
+
+    # Root refuses a duplicate key rather than overwriting the entry (HZ-REG-010).
+    key = f"component:test-{uuid.uuid4().hex[:8]}"
+    uri = fixtures.fake_uri("root-test")
+    reply = fixtures.call_uri(fixtures.comp("root"), "register",
+                              [key, uri, 1, "test", Raw("*dId")], key="deployer")
+    assertions.expect_ok("root register first", reply)
+    reply = fixtures.call_uri(fixtures.comp("root"), "register",
+                              [key, fixtures.fake_uri("root-test2"), 1, "test", Raw("*dId")],
+                              key="deployer")
+    assertions.expect_refusal("root duplicate key refused", reply, "duplicate")
 
     print("unit_identity: pass")
     return 0

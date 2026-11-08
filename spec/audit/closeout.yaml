@@ -675,11 +675,8 @@ items:
   priority: P0
   decision: risk-accepted
   owner: patrick
-  rationale: The manifest is an unsigned file of URI designations. Pinning is now implemented and tested, not merely
-    proposed. Manifest::from_json_pinned refuses a substituted Root, and the web client refuses a fetched, cached
-    or pasted manifest whose Root differs from VITE_RGEN_ROOT_URI. The default build remains trust-on-first-use
-    because pinning is opt-in; a signed manifest is still the stronger fix. Risk accepted until an S1 external review
-    or 2027-05-08, whichever is first.
+  rationale: The web client enforces Root pinning for testnet and custom profiles and fails closed without VITE_RGEN_ROOT_URI;
+    the devnet profile remains trust-on-first-use on a local file. A signed manifest remains future work.
   evidence:
   - kind: code
     ref: crates/rgen-core/src/manifest.rs:47
@@ -689,24 +686,29 @@ items:
     ref: web/src/lib/store.ts:79
   - kind: test
     ref: crates/rgen-core/src/manifest.rs
+  - kind: test
+    ref: web/src/lib/manifest.test.ts
+  - kind: code
+    ref: web/src/lib/manifest.ts
   closed_on: '2026-11-08'
   review: owner-authorized
   expiry: '2027-05-08'
 - id: RGA-052
   priority: P1
-  decision: risk-accepted
+  decision: fixed
   owner: patrick
-  rationale: The 00_root deployer becomes the installer and the 11_credentials deployer becomes the genesis Issuer.
-    In the installer they are one key. Loss of that key freezes Root updates and new qualifications; there is no
-    rotate arm. A governance extension must separate or rotate them.
+  rationale: The installer renders the issuer address from a distinct issuer key and the default keygen emits one;
+    Root registration remains the installer, but qualification issuance checks the separate key.
   evidence:
+  - kind: test
+    ref: harness/unit_install.py
   - kind: code
-    ref: contracts/src/deploy/00_root.rho:63
+    ref: harness/install.py:143
   - kind: code
-    ref: contracts/src/deploy/11_credentials.rho:48
+    ref: contracts/src/deploy/11_credentials.rho:52
   closed_on: '2026-11-08'
   review: owner-authorized
-  expiry: '2027-05-08'
+  expiry: null
 - id: RGA-053
   priority: P1
   decision: risk-accepted
@@ -977,15 +979,15 @@ items:
   expiry: null
 - id: RGA-071
   priority: P1
-  decision: risk-accepted
+  decision: fixed
   owner: patrick
-  rationale: A decided case whose subject Apply keeps refusing has no terminal close path; an abandon path needs
-    a liability policy.
+  rationale: execute increments execution.attempts and the adjudicator can abandon a decided case, closing it without
+    an applied outcome; execute after abandon refuses. A timeout close would need a liability policy.
   evidence:
+  - kind: test
+    ref: harness/unit_oracle.py
   - kind: code
-    ref: contracts/src/deploy/30_oracle.rho:205
-  - kind: code
-    ref: contracts/src/deploy/30_oracle.rho:299
+    ref: contracts/src/deploy/30_oracle.rho:296
   closed_on: '2026-11-08'
   review: owner-authorized
-  expiry: '2027-05-08'
+  expiry: null
