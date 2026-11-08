@@ -53,9 +53,8 @@ jobs:
           components: rustfmt, clippy
       - run: cargo test -p rgen-core -p rgen-keystore -p rgen-sdk -p rgen-cli
       - run: cargo check -p rgen-wasm --target wasm32-unknown-unknown
-      - uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: taiki-e/install-action@cargo-audit
+      - run: cargo audit
 
   client:
     runs-on: ubuntu-latest
