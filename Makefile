@@ -21,13 +21,13 @@ export RGEN_CONTAINER
         check-pareto check-lean check-flows check-race-matrix check-arm-guards check-audit check-closeout check-improvement-plan check-registry-trust check-rigor check-conformance check-hazop hazop-check check-capabilities capabilities-check guard-check style-check audit-control-flow probe-deploy-semantics redteam redteam-capabilities lean-build lean-audit lean-audit-coverage lean-check gen-core-vectors check-core-vectors \
         devnet-up devnet-wait down status keys install unit-identity unit-credentials \
         unit-claim unit-kasset unit-value unit-oracle unit-provenance unit-integration \
-        unit-core unit-race unit-install unit-wiring unit-all verify \
+        unit-core unit-race unit-install unit-wiring unit-azoth unit-all verify \
         devnet-image devnet-doctor devnet-logs devnet-reset devnet-verify \
         devnet-test-smoke devnet-test-full devnet-test-nightly setup devnet-setup \
         client-lint client-test client-build client-wasm client-check \
         web-install web-dev web-build web-test web-typecheck web-wasm-smoke sync-manifest \
         testnet-preflight testnet-keys testnet-fund testnet-install testnet-verify \
-        testnet-seed testnet-campaign demo-seed demo-verify \
+        testnet-seed testnet-campaign demo-seed demo-verify demo-azoth demo-azoth-verify \
         check ci clean
 
 venv:
@@ -260,6 +260,9 @@ unit-install:
 unit-wiring:
 	$(PY) harness/unit_wiring.py
 
+unit-azoth:
+	$(PY) harness/unit_azoth.py
+
 unit-core:
 	$(PY) harness/unit_core.py
 
@@ -293,6 +296,12 @@ demo-seed:
 
 demo-verify:
 	$(PY) harness/demo_verify.py
+
+demo-azoth: client-build
+	$(PY) harness/azoth_claim.py demo --artifacts harness/demo/artifacts/azoth --approve
+
+demo-azoth-verify:
+	$(PY) harness/azoth_claim.py verify-deployment
 
 testnet-preflight:
 	RGEN_NET=testnet $(PY) harness/testnet_preflight.py --node $(TESTNET_NODE) $(TESTNET_ALLOW)
