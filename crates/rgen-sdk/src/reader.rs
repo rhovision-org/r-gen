@@ -16,7 +16,7 @@ impl NodeReader {
     pub fn new(node: impl Into<String>) -> Self {
         Self {
             node: node.into().trim_end_matches('/').to_string(),
-            http: ureq::AgentBuilder::new().build(),
+            http: ureq::agent(),
         }
     }
 
@@ -25,11 +25,12 @@ impl NodeReader {
     }
 
     pub fn status(&self) -> Result<Value, SdkError> {
-        let response = self
+        Ok(self
             .http
             .get(&format!("{}/api/v1/status", self.node))
-            .call()?;
-        Ok(response.into_json()?)
+            .call()?
+            .body_mut()
+            .read_json::<Value>()?)
     }
 
     pub fn height(&self) -> Result<i64, SdkError> {
@@ -43,12 +44,13 @@ impl NodeReader {
     /// Exploratory deploy. The body is a bare JSON string containing the Rholang term.
     pub fn explore(&self, term: &str) -> Result<Value, SdkError> {
         let body = serde_json::to_string(term).map_err(|e| SdkError::Decode(e.to_string()))?;
-        let response = self
+        Ok(self
             .http
             .post(&format!("{}/api/v1/explore-deploy", self.node))
-            .set("Content-Type", "application/json")
-            .send_string(&body)?;
-        Ok(response.into_json()?)
+            .header("Content-Type", "application/json")
+            .send(body.as_str())?
+            .body_mut()
+            .read_json::<Value>()?)
     }
 
     /// Resolve a component through a GenRoot URI. `GenRoot.resolve` is `(key, ret)`.
@@ -68,10 +70,7 @@ impl NodeReader {
 impl From<ureq::Error> for SdkError {
     fn from(error: ureq::Error) -> Self {
         match error {
-            ureq::Error::Status(status, response) => {
-                let body = response.into_string().unwrap_or_default();
-                SdkError::Decode(format!("node returned {status}: {body}"))
-            }
+            ureq::Error::StatusCode(status) => SdkError::Decode(format!("node returned {status}")),
             other => SdkError::Decode(format!("transport: {other}")),
         }
     }

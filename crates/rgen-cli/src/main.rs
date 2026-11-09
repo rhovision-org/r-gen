@@ -589,19 +589,17 @@ fn faucet(url: &str, address: &str, json: bool) {
         Ok(body) => body,
         Err(error) => fail(&error.to_string()),
     };
-    let response = match ureq::post(url)
-        .set("Content-Type", "application/json")
-        .send_string(&body)
+    let mut response = match ureq::post(url)
+        .header("Content-Type", "application/json")
+        .send(body.as_str())
     {
         Ok(response) => response,
-        Err(ureq::Error::Status(status, response)) => fail(&format!(
-            "faucet returned {status}: {}",
-            response.into_string().unwrap_or_default()
-        )),
+        Err(ureq::Error::StatusCode(status)) => fail(&format!("faucet returned {status}")),
         Err(error) => fail(&error.to_string()),
     };
     let value: serde_json::Value = response
-        .into_json()
+        .body_mut()
+        .read_json()
         .unwrap_or(serde_json::json!({"ok": true}));
     if json {
         print_json(value);
