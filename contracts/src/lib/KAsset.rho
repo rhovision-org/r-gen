@@ -1,6 +1,6 @@
-// K-Asset private library. Only the Claim may create one; a public factory would allow a fake claim.
+// K-Asset private library; only Claim creates one.
 // Paper: @robles2020innovation p.4-5; @zhong2019bridge p.4, p.6.
-// r-gen decision: parent-owned strict-order nesting; a receipt makes a failed batch resumable.
+// r-gen decision: strict-order nesting; the receipt is resumable.
 
 contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, @expectedOracleUri, root, ret) = {
   // Verify the oracle wiring against Root before the K-Asset exists (RGA-070).

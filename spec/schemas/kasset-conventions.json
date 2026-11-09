@@ -4,33 +4,97 @@
   "title": "r-gen K-Asset conventions v1",
   "description": "The state shape and status semantics that interoperating consumers may rely on. This is a versioned interface convention, not an on-chain guarantee: the Pareto core stores these fields but does not validate the quality rubric, quantity shape or liability shape.",
   "type": "object",
-  "required": ["quantity", "quality", "verdict", "status"],
+  "required": [
+    "quantity",
+    "quality",
+    "verdict",
+    "status"
+  ],
   "properties": {
     "quantity": {
       "type": "object",
-      "required": ["unit", "value"],
+      "required": [
+        "unit",
+        "value"
+      ],
       "properties": {
-        "unit": { "type": "string", "minLength": 1 },
-        "value": { "type": "integer", "minimum": 1 }
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "integer",
+          "minimum": 1
+        }
       },
       "additionalProperties": true
     },
     "quality": {
       "type": "object",
-      "required": ["completeness", "correctness", "traceability", "fitness"],
+      "required": [
+        "completeness",
+        "correctness",
+        "traceability",
+        "fitness"
+      ],
       "properties": {
-        "completeness": { "type": "integer", "minimum": 1, "maximum": 5 },
-        "correctness": { "type": "integer", "minimum": 1, "maximum": 5 },
-        "traceability": { "type": "integer", "minimum": 1, "maximum": 5 },
-        "fitness": { "type": "integer", "minimum": 1, "maximum": 5 }
+        "completeness": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "correctness": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "traceability": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "fitness": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        }
       },
       "additionalProperties": false,
       "x-sum-minimum": 4,
       "x-sum-maximum": 20
     },
+    "variance": {
+      "type": "object",
+      "required": [
+        "quantityBps",
+        "qualityBps",
+        "n"
+      ],
+      "properties": {
+        "quantityBps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "qualityBps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
     "verdict": {
       "type": "string",
-      "enum": ["valid", "partial", "invalid"]
+      "enum": [
+        "valid",
+        "partial",
+        "invalid"
+      ]
     },
     "status": {
       "type": "string",
@@ -46,17 +110,41 @@
       ]
     },
     "approval": {
-      "type": ["object", "null"],
-      "required": ["decision", "liability"],
+      "type": [
+        "object",
+        "null"
+      ],
+      "required": [
+        "decision",
+        "liability"
+      ],
       "properties": {
-        "decision": { "type": "string", "enum": ["approve", "conditional"] },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "approve",
+            "conditional"
+          ]
+        },
         "liability": {
           "type": "object",
-          "required": ["responsible", "shareBps"],
+          "required": [
+            "responsible",
+            "shareBps"
+          ],
           "properties": {
-            "responsible": { "type": "string", "minLength": 1 },
-            "shareBps": { "type": "integer", "minimum": 0, "maximum": 10000 },
-            "basisHash": { "type": "string" }
+            "responsible": {
+              "type": "string",
+              "minLength": 1
+            },
+            "shareBps": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "basisHash": {
+              "type": "string"
+            }
           },
           "additionalProperties": true
         }
@@ -66,12 +154,21 @@
   },
   "allOf": [
     {
-      "if": { "properties": { "status": { "const": "approved" } } },
+      "if": {
+        "properties": {
+          "status": {
+            "const": "approved"
+          }
+        }
+      },
       "then": {
         "properties": {
           "approval": {
             "type": "object",
-            "required": ["decision", "liability"]
+            "required": [
+              "decision",
+              "liability"
+            ]
           }
         }
       }
@@ -81,7 +178,12 @@
     "version": "kasset.conventions/v1",
     "enforcedByCore": false,
     "qualityRubric": {
-      "dimensions": ["completeness", "correctness", "traceability", "fitness"],
+      "dimensions": [
+        "completeness",
+        "correctness",
+        "traceability",
+        "fitness"
+      ],
       "range": "integer 1..5 each",
       "sum": "4..20",
       "missingOrOutOfRange": "refuse derivation; require a bound attestation"
@@ -95,7 +197,9 @@
       "approval": "validated or conditional -> approved or rejected",
       "dispute": "approved -> disputed -> upheld, revoked, or partially_revoked"
     },
-    "automaticDerivationStatuses": ["approved"],
+    "automaticDerivationStatuses": [
+      "approved"
+    ],
     "attestationRequiredStatuses": [
       "validated",
       "conditional",
@@ -107,7 +211,10 @@
     ],
     "engineeringVarianceBps": {
       "formula": "(20 - qualitySum) * 500 + verdictPenalty",
-      "verdictPenalty": { "valid": 0, "partial": 1000 },
+      "verdictPenalty": {
+        "valid": 0,
+        "partial": 1000
+      },
       "invalid": "rejected at mint; not eligible for automatic derivation",
       "range": "0..9000 for approved assets with a valid or partial verdict",
       "liabilityShareUsed": false

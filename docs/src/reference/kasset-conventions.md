@@ -95,6 +95,21 @@ The conformance fixture `spec/fixtures/kasset-conventions-v1.json` pins:
 The harness test in `harness/unit_kasset.py` creates, validates and approves that asset and
 asserts the returned state and the rate. If the state shape changes, that test fails first.
 
+## Declared variance snapshot
+
+A K-Asset created from a value proposition may carry the VP's declared variance map:
+
+```json
+{"quantityBps": 400, "qualityBps": 1200, "n": 30}
+```
+
+The rates are dimensionless second moments `σ² / mean²` in basis points. The K-Asset keeps
+its own realized `quantity` and `quality`, plus `valuePropositionRef`, so the snapshot is
+traceable to the VP. It is descriptive and immutable after mint; it is not a price, reward
+or liability record. A consumer that understands it (r-sure does) uses it as the engineering
+estimate; when it is absent, the rubric-derived `engineeringBps` above is the fallback. See
+[quantity, quality and variance](variance-model.md).
+
 ## Attestation fallback
 
 When the state is not eligible, or a dimension is missing, a consumer may use a bound

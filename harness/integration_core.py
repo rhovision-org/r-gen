@@ -31,6 +31,7 @@ def main() -> int:
         "termsHash": "terms",
         "selectionCriteria": selection,
         "deadlineHeight": 1000000,
+        **fixtures.vp_asset(),
     })
     assertions.expect_ok("propose VP", vp)
     vp_uri = vp[1]["uri"]
@@ -46,6 +47,11 @@ def main() -> int:
                                         suite_base.validation(bob_cred))
     assertions.expect_ok("validate claim", validated)
     kasset_uri = validated[1]["uri"]
+    kasset = fixtures.read(kasset_uri, "get")[1]
+    assertions.expect("K-Asset carries the VP variance snapshot",
+                      kasset.get("variance").get("quantityBps"), 400)
+    assertions.expect("K-Asset variance traces to the VP",
+                      kasset.get("valuePropositionRef").get("uri"), vp_uri)
 
     reply = fixtures.kasset_approve(kasset_uri, carol_cred, "carol",
                                     suite_base.approval(carol_cred, addrs["carol"]))

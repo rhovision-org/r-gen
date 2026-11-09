@@ -35,6 +35,7 @@
 - [Audit charter](reference/audit-charter.md)
 - [Close-out ledger](reference/closeout.md)
 - [Improvement plan](reference/improvement-plan.md)
+- [Quantity, quality and variance](reference/variance-model.md)
 - [External review packet](reference/external-review-packet.md)
 - [HAZOP](reference/hazop.md)
 - [Workflow HAZOP: multi-agent run](reference/workflow-hazop.md)

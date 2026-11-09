@@ -19,7 +19,7 @@ papers and the Pareto core. The core rows are anchored in `@robles2020innovation
 | 9 | `@zhong2019bridge` | p.4 | "'Approval' represents an acceptable completion" | `lib/KAsset.rho`: `KAsset@"approve"` requires credential + VP proofs | `K1_approve_credential`, `K2_approve_status` | `unit_kasset.py` |
 | 10 | `@zhong2019bridge` | p.5 | "pre-defined and agreed upon 'clock'" | `20_claim.rho`: `deadlineHeight`, `commentUntilHeight`; `Claim@"comment"` window | `ClaimState.validate_within_deadline`, `comment_within_window` | `unit_claim.py` |
 | 11 | `@zhong2019bridge` | p.6 | "'Blocks' … are nested"; risk transfer | `lib/KAsset.rho`: two-phase `KAsset@"nest"`, child `proveApproved` proofs | `K3_nest_acyclic`, `nest_child_below_parent`, `nest_child_scope` | `unit_kasset.py` |
-| 12 | `@mathews2017bim` | p.7 | "the new value proposition" | `22_value.rho`: `ValuePropositionFactory@"propose"`, `@"validate"`, `@"proveValidated"` | `V1_validate_once`, `proveValidated_requires_validated` | `unit_value.py` |
+| 12 | `@mathews2017bim` | p.7 | "the new value proposition" | `22_value.rho`: `ValuePropositionFactory@"propose"` now requires quantity, quality and variance; `@"validate"`, `@"proveValidated"` | `V1_validate_once`, `proveValidated_requires_validated`; [variance model](variance-model.md) | `unit_value.py` |
 | 13 | `@mathews2017bim` | p.8 | adjudicator as the most appropriate person | `30_oracle.rho`: stored adjudicator credential | `OracleState.decide_requires_adjudicator` | `unit_oracle.py` |
 | 14 | `@mathews2017bim` | p.9 | "new value proposition … intrinsic intangible value" | `22_value.rho`: validated/disputed/upheld value proposition cell | `V2_dispute_blocks_prove`, `openDispute_requires_status` | `unit_value.py` |
 | 15 | `@robles2016nspe` | p.29 | "The asset becomes the keeper of its own information" | `40_provenance.rho`: per-asset anchors/comments/verify | `P1_anchors_append_only`, `anchor_unique`, `verify_monotone` | `unit_provenance.py` |
@@ -31,7 +31,8 @@ papers and the Pareto core. The core rows are anchored in `@robles2020innovation
 
 - `@robles2017stewardship p.3` — reputation/Quant and the invisibility thesis. Background for
   why claim and validation are first-class; tokenisation and reputation are extensions.
-- `@robles2020innovation p.3` — Risk = S×P×E. Deferred risk extension.
+- `@robles2020innovation p.3` — Risk = S×P×E. Deferred risk extension; the variance-as-risk
+  bridge is the [variance model](variance-model.md), consumed by r-sure, not by the core.
 - `@robles2020innovation p.6-7` — WIKiD tools. Deferred metrics extension.
 - `@robles2016naic p.4`, `@robles2016nspe p.14` — insurability questions. Deferred risk
   extension.

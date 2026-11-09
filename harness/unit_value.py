@@ -25,6 +25,7 @@ def vp_req(addrs, proposer: str, selection: dict) -> dict:
         "termsHash": "vp-terms",
         "selectionCriteria": selection,
         "deadlineHeight": 1000000,
+        **fixtures.vp_asset(),
     }
 
 
@@ -117,6 +118,20 @@ def main() -> int:
     corpus.assert_row("VP-applyDecision", reply)
     reply = fixtures.read(vp_uri, "get")
     assertions.expect("VP upheld", reply[1].get("status"), "upheld")
+
+    # The proposal must describe the asset: quantity, quality and variance.
+    missing = vp_req(addrs, "alice", selection)
+    missing.pop("variance")
+    assertions.expect_refusal("missing variance refused",
+                              fixtures.vp_propose("alice", missing), "fields")
+    out_of_range = vp_req(addrs, "alice", selection)
+    out_of_range["variance"]["quantityBps"] = 10001
+    assertions.expect_refusal("variance above 10000 refused",
+                              fixtures.vp_propose("alice", out_of_range), "fields")
+    bad_quality = vp_req(addrs, "alice", selection)
+    bad_quality["quality"]["mean"] = 21
+    assertions.expect_refusal("quality mean outside the scale refused",
+                              fixtures.vp_propose("alice", bad_quality), "fields")
 
     print("unit_value: pass")
     return 0
