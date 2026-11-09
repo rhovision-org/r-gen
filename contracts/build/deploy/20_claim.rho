@@ -1,8 +1,7 @@
-// Why: the claim is the quantity half; one linear cell makes a second validation non-representable.
+// Why: the claim is the quantity half; one linear cell makes a second validation impossible.
 // Paper: @robles2020innovation p.5; @zhong2019bridge p.4 Fig.1, p.5.
-// r-gen decision: the Claim creates the K-Asset privately, so a fake K-Asset cannot exist for a real claim.
-// Placeholders: __ROOT_URI__, __CREDENTIAL_FACTORY_URI__, __VALUE_PROPOSITION_FACTORY_URI__,
-//               __ORACLE_FACTORY_URI__.
+// r-gen decision: the Claim creates the K-Asset privately, so a fake pair cannot exist.
+// Placeholders: __ROOT_URI__, __CREDENTIAL_FACTORY_URI__, __VALUE_PROPOSITION_FACTORY_URI__, __ORACLE_FACTORY_URI__.
 new
   ClaimFactory,
   rl(`rho:registry:lookup`),
@@ -14,7 +13,7 @@ new
   listHas, listHasId, listHasAny, listHas3,
   listHasEq, listHasIdEq, listHasAnyEq, listHas3Eq,
   makeKAsset, claimReqOk, claimWorkGate, claimFieldsGate, claimFieldsOk, claimWindowOk,
-  claimVpGate,
+  claimVpGate, claimGate,
   outcomeStatus, claimRegistryState,
   CredentialFactory, ValuePropositionFactory, OracleFactory,
   checkCredentialProof, proveAndCheck, checkValidatedProof, proveValidatedAndCheck,
@@ -293,18 +292,15 @@ contract outcomeStatus(@outcome, ret) = {
     } else { ret!(true) }
   } |
 
-  // Claim and K-Asset status are derived from one verdict table in finalizeValidation.
-  // An unknown verdict is rejected in both, so the two records cannot disagree.
-
   rl!(`__ROOT_URI__`, *rootCh) |
   rl!(`__CREDENTIAL_FACTORY_URI__`, *cfCh) |
   rl!(`__VALUE_PROPOSITION_FACTORY_URI__`, *vpCh) |
   rl!(`__ORACLE_FACTORY_URI__`, *ofCh) |
   for (CredentialFactory <- cfCh; ValuePropositionFactory <- vpCh; OracleFactory <- ofCh;
        Root <- rootCh) {
-// K-Asset private library. Only the Claim may create one; a public factory would allow a fake claim.
+// K-Asset private library; only Claim creates one.
 // Paper: @robles2020innovation p.4-5; @zhong2019bridge p.4, p.6.
-// r-gen decision: parent-owned strict-order nesting; a receipt makes a failed batch resumable.
+// r-gen decision: strict-order nesting; the receipt is resumable.
 
 contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, @expectedOracleUri, root, ret) = {
   // Verify the oracle wiring against Root before the K-Asset exists (RGA-070).
@@ -1138,22 +1134,31 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, @expectedOrac
 
     contract claimVpGate(@req, ret3) = {
       match req.get("valuePropositionRef") {
-        Nil => { ret3!(true) }
+        Nil => { ret3!({"ok": true, "variance": Nil}) }
         {"uri": uri, ..._} => {
-          if (uri == Nil || uri == "") { ret3!(false) }
+          if (uri == Nil || uri == "") { ret3!({"ok": false, "reason": "value proposition"}) }
           else {
             new vfCh in {
               ValuePropositionFactory!("verify", uri, *vfCh) |
               for (@vf <- vfCh) {
                 match vf {
-                  (true, _) => { ret3!(true) }
-                  _ => { ret3!(false) }
+                  (true, rec) => { ret3!({"ok": true, "variance": rec.get("variance")}) }
+                  _ => { ret3!({"ok": false, "reason": "value proposition"}) }
                 }
               }
             }
           }
         }
-        _ => { ret3!(false) }
+        _ => { ret3!({"ok": false, "reason": "value proposition"}) }
+      }
+    } |
+
+    contract claimGate(@ok, @vpOk, ret) = {
+      match (ok, vpOk) {
+        (false, _) => { ret!((false, "fields")) }
+        (true, {"ok": false, ..._}) => { ret!((false, "value proposition")) }
+        (true, {"ok": true, "variance": variance, ..._}) => { ret!((true, variance)) }
+        _ => { ret!((false, "fields")) }
       }
     } |
 
@@ -1175,14 +1180,15 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, @expectedOrac
         authOwner!(*dId, *aCh) |
         nowHeight!(*hCh) |
         for (@(true, claimant, pk) <- aCh; @height <- hCh) {
-          new okCh, vpOkCh in {
+          new okCh, vpOkCh, gateCh in {
             claimReqOk!(req, height, *okCh) |
             claimVpGate!(req, *vpOkCh) |
             for (@ok <- okCh; @vpOk <- vpOkCh) {
-              match (ok, vpOk) {
-                (false, _) => { ret!((false, "fields")) }
-                (true, false) => { ret!((false, "value proposition")) }
-                (true, true) => {
+              claimGate!(ok, vpOk, *gateCh)
+            } |
+            for (@gate <- gateCh) {
+              match gate {
+                (true, varianceSnapshot) => {
                 new claimState, Claim, finalizeValidation, finalizeWith, resumeFinalize, appendComment, uriCh in {
                   claimState!({
                     "uri": "",
@@ -1195,6 +1201,7 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, @expectedOrac
                     "quantity": req.get("quantity"),
                     "evidence": req.get("evidence"),
                     "valuePropositionRef": req.get("valuePropositionRef"),
+                    "varianceSnapshot": varianceSnapshot,
                     "status": "open",
                     "deadlineHeight": req.get("deadlineHeight"),
                     "commentUntilHeight": req.get("commentUntilHeight"),
@@ -1330,6 +1337,7 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, @expectedOrac
                         "discipline": s.get("work").get("discipline"),
                         "jurisdiction": s.get("work").get("jurisdiction"),
                         "valuePropositionRef": s.get("valuePropositionRef"),
+                        "variance": s.get("varianceSnapshot"),
                         "status": kassetSt,
                         "approver": Nil,
                         "approval": Nil,
@@ -1393,7 +1401,6 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, @expectedOrac
                     }
                   } |
 
-                  // Resume commits the receipt and never mints (ClaimMint.resume).
                   contract resumeFinalize(@s, @r, @validator, @who, ret3) = {
                     if (who != s.get("claimant") && who != validator) {
                       claimState!(s) | ret3!((false, "not party"))
@@ -1502,6 +1509,7 @@ contract makeKAsset(@init, oracleFactory, vpFactory, claimFactory, @expectedOrac
                   }
                 }
                 }
+                (false, reason) => { ret!((false, reason)) }
                 _ => { ret!((false, "fields")) }
               }
             }

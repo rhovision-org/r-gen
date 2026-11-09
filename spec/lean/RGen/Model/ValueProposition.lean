@@ -44,7 +44,21 @@ structure VPState where
   disputeCase : Option Id
   deadlineHeight : Height
   comments : List Id
+  /-- Declared quantity mean and variance rate (basis points). -/
+  quantityMean : Nat
+  quantityBps : Nat
+  /-- Declared quality mean (4..20) and variance rate (basis points). -/
+  qualityMean : Nat
+  qualityBps : Nat
+  varianceN : Nat
   deriving DecidableEq, Repr
+
+/-- The declared variance rates are non-negative, bounded, and sum to at most 100%. -/
+def VarianceSound (s : VPState) : Prop :=
+  s.quantityMean > 0 ∧
+  s.qualityMean ≥ 4 ∧ s.qualityMean ≤ 20 ∧
+  s.quantityBps ≤ 10000 ∧ s.qualityBps ≤ 10000 ∧
+  s.quantityBps + s.qualityBps ≤ 10000 ∧ s.varianceN ≥ 1
 
 namespace VPState
 

@@ -289,6 +289,7 @@ def main() -> int:
         "termsHash": "rt-vp-terms",
         "selectionCriteria": suite_base.requirement("Validator", "validator"),
         "deadlineHeight": 1000000,
+        **fixtures.vp_asset(),
     }
     vp = fixtures.vp_propose("alice", vp_req)
     if isinstance(vp, tuple) and vp and vp[0] is True:

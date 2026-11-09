@@ -81,6 +81,12 @@ export default function ValueProposition() {
             <dd className="mono small">{str(state, "termsHash") ?? "—"}</dd>
             <dt>value model hash</dt>
             <dd className="mono small">{str(state, "valueModelHash") ?? "—"}</dd>
+            <dt>quantity</dt>
+            <dd>{JSON.stringify(state.quantity ?? "—")}</dd>
+            <dt>quality</dt>
+            <dd>{JSON.stringify(state.quality ?? "—")}</dd>
+            <dt>variance (bps)</dt>
+            <dd>{JSON.stringify(state.variance ?? "—")}</dd>
           </dl>
           <dl className="kv">
             <dt>status</dt>

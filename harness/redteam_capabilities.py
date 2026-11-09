@@ -116,6 +116,7 @@ def main() -> int:
         "statementHash": "statement", "termsHash": "terms",
         "selectionCriteria": suite_base.requirement("Validator", "validator"),
         "deadlineHeight": 1_000_000, "beneficiaries": [], "valueModelHash": "",
+        **fixtures.vp_asset(),
     }
     vp_reply = fixtures.vp_propose("alice", vp_req)
     vp_uri = vp_reply[1]["uri"] if as_ok(vp_reply) else ""

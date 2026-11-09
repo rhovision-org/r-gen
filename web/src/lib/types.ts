@@ -139,6 +139,14 @@ export interface ValuePropositionState extends State {
   status?: string;
   deadlineHeight?: number;
   dispute?: { id?: string; uri?: string };
+  quantity?: { unit?: string; mean?: number };
+  quality?: {
+    kind?: string;
+    spec?: string;
+    scale?: { min?: number; max?: number };
+    mean?: number;
+  };
+  variance?: { quantityBps?: number; qualityBps?: number; n?: number };
 }
 
 export interface CaseState extends State {

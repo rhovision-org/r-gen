@@ -60,6 +60,50 @@ fn hash_field(value: &Value, key: &str) -> Result<()> {
     Ok(())
 }
 
+/// A value proposition describes the asset as quantity, quality and a variance rate
+/// around the mean. The rate is dimensionless basis points (sigma^2 / mean^2), so the
+/// core stays integer-only.
+fn vp_asset(value: &Value) -> Result<()> {
+    let quantity = object(value.get("quantity").unwrap_or(&Value::Null), "quantity")?;
+    text(&Value::Object(quantity.clone()), "unit")?;
+    positive(&Value::Object(quantity.clone()), "mean")?;
+
+    let quality = object(value.get("quality").unwrap_or(&Value::Null), "quality")?;
+    text(&Value::Object(quality.clone()), "kind")?;
+    text(&Value::Object(quality.clone()), "spec")?;
+    let scale = object(
+        quality.get("scale").unwrap_or(&Value::Null),
+        "quality.scale",
+    )?;
+    let min = int(&Value::Object(scale.clone()), "min")?;
+    let max = int(&Value::Object(scale.clone()), "max")?;
+    if !(4..=20).contains(&min) || !(4..=20).contains(&max) || min > max {
+        return Err(RgenError::Validation(
+            "quality.scale must be within 4..20 and ordered".into(),
+        ));
+    }
+    let mean = int(&Value::Object(quality.clone()), "mean")?;
+    if mean < min || mean > max {
+        return Err(RgenError::Validation(
+            "quality.mean must be within the scale".into(),
+        ));
+    }
+
+    let variance = object(value.get("variance").unwrap_or(&Value::Null), "variance")?;
+    let quantity_bps = int(&Value::Object(variance.clone()), "quantityBps")?;
+    let quality_bps = int(&Value::Object(variance.clone()), "qualityBps")?;
+    if !(0..=10_000).contains(&quantity_bps)
+        || !(0..=10_000).contains(&quality_bps)
+        || quantity_bps + quality_bps > 10_000
+    {
+        return Err(RgenError::Validation(
+            "variance rates must be non-negative and sum to at most 10000 bps".into(),
+        ));
+    }
+    positive(&Value::Object(variance.clone()), "n")?;
+    Ok(())
+}
+
 fn criteria(value: &Value) -> Result<()> {
     let criteria = object(value, "selectionCriteria")?;
     for key in ["ctype", "discipline", "jurisdiction", "role"] {
@@ -250,6 +294,7 @@ pub fn validate_payload(kind: &str, value: &Value, at_height: i64) -> Result<()>
                     "deadlineHeight must be greater than the current height".into(),
                 ));
             }
+            vp_asset(value)?;
             Ok(())
         }
         "vpValidation" => {
@@ -411,6 +456,42 @@ mod tests {
         validate_payload("validation", &valid, 1).unwrap();
         assert!(require_credential("rho:id:a", &valid).is_ok());
         assert!(require_credential("rho:id:b", &valid).is_err());
+    }
+
+    fn value_proposition() -> Value {
+        json!({
+            "subjectRef": {"uri": "rho:id:subject"},
+            "statementHash": "statement",
+            "termsHash": "terms",
+            "selectionCriteria": {"ctype": "Validator", "discipline": "structural",
+                                  "jurisdiction": "US-TX", "role": "validator", "minLevel": 1},
+            "beneficiaries": ["1111alice"],
+            "deadlineHeight": 120,
+            "quantity": {"unit": "m3", "mean": 100},
+            "quality": {"kind": "water", "spec": "potable",
+                        "scale": {"min": 4, "max": 20}, "mean": 18},
+            "variance": {"quantityBps": 400, "qualityBps": 1200, "n": 30}
+        })
+    }
+
+    #[test]
+    fn accepts_a_value_proposition_with_quantity_quality_and_variance() {
+        validate_payload("vp", &value_proposition(), 100).unwrap();
+    }
+
+    #[test]
+    fn refuses_bad_value_proposition_asset_fields() {
+        let mut missing = value_proposition();
+        missing.as_object_mut().unwrap().remove("variance");
+        assert!(validate_payload("vp", &missing, 100).is_err());
+
+        let mut negative = value_proposition();
+        negative["variance"]["quantityBps"] = json!(-1);
+        assert!(validate_payload("vp", &negative, 100).is_err());
+
+        let mut scale = value_proposition();
+        scale["quality"]["mean"] = json!(21);
+        assert!(validate_payload("vp", &scale, 100).is_err());
     }
 
     #[test]

@@ -156,6 +156,19 @@ def vp_propose(proposer: str, req: dict):
                     [Raw("*dId"), req], key=proposer)
 
 
+def vp_asset(unit: str = "inspections", mean: int = 12,
+             kind: str = "inspection", spec: str = "structural",
+             quality_mean: int = 12, quantity_bps: int = 400,
+             quality_bps: int = 1200, n: int = 30) -> dict:
+    """Dan's quantity/quality/variance description for a value proposition."""
+    return {
+        "quantity": {"unit": unit, "mean": mean},
+        "quality": {"kind": kind, "spec": spec,
+                    "scale": {"min": 4, "max": 20}, "mean": quality_mean},
+        "variance": {"quantityBps": quantity_bps, "qualityBps": quality_bps, "n": n},
+    }
+
+
 def vp_validate(vp_uri: str, cred_uri: str, validator: str, validation: dict):
     term = f"""
 new rl(`rho:registry:lookup`), c1, ret,
