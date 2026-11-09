@@ -14,7 +14,8 @@ new
   rootCh, cfCh, ofCh, cFactory, ack1,
   authOwner, authSubject, authPubKey, nowHeight,
   CredentialFactory, OracleFactory,
-  vpReqOk, outcomeStatus,
+  vpReqOk, vpAssetOk, vpQuantityOk, vpQuantityFieldsOk, vpQualityOk, vpQualityFieldsOk,
+  vpQualityScaleOk, vpVarianceOk, vpVarianceFieldsOk, outcomeStatus,
   checkCredentialProof, proveAndCheck, checkValidatedProof, proveValidatedAndCheck,
   proveAndCheckCall, proveAndCheckReply, proveTakeAndCheck,
   proveValidatedCall, proveValidatedReply, proveValidatedTake
@@ -33,11 +34,80 @@ in {
           (s, t, sc, d) => {
             if (s == Nil || s == "" || t == Nil || t == ""
                 || sc == Nil || d == Nil || d <= height) { ret!(false) }
-            else { ret!(true) }
+            else { vpAssetOk!(req, *ret) }
           }
         }
       }
     }
+  } |
+
+  // The VP describes the asset as quantity, quality and a variance rate around the
+  // mean. The rate is dimensionless basis points (sigma^2 / mean^2); the raw
+  // second moment is derived, never stored as a float.
+  contract vpAssetOk(@req, ret) = {
+    new qCh, lCh, vCh in {
+      vpQuantityOk!(req.get("quantity"), *qCh) |
+      vpQualityOk!(req.get("quality"), *lCh) |
+      vpVarianceOk!(req.get("variance"), *vCh) |
+      for (@q <- qCh; @l <- lCh; @v <- vCh) {
+        if (q && l && v) { ret!(true) } else { ret!(false) }
+      }
+    }
+  } |
+
+  contract vpQuantityOk(@q, ret) = {
+    match q {
+      Nil => { ret!(false) }
+      v => { vpQuantityFieldsOk!(v.get("unit"), v.get("mean"), *ret) }
+    }
+  } |
+
+  contract vpQuantityFieldsOk(@unit, @mean, ret) = {
+    if (unit == Nil || unit == "" || mean == Nil || mean <= 0) { ret!(false) }
+    else { ret!(true) }
+  } |
+
+  contract vpQualityOk(@q, ret) = {
+    match q {
+      Nil => { ret!(false) }
+      v => {
+        vpQualityFieldsOk!(v.get("kind"), v.get("spec"), v.get("scale"),
+                           v.get("mean"), *ret)
+      }
+    }
+  } |
+
+  contract vpQualityFieldsOk(@kind, @spec, @scale, @mean, ret) = {
+    if (kind == Nil || kind == "" || spec == Nil || spec == ""
+        || scale == Nil || mean == Nil) { ret!(false) }
+    else { vpQualityScaleOk!(scale, mean, *ret) }
+  } |
+
+  contract vpQualityScaleOk(@scale, @mean, ret) = {
+    match (scale.get("min"), scale.get("max")) {
+      (lo, hi) => {
+        if (lo == Nil || hi == Nil || lo < 4 || hi > 20 || lo > hi
+            || mean < lo || mean > hi) { ret!(false) }
+        else { ret!(true) }
+      }
+    }
+  } |
+
+  contract vpVarianceOk(@v, ret) = {
+    match v {
+      Nil => { ret!(false) }
+      m => {
+        vpVarianceFieldsOk!(m.get("quantityBps"), m.get("qualityBps"),
+                             m.get("n"), *ret)
+      }
+    }
+  } |
+
+  contract vpVarianceFieldsOk(@qBps, @lBps, @n, ret) = {
+    if (qBps == Nil || lBps == Nil || n == Nil
+        || qBps < 0 || qBps > 10000 || lBps < 0 || lBps > 10000
+        || qBps + lBps > 10000 || n < 1) { ret!(false) }
+    else { ret!(true) }
   } |
 
   rl!(`__ROOT_URI__`, *rootCh) |
@@ -94,6 +164,9 @@ in {
                       "beneficiaries": req.get("beneficiaries"),
                       "termsHash": req.get("termsHash"),
                       "selectionCriteria": req.get("selectionCriteria"),
+                      "quantity": req.get("quantity"),
+                      "quality": req.get("quality"),
+                      "variance": req.get("variance"),
                       "status": "proposed",
                       "validator": Nil,
                       "validation": Nil,
@@ -403,7 +476,10 @@ in {
                             "uri": uri,
                             "proposer": proposer,
                             "subjectRef": req.get("subjectRef"),
-                            "statementHash": req.get("statementHash")
+                            "statementHash": req.get("statementHash"),
+                            "quantity": req.get("quantity"),
+                            "quality": req.get("quality"),
+                            "variance": req.get("variance")
                           })) |
                           ret!((true, {"id": uri, "uri": uri}))
                         }

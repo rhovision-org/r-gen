@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rgen.vp-variance/v1",
+  "title": "Value proposition quantity, quality and variance",
+  "description": "Dan Robles's value-proposition description: a quantity (a volume, weight, count, etc.), a quality (what the thing is), and a variance rate for each branch around the mean. The rate is the dimensionless second moment, sigma^2 / mean^2, in basis points.",
+  "type": "object",
+  "required": ["quantity", "quality", "variance"],
+  "additionalProperties": false,
+  "properties": {
+    "quantity": {
+      "type": "object",
+      "required": ["unit", "mean"],
+      "additionalProperties": false,
+      "properties": {
+        "unit": {"type": "string", "minLength": 1},
+        "mean": {"type": "integer", "minimum": 1}
+      }
+    },
+    "quality": {
+      "type": "object",
+      "required": ["kind", "spec", "scale", "mean"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "spec": {"type": "string", "minLength": 1},
+        "scale": {
+          "type": "object",
+          "required": ["min", "max"],
+          "additionalProperties": false,
+          "properties": {
+            "min": {"type": "integer", "minimum": 4},
+            "max": {"type": "integer", "maximum": 20}
+          }
+        },
+        "mean": {"type": "integer", "minimum": 4, "maximum": 20}
+      }
+    },
+    "variance": {
+      "type": "object",
+      "required": ["quantityBps", "qualityBps", "n"],
+      "additionalProperties": false,
+      "properties": {
+        "quantityBps": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "qualityBps": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "n": {"type": "integer", "minimum": 1}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "description": "The combined rate is bounded to 10000 bps (100%).",
+      "properties": {
+        "variance": {
+          "properties": {
+            "quantityBps": {"maximum": 10000},
+            "qualityBps": {"maximum": 10000}
+          }
+        }
+      }
+    }
+  ]
+}

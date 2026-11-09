@@ -60,6 +60,13 @@ structure KAssetState where
   jurisdiction : String
   disputeCase : Option Id
   rejectedAt : Option Height
+  /-- Declared variance snapshot from the value proposition, when present. -/
+  varianceFromVp : Bool
+  quantityMean : Nat
+  quantityBps : Nat
+  qualityMean : Nat
+  qualityBps : Nat
+  varianceN : Nat
   deriving DecidableEq, Repr
 
 namespace KAssetState

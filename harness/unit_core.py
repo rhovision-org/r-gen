@@ -64,6 +64,7 @@ def main() -> int:
         "selectionCriteria": {"ctype": "Validator", "discipline": "structural",
                               "jurisdiction": "US-TX", "role": "validator", "minLevel": 1},
         "deadlineHeight": 1000000,
+        **fixtures.vp_asset(),
     }
     vp = fixtures.vp_propose(ALICE, vp_req)
     assertions.expect_ok("propose value proposition", vp)

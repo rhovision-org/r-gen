@@ -160,6 +160,9 @@ def main() -> int:
         "termsHash": digest("terms.md"),
         "selectionCriteria": CRITERIA,
         "deadlineHeight": height + 100_000,
+        **fixtures.vp_asset(unit="inspections", mean=12, kind="bridge inspection",
+                            spec="twelve-bay deck", quality_mean=18,
+                            quantity_bps=400, quality_bps=1200),
     }
     vp = fixtures.vp_propose("alice", vp_req)
     assertions.expect_ok("value proposition", vp)
