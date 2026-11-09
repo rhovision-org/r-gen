@@ -8,6 +8,7 @@
 - [Public testnet](guides/testnet.md)
 - [Web client](guides/web.md)
 - [Local-devnet testing](guides/devnet-testing.md)
+- [Filing an azoth calculation](guides/azoth.md)
 
 ## Primitives
 

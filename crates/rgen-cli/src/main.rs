@@ -115,6 +115,20 @@ enum Command {
     },
     /// Read the node's status for a deploy id.
     DeployStatus { deploy_id: String },
+    /// Validate a JSON payload with the same structural rules the SDK applies.
+    ///
+    /// The facade's Python harness writes raw terms, so it never crossed the SDK's
+    /// `validate_payload`. This exposes that check to a non-Rust caller without growing
+    /// a second copy of the rules.
+    ValidatePayload {
+        /// The facade's kind name, e.g. `claim` or `validation`.
+        kind: String,
+        /// The JSON file to validate.
+        file: PathBuf,
+        /// The block height the payload will be judged at; `deadlineHeight` must exceed it.
+        #[arg(long, default_value_t = 0)]
+        at_height: i64,
+    },
     /// Ask the node's faucet for native REV.
     Faucet {
         address: String,
@@ -195,6 +209,11 @@ async fn main() {
             allow_live,
         } => deploy(&cli, &file, op.as_deref(), &op_cache, allow_live).await,
         Command::DeployStatus { deploy_id } => deploy_status(&cli, &deploy_id).await,
+        Command::ValidatePayload {
+            kind,
+            file,
+            at_height,
+        } => validate_payload(&kind, &file, at_height, cli.json),
         Command::Faucet { address, url } => faucet(&url, &address, cli.json),
         Command::RiskScore {
             severity,
@@ -551,6 +570,27 @@ async fn deploy(cli: &Cli, file: &Path, op: Option<&str>, op_cache: &Path, allow
             "deploy={} block={} status={}",
             receipt.deploy_id, receipt.block_number, receipt.status_text
         );
+    }
+}
+
+fn validate_payload(kind: &str, file: &Path, at_height: i64, json: bool) {
+    let text = match std::fs::read_to_string(file) {
+        Ok(text) => text,
+        Err(error) => fail(&format!("{}: {error}", file.display())),
+    };
+    let value: serde_json::Value = match serde_json::from_str(&text) {
+        Ok(value) => value,
+        Err(error) => fail(&format!("{}: {error}", file.display())),
+    };
+    match rgen_core::requests::validate_payload(kind, &value, at_height) {
+        Ok(()) => {
+            if json {
+                print_json(serde_json::json!({"kind": kind, "ok": true}));
+            } else {
+                println!("validate-payload: {kind} ok");
+            }
+        }
+        Err(error) => fail(&error.to_string()),
     }
 }
 

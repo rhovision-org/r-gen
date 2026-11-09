@@ -26,9 +26,10 @@ SUITES = {
     "race": "concurrency_core.py",
     "install": "unit_install.py",
     "wiring": "unit_wiring.py",
+    "azoth": "unit_azoth.py",
 }
 DEFAULT = ["identity", "credentials", "claim", "kasset", "value", "oracle",
-           "provenance", "integration", "core", "race"]
+           "provenance", "integration", "core", "race", "azoth"]
 
 
 def run(name: str) -> dict:

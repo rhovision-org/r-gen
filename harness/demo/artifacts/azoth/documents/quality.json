@@ -1,0 +1,1 @@
+{"calc_id":"eos.antoine_vapor_pressure","evidence":{"declared":5,"passed":5,"replayed":5,"run_disagree":false,"run_matched":true,"traceability_items":5,"tracked_dirty":false,"warnings":0},"quality":{"completeness":5,"correctness":5,"fitness":5,"traceability":5},"schema":"azoth.quality/v1","verdict":"valid"}
