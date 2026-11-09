@@ -48,6 +48,29 @@ A value proposition declares:
   engineering choice: the paper says both branches contribute to value, not that their
   rates add.
 
+### Declared curve
+
+The variance map may also carry the whole distribution as a `risk-curve/v1`:
+
+```json
+"variance": {
+  "quantityBps": 400, "qualityBps": 1200, "n": 30,
+  "curve": {
+    "kind": "quantiles",
+    "unit": "bpsOfDeclaredValue",
+    "n": 16,
+    "points": [0, 500, 1000, 1500, 2000, 2500, 3000, 3500,
+               4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500]
+  }
+}
+```
+
+The 16 points are equiprobable positions in bps of the declared value, nondecreasing and
+each `0..10000`; the sum must be positive. The scalar branch rates remain required as the
+summary and the fallback. The curve is snapshotted with the map, so a K-Asset and a claim
+carry it unchanged. r-sure reads the curve, computes its stats, and compares it with the
+actuary's loss curve; the scalar rate is the legacy projection.
+
 ## Flow into the K-Asset
 
 A claim or value proposition reference is checked at claim creation. The VP's variance map

@@ -42,7 +42,23 @@
       "properties": {
         "quantityBps": {"type": "integer", "minimum": 0, "maximum": 10000},
         "qualityBps": {"type": "integer", "minimum": 0, "maximum": 10000},
-        "n": {"type": "integer", "minimum": 1}
+        "n": {"type": "integer", "minimum": 1},
+        "curve": {
+          "type": "object",
+          "required": ["kind", "unit", "n", "points"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"const": "quantiles"},
+            "unit": {"const": "bpsOfDeclaredValue"},
+            "n": {"const": 16},
+            "points": {
+              "type": "array",
+              "minItems": 16,
+              "maxItems": 16,
+              "items": {"type": "integer", "minimum": 0, "maximum": 10000}
+            }
+          }
+        }
       }
     }
   },

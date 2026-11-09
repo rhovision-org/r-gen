@@ -110,6 +110,12 @@ or liability record. A consumer that understands it (r-sure does) uses it as the
 estimate; when it is absent, the rubric-derived `engineeringBps` above is the fallback. See
 [quantity, quality and variance](variance-model.md).
 
+The map may also carry an optional `curve` (`risk-curve/v1`): 16 nondecreasing integer points
+in `bpsOfDeclaredValue`. The scalar fields remain required; a consumer that understands the
+curve (r-sure does) compares it with the actuarial loss curve and publishes the delta. A
+malformed curve is refused by the value-proposition validator. The curve is a declared
+convention, not a core-enforced measurement.
+
 ## Attestation fallback
 
 When the state is not eligible, or a dimension is missing, a consumer may use a bound

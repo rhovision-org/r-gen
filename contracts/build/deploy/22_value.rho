@@ -15,7 +15,10 @@ new
   authOwner, authSubject, authPubKey, nowHeight,
   CredentialFactory, OracleFactory,
   vpReqOk, vpAssetOk, vpQuantityOk, vpQuantityFieldsOk, vpQualityOk, vpQualityFieldsOk,
-  vpQualityScaleOk, vpVarianceOk, vpVarianceFieldsOk, outcomeStatus,
+  vpQualityScaleOk, vpVarianceOk, vpVarianceFieldsOk,
+  vpVarianceCurveOk, vpVarianceCurveFieldsOk, vpCurveOrdered, vpCurveOrderedTail,
+  vpCurveSum,
+  outcomeStatus,
   checkCredentialProof, proveAndCheck, checkValidatedProof, proveValidatedAndCheck,
   proveAndCheckCall, proveAndCheckReply, proveTakeAndCheck,
   proveValidatedCall, proveValidatedReply, proveValidatedTake
@@ -265,8 +268,14 @@ contract outcomeStatus(@outcome, ret) = {
     match v {
       Nil => { ret!(false) }
       m => {
-        vpVarianceFieldsOk!(m.get("quantityBps"), m.get("qualityBps"),
-                             m.get("n"), *ret)
+        new fCh, cCh in {
+          vpVarianceFieldsOk!(m.get("quantityBps"), m.get("qualityBps"),
+                               m.get("n"), *fCh) |
+          vpVarianceCurveOk!(m.get("curve"), *cCh) |
+          for (@f <- fCh; @c <- cCh) {
+            if (f && c) { ret!(true) } else { ret!(false) }
+          }
+        }
       }
     }
   } |
@@ -276,6 +285,59 @@ contract outcomeStatus(@outcome, ret) = {
         || qBps < 0 || qBps > 10000 || lBps < 0 || lBps > 10000
         || qBps + lBps > 10000 || n < 1) { ret!(false) }
     else { ret!(true) }
+  } |
+
+  contract vpVarianceCurveOk(@curve, ret) = {
+    match curve {
+      Nil => { ret!(true) }
+      c => {
+        vpVarianceCurveFieldsOk!(c.get("kind"), c.get("unit"), c.get("n"),
+                                 c.get("points"), *ret)
+      }
+    }
+  } |
+
+  contract vpVarianceCurveFieldsOk(@kind, @unit, @n, @points, ret) = {
+    if (kind != "quantiles" || unit != "bpsOfDeclaredValue" || n != 16
+        || points == Nil || points.length() != 16) { ret!(false) }
+    else {
+      new oCh, sCh in {
+        vpCurveOrdered!(points, *oCh) |
+        vpCurveSum!(points, 0, *sCh) |
+        for (@ok <- oCh; @sum <- sCh) {
+          if (ok == false || sum < 1) { ret!(false) }
+          else { ret!(true) }
+        }
+      }
+    }
+  } |
+
+  contract vpCurveOrdered(@points, ret) = {
+    match points {
+      [] => { ret!(true) }
+      [head, ...tail] => { vpCurveOrderedTail!(head, tail, *ret) }
+      _ => { ret!(false) }
+    }
+  } |
+
+  contract vpCurveOrderedTail(@prev, @rest, ret) = {
+    match rest {
+      [] => { ret!(true) }
+      [head, ...tail] => {
+        if (prev < 0 || prev > 10000 || head < 0 || head > 10000
+            || prev > head) { ret!(false) }
+        else { vpCurveOrderedTail!(head, tail, *ret) }
+      }
+      _ => { ret!(false) }
+    }
+  } |
+
+  contract vpCurveSum(@points, @acc, ret) = {
+    match points {
+      [] => { ret!(acc) }
+      [head, ...tail] => { vpCurveSum!(tail, acc + head, *ret) }
+      _ => { ret!(acc) }
+    }
   } |
 
   rl!(`__ROOT_URI__`, *rootCh) |
