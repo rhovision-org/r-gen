@@ -89,7 +89,9 @@ jobs:
       # Install the pinned toolchain before the build. The hosted image can carry a
       # partial 1.95.0 toolchain whose real files conflict with rustup's component
       # symlinks ("detected conflict: bin/cargo-fmt"); remove it, then install the
-      # minimal profile, which is all the parse build needs.
+      # minimal profile, which is all the parse build needs. The parse step sets
+      # RUSTUP_TOOLCHAIN so rustup does not re-read rust-toolchain.toml and try to add
+      # rustfmt and clippy, which is what hit the conflict.
       - name: Install Rust
         run: |
           rm -rf "${RUSTUP_HOME:-$HOME/.rustup}/toolchains/1.95.0-x86_64-unknown-linux-gnu"
@@ -106,7 +108,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: make venv-ci PY=.venv/bin/python
       - run: make build PY=.venv/bin/python
-      - run: RCHAIN_RUST_DIR=$PWD/rnode-rust tools/parse_check.sh contracts/build/deploy/*.rho
+      - run: RCHAIN_RUST_DIR=$PWD/rnode-rust RUSTUP_TOOLCHAIN=1.95.0 tools/parse_check.sh contracts/build/deploy/*.rho
 
   devnet:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
