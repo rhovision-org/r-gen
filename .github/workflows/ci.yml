@@ -86,10 +86,20 @@ jobs:
           repository: rchain-community/rchain-rust
           ref: e2d073dcd02f1e560ccb84749937138a1e184b0b
           path: rnode-rust
+      # Install the pinned toolchain before the build. Without this, the first cargo
+      # invocation lets rustup auto-install 1.95.0 with the default profile, which has
+      # flaked on the runner with "detected conflict: bin/cargo-clippy".
+      - uses: dtolnay/rust-toolchain@1.95.0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      # rchain-models builds its protos with prost-build, which needs protoc on PATH.
+      # Fetch it from the GitHub release instead of apt: the Ubuntu mirror intermittently
+      # fails to resolve on hosted runners and takes the whole parse job with it.
+      - uses: arduino/setup-protoc@v3
+        with:
+          version: "21.12"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: make venv-ci PY=.venv/bin/python
       - run: make build PY=.venv/bin/python
       - run: RCHAIN_RUST_DIR=$PWD/rnode-rust tools/parse_check.sh contracts/build/deploy/*.rho
