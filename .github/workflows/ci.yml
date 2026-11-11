@@ -86,10 +86,14 @@ jobs:
           repository: rchain-community/rchain-rust
           ref: e2d073dcd02f1e560ccb84749937138a1e184b0b
           path: rnode-rust
-      # Install the pinned toolchain before the build. Without this, the first cargo
-      # invocation lets rustup auto-install 1.95.0 with the default profile, which has
-      # flaked on the runner with "detected conflict: bin/cargo-clippy".
-      - uses: dtolnay/rust-toolchain@1.95.0
+      # Install the pinned toolchain before the build. The hosted image can carry a
+      # partial 1.95.0 toolchain whose real files conflict with rustup's component
+      # symlinks ("detected conflict: bin/cargo-fmt"); remove it, then install the
+      # minimal profile, which is all the parse build needs.
+      - name: Install Rust
+        run: |
+          rm -rf "${RUSTUP_HOME:-$HOME/.rustup}/toolchains/1.95.0-x86_64-unknown-linux-gnu"
+          rustup toolchain install 1.95.0 --profile minimal --no-self-update
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
