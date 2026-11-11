@@ -93,7 +93,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      # rchain-models builds its protos with prost-build, which needs protoc on PATH.
+      # Fetch it from the GitHub release instead of apt: the Ubuntu mirror intermittently
+      # fails to resolve on hosted runners and takes the whole parse job with it.
+      - uses: arduino/setup-protoc@v3
+        with:
+          version: "21.12"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: make venv-ci PY=.venv/bin/python
       - run: make build PY=.venv/bin/python
       - run: RCHAIN_RUST_DIR=$PWD/rnode-rust tools/parse_check.sh contracts/build/deploy/*.rho
