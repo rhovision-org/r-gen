@@ -2,4 +2,4 @@
 # enforces the Linux wheel hashes with --require-hashes.
 coincurve==21.0.0
 pycryptodome==4.4.0
-PyYAML==6.0.3
+PyYAML==6.0.4
